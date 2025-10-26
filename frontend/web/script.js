@@ -2,6 +2,7 @@ const dropZone = document.getElementById('upload-form');
 const fileInput = document.getElementById('file-input');
 const feedback = document.getElementById('feedback');
 const progressBar = document.getElementById('progress');
+const classifyBtn = document.getElementById('classify-btn');
 const MAX_SIZE_MB = 5;
 
 function formatFileSize(bytes) {
@@ -32,24 +33,43 @@ function validateFile(file) {
   return true;
 }
 
-function simulateUpload(file) {
-  progressBar.hidden = false;
+async function uploadFile(file) {
+  if (!validateFile(file)) return;
+
   feedback.innerHTML = `Mengunggah <b>${file.name}</b> (${formatFileSize(file.size)})...`;
-  let progress = 0;
-  const interval = setInterval(() => {
-    progress += 10;
-    progressBar.value = progress;
-    if (progress >= 100) {
-      clearInterval(interval);
-      feedback.innerHTML = `<span style="color:green;">File <b>${file.name}</b> berhasil diunggah!</span>`;
-      progressBar.hidden = true;
+  progressBar.hidden = false;
+
+  const formData = new FormData();
+  formData.append("file", file);
+
+  try {
+    const response = await fetch("../../backend/upload.php", {
+      method: "POST",
+      body: formData,
+    });
+    const result = await response.json();
+
+    progressBar.hidden = true;
+
+    if (result.success) {
+      feedback.innerHTML = `<span style="color:green;">${result.message}</span>`;
+
+      if (result.result) {
+        feedback.innerHTML += `<br><b>Hasil klasifikasi:</b> ${result.result.classification}`;
+      }
+
+    } else {
+      feedback.innerHTML = `<span style="color:red;">${result.message}</span>`;
     }
-  }, 200);
+  } catch (error) {
+    feedback.innerHTML = `<span style="color:red;">Terjadi kesalahan saat upload.</span>`;
+  }
 }
 
-fileInput.addEventListener('change', e => {
-  const file = e.target.files[0];
-  if (file && validateFile(file)) simulateUpload(file);
+classifyBtn.addEventListener('click', () => {
+  const file = fileInput.files[0];
+  if (file) uploadFile(file);
+  else feedback.innerHTML = `<span style="color:red;">Pilih file terlebih dahulu.</span>`;
 });
 
 dropZone.addEventListener('dragover', e => {
@@ -63,5 +83,5 @@ dropZone.addEventListener('drop', e => {
   e.preventDefault();
   dropZone.classList.remove('dragover');
   const file = e.dataTransfer.files[0];
-  if (file && validateFile(file)) simulateUpload(file);
+  if (file) uploadFile(file);
 });
