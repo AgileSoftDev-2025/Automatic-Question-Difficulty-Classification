@@ -13,6 +13,40 @@ import os
 from django.conf import settings
 
 @login_required
+def home(request):
+    """
+    Menampilkan halaman utama (homepage)
+    """
+    history = [] # Ganti dengan data asli jika perlu
+    
+    # Logika untuk form upload file Anda akan ada di sini
+    if request.method == 'POST':
+        # Contoh: proses file upload
+        uploaded_file = request.FILES.get('file')
+        if uploaded_file:
+            # Lakukan sesuatu dengan file (simpan, proses, dll.)
+            messages.success(request, f'File "{uploaded_file.name}" berhasil diupload.')
+            # Arahkan ke halaman hasil atau history
+            return redirect('klasifikasi:history') 
+        else:
+            messages.error(request, 'Tidak ada file yang dipilih.')
+
+    # Ambil 5 history terbaru untuk ditampilkan di homepage
+    # Ganti 'classifications_dummy' dengan query model asli nanti
+    try:
+        # GANTI DENGAN MODEL ASLI
+        # history = Classification.objects.filter(user=request.user).order_by('-created_at')[:5]
+        pass # Hapus 'pass' ini saat model sudah ada
+    except Exception as e:
+        history = [] # Tetap kosong jika ada error
+
+    context = {
+        'history': history,
+        'is_authenticated': request.user.is_authenticated,
+    }
+    return render(request, 'klasifikasi/home.html', context)
+
+@login_required
 def history_view(request):
     """
     Menampilkan halaman history klasifikasi untuk user yang sedang login
