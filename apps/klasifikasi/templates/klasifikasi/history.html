@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>History - Bloomers</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+</head>
+<body class="bg-gradient-to-b from-blue-50 to-gray-100 min-h-screen">
+    
+    <!-- Navbar -->
+    <nav class="bg-white shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16 items-center">
+                <div class="flex items-center">
+                    <svg class="w-8 h-8 text-blue-500" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M12 3L3 8L12 13L21 8L12 3Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M3 13L12 18L21 13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M3 18L12 23L21 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    <span class="text-blue-500 text-4xl font-bold ml-2">BLOOMERS</span>
+                </div>
+                
+                <div>
+                    <div class="flex items-center space-x-6">
+                        <a href="/" class="text-gray-600 hover:text-blue-600 font-medium">Home</a>
+                        <a href="/history" class="text-blue-600 hover:text-blue-700 font-medium">History</a>
+                        <a href="/help" class="text-gray-600 hover:text-blue-600 font-medium">Help / FAQ</a>
+                        
+                        <div class="relative">
+                            <button type="button" id="profile-menu-button" class="flex flex-col items-center justify-center text-blue-500 hover:text-blue-600 transition-colors group">
+                                <i class="bi bi-person-circle text-4xl mb-1"></i>
+                                <span class="text-gray-900 font-semibold text-sm group-hover:text-gray-700">
+                                    Agim
+                                </span>
+                            </button>
+
+                            <div id="profile-menu-dropdown" 
+                                 class="hidden absolute right-0 z-10 mt-2 w-48 origin-top-right rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none">
+                                <div class="py-1" role="menu" aria-orientation="vertical" aria-labelledby="profile-menu-button">
+                                    <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100" role="menuitem">
+                                        My Profile
+                                    </a>
+                                    <a href="#" class="block px-4 py-2 text-sm text-red-600 hover:bg-gray-100 hover:text-red-700" role="menuitem">
+                                        Log Out
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <h1 class="text-3xl font-bold text-blue-600 mb-8">History Klasifikasi Anda</h1>
+        
+        <!-- Table -->
+        <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+            <div class="overflow-x-auto">
+                <table class="min-w-full">
+                    <thead class="bg-blue-100">
+                        <tr>
+                            <th class="px-6 py-4 text-left text-sm font-semibold text-gray-700"># <i class="bi bi-list ml-1"></i></th>
+                            <th class="px-6 py-4 text-left text-sm font-semibold text-gray-700">File Name</th>
+                            <th class="px-6 py-4 text-left text-sm font-semibold text-gray-700">Question</th>
+                            <th class="px-6 py-4 text-left text-sm font-semibold text-gray-700">Date</th>
+                            <th class="px-6 py-4 text-center text-sm font-semibold text-gray-700">Q1</th>
+                            <th class="px-6 py-4 text-center text-sm font-semibold text-gray-700">Q2</th>
+                            <th class="px-6 py-4 text-center text-sm font-semibold text-gray-700">Q3</th>
+                            <th class="px-6 py-4 text-center text-sm font-semibold text-gray-700">Q4</th>
+                            <th class="px-6 py-4 text-center text-sm font-semibold text-gray-700">Q5</th>
+                            <th class="px-6 py-4 text-center text-sm font-semibold text-gray-700">Q6</th>
+                            <th class="px-6 py-4 text-center text-sm font-semibold text-gray-700">Report</th>
+                            <th class="px-6 py-4 text-center text-sm font-semibold text-gray-700">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-200">
+                        <!-- Row 1 -->
+                        <tr class="hover:bg-gray-50">
+                            <td class="px-6 py-4 text-sm text-gray-900">1</td>
+                            <td class="px-6 py-4 text-sm text-gray-900">Soal UTS.pdf</td>
+                            <td class="px-6 py-4 text-sm text-gray-900">10</td>
+                            <td class="px-6 py-4 text-sm text-gray-900">15/2/2024</td>
+                            <td class="px-6 py-4 text-sm text-center text-gray-900">2</td>
+                            <td class="px-6 py-4 text-sm text-center text-gray-900">2</td>
+                            <td class="px-6 py-4 text-sm text-center text-gray-900">1</td>
+                            <td class="px-6 py-4 text-sm text-center text-gray-900">3</td>
+                            <td class="px-6 py-4 text-sm text-center text-gray-900">2</td>
+                            <td class="px-6 py-4 text-sm text-center text-gray-900">0</td>
+                            <td class="px-6 py-4 text-center">
+                                <button class="text-blue-600 hover:text-blue-800">
+                                    <i class="bi bi-file-earmark-text text-xl"></i>
+                                </button>
+                                <button class="text-blue-600 hover:text-blue-800 ml-2">
+                                    <i class="bi bi-download text-xl"></i>
+                                </button>
+                            </td>
+                            <td class="px-6 py-4 text-center">
+                                <button class="text-gray-600 hover:text-gray-800 mr-2">
+                                    <i class="bi bi-pencil-square text-xl"></i>
+                                </button>
+                                <button class="text-red-600 hover:text-red-800">
+                                    <i class="bi bi-trash text-xl"></i>
+                                </button>
+                            </td>
+                        </tr>
+
+                        <!-- Row 2 -->
+                        <tr class="bg-blue-50 hover:bg-blue-100">
+                            <td class="px-6 py-4 text-sm text-gray-900">2</td>
+                            <td class="px-6 py-4 text-sm text-gray-900">Soal apa aja.pdf</td>
+                            <td class="px-6 py-4 text-sm text-gray-900">23</td>
+                            <td class="px-6 py-4 text-sm text-gray-900">19/3/2024</td>
+                            <td class="px-6 py-4 text-sm text-center text-gray-900">5</td>
+                            <td class="px-6 py-4 text-sm text-center text-gray-900">7</td>
+                            <td class="px-6 py-4 text-sm text-center text-gray-900">3</td>
+                            <td class="px-6 py-4 text-sm text-center text-gray-900">5</td>
+                            <td class="px-6 py-4 text-sm text-center text-gray-900">1</td>
+                            <td class="px-6 py-4 text-sm text-center text-gray-900">2</td>
+                            <td class="px-6 py-4 text-center">
+                                <button class="text-blue-600 hover:text-blue-800">
+                                    <i class="bi bi-file-earmark-text text-xl"></i>
+                                </button>
+                                <button class="text-blue-600 hover:text-blue-800 ml-2">
+                                    <i class="bi bi-download text-xl"></i>
+                                </button>
+                            </td>
+                            <td class="px-6 py-4 text-center">
+                                <button class="text-gray-600 hover:text-gray-800 mr-2">
+                                    <i class="bi bi-pencil-square text-xl"></i>
+                                </button>
+                                <button class="text-red-600 hover:text-red-800">
+                                    <i class="bi bi-trash text-xl"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // Profile dropdown functionality
+        const profileMenuButton = document.getElementById('profile-menu-button');
+        const profileMenuDropdown = document.getElementById('profile-menu-dropdown');
+
+        if (profileMenuButton) {
+            profileMenuButton.addEventListener('click', () => {
+                profileMenuDropdown.classList.toggle('hidden');
+            });
+
+            window.addEventListener('click', (event) => {
+                if (!profileMenuButton.contains(event.target) && !profileMenuDropdown.contains(event.target)) {
+                    profileMenuDropdown.classList.add('hidden');
+                }
+            });
+        }
+    </script>
+</body>
+</html>
