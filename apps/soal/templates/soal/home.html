@@ -8,59 +8,7 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
 </head>
 <body class="bg-gradient-to-b from-blue-50 to-gray-100 min-h-screen">
-    
-    <nav class="bg-white shadow-sm">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex justify-between h-16 items-center">
-                
-                <div class="flex items-center">
-                    <svg class="w-8 h-8 text-blue-500" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M12 3L3 8L12 13L21 8L12 3Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                        <path d="M3 13L12 18L21 13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                        <path d="M3 18L12 23L21 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    </svg>
-                    <span class="text-blue-500 text-4xl font-bold ml-2">BLOOMERS</span>
-                </div>
-                
-                <div>
-                    <div class="flex items-center space-x-6">
-                        <a href="/" class="text-gray-600 hover:text-blue-600 font-medium">Home</a>
-                        <a href="/history" class="text-gray-600 hover:text-blue-600 font-medium">History</a>
-                        <a href="/help" class="text-gray-600 hover:text-blue-600 font-medium">Help / FAQ</a>
-                        
-                        {% if user.is_authenticated %}
-                            <div class="relative">
-                                <button type="button" id="profile-menu-button" class="flex flex-col items-center justify-center text-blue-500 hover:text-blue-600 transition-colors group">
-                                    <i class="bi bi-person-circle text-4xl mb-1"></i>
-                                    <span class="text-gray-900 font-semibold text-sm group-hover:text-gray-700">
-                                        {{ user.username }}
-                                    </span>
-                                </button>
-
-                                <div id="profile-menu-dropdown" 
-                                     class="hidden absolute right-0 z-10 mt-2 w-48 origin-top-right rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none">
-                                    <div class="py-1" role="menu" aria-orientation="vertical" aria-labelledby="profile-menu-button">
-                                        <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100" role="menuitem">
-                                            My Profile
-                                        </a>
-                                        <a href="{% url 'users:logout' %}" class="block px-4 py-2 text-sm text-red-600 hover:bg-gray-100 hover:text-red-700" role="menuitem">
-                                            Log Out
-                                        </a>
-                                    </div>
-                                </div>
-                            </div>
-
-                        {% else %}
-                            <a href="{% url 'users:login' %}" 
-                               class="bg-blue-600 text-white px-5 py-2 rounded-full font-semibold hover:bg-blue-700 transition-colors text-sm">
-                                Log In
-                            </a>
-                        {% endif %}
-                    </div>
-                </div>
-            </div>
-        </div>
-    </nav>
+    {% include 'navbar.html' %}
 
     <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
         <div class="max-w-3xl">
@@ -225,82 +173,7 @@
     </section>
 
 
-    <script>
-        // --- 1. KODE DRAG/DROP & PREVIEW ANDA ---
-        const dropZone = document.getElementById('drop-zone');
-        const fileInput = document.getElementById('file-input');
-        const classifyBtn = document.getElementById('classify-btn');
-        const filePreview = document.getElementById('file-preview');
-        const fileNameEl = document.getElementById('file-name');
-        const removeFileBtn = document.getElementById('remove-file-btn');
-
-        function handleFileSelect(file) {
-            if (!file) return;
-            fileNameEl.textContent = file.name;
-            filePreview.classList.remove('hidden');
-            filePreview.classList.add('flex');
-            dropZone.classList.add('hidden');
-            classifyBtn.disabled = false;
-        }
-
-        function removeFilePreview() {
-            fileInput.value = ''; 
-            filePreview.classList.add('hidden');
-            filePreview.classList.remove('flex');
-            dropZone.classList.remove('hidden');
-            classifyBtn.disabled = true;
-        }
-
-        removeFileBtn.addEventListener('click', removeFilePreview);
-        fileInput.addEventListener('change', (e) => {
-            handleFileSelect(e.target.files[0]);
-        });
-
-        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
-            dropZone.addEventListener(eventName, preventDefaults, false);
-        });
-
-        function preventDefaults (e) {
-            e.preventDefault();
-            e.stopPropagation();
-        }
-
-        ['dragenter', 'dragover'].forEach(eventName => {
-            dropZone.addEventListener(eventName, () => dropZone.classList.add('border-blue-500', 'bg-blue-50'), false);
-        });
-
-        ['dragleave', 'drop'].forEach(eventName => {
-            dropZone.addEventListener(eventName, () => dropZone.classList.remove('border-blue-500', 'bg-blue-50'), false);
-        });
-
-        dropZone.addEventListener('drop', (e) => {
-            const dt = e.dataTransfer;
-            const files = dt.files;
-            fileInput.files = files; 
-            handleFileSelect(files[0]);
-        }, false);
-
-
-        // --- 2. JAVASCRIPT BARU UNTUK DROPDOWN PROFIL ---
-        
-        // Cek dulu apakah elemennya ada (hanya ada jika user login)
-        const profileMenuButton = document.getElementById('profile-menu-button');
-        const profileMenuDropdown = document.getElementById('profile-menu-dropdown');
-
-        if (profileMenuButton) {
-            // 1. Tampilkan/sembunyikan dropdown saat tombol diklik
-            profileMenuButton.addEventListener('click', () => {
-                profileMenuDropdown.classList.toggle('hidden');
-            });
-
-            // 2. Sembunyikan dropdown saat pengguna mengklik di luar area dropdown
-            window.addEventListener('click', (event) => {
-                // Cek apakah target klik BUKAN tombol DAN BUKAN di dalam menu
-                if (!profileMenuButton.contains(event.target) && !profileMenuDropdown.contains(event.target)) {
-                    profileMenuDropdown.classList.add('hidden');
-                }
-            });
-        }
-    </script>
+    {% load static %}
+    <script src="{% static 'js/home.js' %}"></script>
 </body>
 </html>

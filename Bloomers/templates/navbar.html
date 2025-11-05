@@ -1,17 +1,59 @@
-<nav class="bg-white border-b">
+<nav class="bg-white shadow-sm">
 	<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 		<div class="flex justify-between h-16 items-center">
+
 			<div class="flex items-center">
-				<a href="/" class="text-xl font-bold text-indigo-600">Bloomers</a>
-				<div class="ml-6 hidden md:flex space-x-4">
-					<a href="/users/" class="px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-100">Users</a>
-					<a href="/soal/" class="px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-100">Soal</a>
-					<a href="/klasifikasi/" class="px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-100">Klasifikasi</a>
-					<a href="/laporan/" class="px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-100">Laporan</a>
-				</div>
+				<svg class="w-8 h-8 text-blue-500" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+					<path d="M12 3L3 8L12 13L21 8L12 3Z" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+						stroke-linejoin="round" />
+					<path d="M3 13L12 18L21 13" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+						stroke-linejoin="round" />
+					<path d="M3 18L12 23L21 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+						stroke-linejoin="round" />
+				</svg>
+				<span class="text-blue-500 text-4xl font-bold ml-2">BLOOMERS</span>
 			</div>
+
 			<div>
-				<a href="/admin/" class="px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-100">Admin</a>
+				<div class="flex items-center space-x-6">
+					<a href="/" class="text-gray-600 hover:text-blue-600 font-medium">Home</a>
+					<a href="/history" class="text-gray-600 hover:text-blue-600 font-medium">History</a>
+					<a href="/help" class="text-gray-600 hover:text-blue-600 font-medium">Help / FAQ</a>
+
+					{% if user.is_authenticated %}
+					<div class="relative">
+						<button type="button" id="profile-menu-button"
+							class="flex flex-col items-center justify-center text-blue-500 hover:text-blue-600 transition-colors group">
+							<i class="bi bi-person-circle text-4xl mb-1"></i>
+							<span class="text-gray-900 font-semibold text-sm group-hover:text-gray-700">
+								{{ user.username }}
+							</span>
+						</button>
+
+						<div id="profile-menu-dropdown"
+							class="hidden absolute right-0 z-10 mt-2 w-48 origin-top-right rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none">
+							<div class="py-1" role="menu" aria-orientation="vertical"
+								aria-labelledby="profile-menu-button">
+								<a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+									role="menuitem">
+									My Profile
+								</a>
+								<a href="{% url 'users:log	out' %}"
+									class="block px-4 py-2 text-sm text-red-600 hover:bg-gray-100 hover:text-red-700"
+									role="menuitem">
+									Log Out
+								</a>
+							</div>
+						</div>
+					</div>
+
+					{% else %}
+					<a href="{% url 'users:login' %}"
+						class="bg-blue-600 text-white px-5 py-2 rounded-full font-semibold hover:bg-blue-700 transition-colors text-sm">
+						Log In
+					</a>
+					{% endif %}
+				</div>
 			</div>
 		</div>
 	</div>
