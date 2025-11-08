@@ -265,15 +265,15 @@ def profile_view(request):
                     messages.error(request, 'Invalid image file.')
                     return redirect('users:profile')
                 
-                # Delete old image if it exists and is not default
-                if profile_obj.image:
-                    old_image_path = profile_obj.image.path
-                    if os.path.exists(old_image_path) and 'default.jpg' not in old_image_path:
-                        try:
+                # Delete old image if it exists
+                if profile_obj.has_custom_image:
+                    try:
+                        old_image_path = profile_obj.image.path
+                        if os.path.exists(old_image_path):
                             os.remove(old_image_path)
                             logger.info(f"Deleted old profile image: {old_image_path}")
-                        except Exception as e:
-                            logger.warning(f"Could not delete old profile image: {e}")
+                    except Exception as e:
+                        logger.warning(f"Could not delete old profile image: {e}")
                 
                 # Save new image
                 profile_obj.image = uploaded_file
@@ -302,31 +302,38 @@ def profile_view(request):
         # --- 4. Remove Profile Picture ---
         elif 'remove_image' in request.POST:
             try:
-                # Check if user has a non-default image
-                if profile_obj.image:
-                    image_path = profile_obj.image.path
-                    image_name = profile_obj.image.name
-                    
-                    # Check if it's not the default image
-                    if 'default.jpg' not in image_name:
-                        # Delete the file from storage
-                        if os.path.exists(image_path):
-                            try:
+                # Refresh profile from database to ensure latest data
+                profile_obj = Profile.objects.get(user=request.user)
+                
+                # Check if user has a custom image
+                if profile_obj.has_custom_image:
+                    # Try to delete the physical file first
+                    try:
+                        if profile_obj.image and hasattr(profile_obj.image, 'path'):
+                            image_path = profile_obj.image.path
+                            if os.path.exists(image_path):
                                 os.remove(image_path)
                                 logger.info(f"Deleted profile image file: {image_path}")
-                            except Exception as e:
-                                logger.warning(f"Could not delete profile image file: {e}")
-                        
-                        # Set to default
-                        profile_obj.image = 'profile_pics/default.jpg'
-                        profile_obj.save()
-                        
+                    except Exception as e:
+                        logger.warning(f"Could not delete image file: {e}")
+                    
+                    # Clear the image field - this will show letter avatar
+                    profile_obj.image.delete(save=False)  # Delete from storage if not already
+                    profile_obj.image = None  # Set field to None
+                    profile_obj.save()
+                    
+                    # Verify it was cleared by refreshing from database
+                    profile_obj.refresh_from_db()
+                    
+                    if not profile_obj.has_custom_image:
                         logger.info(f"Profile picture removed for user: {request.user.username}")
                         messages.success(request, 'Profile picture removed successfully.')
                     else:
-                        messages.info(request, 'You are already using the default profile picture.')
+                        logger.error(f"Image field not cleared for user: {request.user.username}")
+                        messages.error(request, 'Failed to remove profile picture. Please try again.')
                 else:
-                    messages.info(request, 'You are already using the default profile picture.')
+                    logger.info(f"User {request.user.username} already using default avatar")
+                    messages.info(request, 'You are already using the default avatar.')
                     
             except Exception as e:
                 logger.error(f"Error removing profile picture for {request.user.username}: {e}", exc_info=True)

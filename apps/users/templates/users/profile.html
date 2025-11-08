@@ -27,46 +27,45 @@
                     <a href="{% url 'klasifikasi:history' %}" class="text-gray-600 hover:text-blue-600 font-medium transition-colors">History</a>
                     <a href="{% url 'soal:help' %}" class="text-gray-600 hover:text-blue-600 font-medium transition-colors">Help / FAQ</a>
                     
-                                    <!-- Updated Navbar User Profile Section -->
-                {% if user.is_authenticated %}
-                    <div class="relative">
-                        <button type="button" id="profile-menu-button" class="flex flex-row items-center space-x-2 text-blue-600 hover:text-blue-700 transition-colors group focus:outline-none">
-                            {% if user.profile.has_custom_image %}
-                                <img src="{{ user.profile.image.url }}" 
-                                    alt="{{ user.username }}" 
-                                    class="w-10 h-10 rounded-full object-cover border-2 border-blue-200">
-                            {% else %}
-                                <div class="w-10 h-10 rounded-full border-2 border-blue-200 bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
-                                    <span class="text-white text-lg font-bold">{{ user.profile.avatar_letter }}</span>
-                                </div>
-                            {% endif %}
-                            <span class="text-gray-900 font-semibold group-hover:text-gray-700">
-                                {{ user.username }}
-                            </span>
-                        </button>
+                    {% if user.is_authenticated %}
+                        <div class="relative">
+                            <button type="button" id="profile-menu-button" class="flex flex-row items-center space-x-2 text-blue-600 hover:text-blue-700 transition-colors group focus:outline-none">
+                                {% if user.profile.has_custom_image %}
+                                    <img src="{{ user.profile.image.url }}" 
+                                        alt="{{ user.username }}" 
+                                        class="w-10 h-10 rounded-full object-cover border-2 border-blue-200">
+                                {% else %}
+                                    <div class="w-10 h-10 rounded-full border-2 border-blue-200 bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
+                                        <span class="text-white text-lg font-bold">{{ user.profile.avatar_letter }}</span>
+                                    </div>
+                                {% endif %}
+                                <span class="text-gray-900 font-semibold group-hover:text-gray-700">
+                                    {{ user.username }}
+                                </span>
+                            </button>
 
-                        <div id="profile-menu-dropdown" 
-                            class="hidden absolute right-0 z-10 mt-2 w-48 origin-top-right rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none">
-                            <div class="py-1" role="menu">
-                                <a href="{% url 'users:profile' %}" class="block px-4 py-2 text-sm text-blue-700 bg-blue-50" role="menuitem">
-                                    <i class="bi bi-person mr-2"></i> My Profile
-                                </a>
-                                <a href="{% url 'users:profile' %}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors" role="menuitem">
-                                    <i class="bi bi-gear mr-2"></i> Settings
-                                </a>
-                                <hr class="my-1">
-                                <a href="{% url 'users:logout' %}" class="block px-4 py-2 text-sm text-red-600 hover:bg-gray-100 hover:text-red-700 transition-colors" role="menuitem">
-                                    <i class="bi bi-box-arrow-right mr-2"></i> Log Out
-                                </a>
+                            <div id="profile-menu-dropdown" 
+                                class="hidden absolute right-0 z-10 mt-2 w-48 origin-top-right rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none">
+                                <div class="py-1" role="menu">
+                                    <a href="{% url 'users:profile' %}" class="block px-4 py-2 text-sm text-blue-700 bg-blue-50" role="menuitem">
+                                        <i class="bi bi-person mr-2"></i> My Profile
+                                    </a>
+                                    <a href="{% url 'users:profile' %}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors" role="menuitem">
+                                        <i class="bi bi-gear mr-2"></i> Settings
+                                    </a>
+                                    <hr class="my-1">
+                                    <a href="{% url 'users:logout' %}" class="block px-4 py-2 text-sm text-red-600 hover:bg-gray-100 hover:text-red-700 transition-colors" role="menuitem">
+                                        <i class="bi bi-box-arrow-right mr-2"></i> Log Out
+                                    </a>
+                                </div>
                             </div>
                         </div>
-                    </div>
-                {% else %}
-                    <a href="{% url 'users:login' %}" 
-                    class="bg-blue-600 text-white px-6 py-2 rounded-full font-semibold hover:bg-blue-700 transition-all shadow-md hover:shadow-lg text-sm">
-                        Log In
-                    </a>
-                {% endif %}
+                    {% else %}
+                        <a href="{% url 'users:login' %}" 
+                        class="bg-blue-600 text-white px-6 py-2 rounded-full font-semibold hover:bg-blue-700 transition-all shadow-md hover:shadow-lg text-sm">
+                            Log In
+                        </a>
+                    {% endif %}
                 </div>
 
                 <div class="md:hidden">
@@ -138,38 +137,43 @@
             
             <div class="lg:col-span-1 space-y-6 md:space-y-8">
                 
+                <!-- PROFILE PICTURE SECTION - COMPLETELY REWRITTEN -->
                 <div class="bg-white rounded-2xl shadow-lg p-6 md:p-8">
                     <h2 class="text-xl md:text-2xl font-bold mb-6 text-gray-900">Profile Picture</h2>
                     <form id="profile-pic-form" method="POST" enctype="multipart/form-data" action="{% url 'users:profile' %}">
                         {% csrf_token %}
                         <div class="flex flex-col items-center space-y-4">
                             
-                            {% if user.profile.image %}
+                            <!-- Profile Picture Preview - USES has_custom_image -->
+                            {% if user.profile.has_custom_image %}
                                 <img id="profile-pic-preview" 
                                      src="{{ user.profile.image.url }}" 
                                      alt="Profile Preview" 
                                      class="w-32 h-32 md:w-48 md:h-48 rounded-full object-cover border-4 border-blue-200 shadow-md">
                             {% else %}
+                                <!-- Letter Avatar (Default) - USES avatar_letter -->
                                 <div id="profile-pic-preview" 
                                      class="w-32 h-32 md:w-48 md:h-48 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 border-4 border-blue-200 shadow-md flex items-center justify-center">
                                     <span class="text-white text-5xl md:text-7xl font-bold">
-                                        {{ user.username|first|upper }}
+                                        {{ user.profile.avatar_letter }}
                                     </span>
                                 </div>
                             {% endif %}
 
+                            <!-- File Input (Hidden) -->
                             <input type="file" 
-                                 id="profile-pic-input" 
-                                 name="profile_image" 
-                                 accept="image/png, image/jpeg, image/jpg" 
-                                 class="hidden">
+                                   id="profile-pic-input" 
+                                   name="profile_image" 
+                                   accept="image/png, image/jpeg, image/jpg" 
+                                   class="hidden">
                             
+                            <!-- Action Buttons - USES has_custom_image -->
                             <div class="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-4 w-full sm:w-auto">
                                 <label for="profile-pic-input" class="cursor-pointer bg-blue-600 text-white px-5 py-2 rounded-full font-semibold hover:bg-blue-700 transition-all shadow-md text-sm text-center">
                                     Change Photo
                                 </label>
                                 
-                                {% if user.profile.image and user.profile.image.name != 'profile_pics/default.jpg' %}
+                                {% if user.profile.has_custom_image %}
                                     <button type="submit" name="remove_image" value="true" class="bg-red-100 text-red-700 px-5 py-2 rounded-full font-semibold hover:bg-red-200 transition-all text-sm">
                                         Remove
                                     </button>
@@ -180,6 +184,7 @@
                                 {% endif %}
                             </div>
 
+                            <!-- Save Button (Hidden until file selected) -->
                             <button type="submit" id="save-pic-btn" class="hidden w-full bg-green-600 text-white py-2 rounded-full font-bold transition-all hover:bg-green-700 shadow-lg text-sm">
                                 Save New Photo
                             </button>

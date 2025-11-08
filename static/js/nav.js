@@ -127,6 +127,7 @@ function initializeProfilePicture() {
                 currentPreview.parentNode.replaceChild(img, currentPreview);
             } else {
                 // If already an <img> tag, just update the src
+                // Add cache-busting to prevent browser caching issues
                 currentPreview.src = event.target.result;
             }
             
@@ -177,13 +178,7 @@ function initializeProfilePicture() {
                     submitButton.innerHTML = '<i class="bi bi-hourglass-split animate-spin"></i> Uploading...';
                 }
                 
-                // Timeout to re-enable if something goes wrong
-                setTimeout(() => {
-                    if (submitButton.disabled) {
-                        submitButton.disabled = false;
-                        submitButton.innerHTML = originalText;
-                    }
-                }, 10000);
+                // Don't restore button state - let page reload
             }
         });
     }

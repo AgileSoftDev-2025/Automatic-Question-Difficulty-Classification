@@ -63,8 +63,19 @@ class Profile(models.Model):
     def has_custom_image(self):
         """
         Check if user has uploaded a custom profile picture.
+        Returns False if no image or if image field is empty/invalid.
         """
-        return bool(self.image and self.image.name)
+        if not self.image:
+            return False
+        
+        # Try to access image.name to verify it's valid
+        try:
+            # Check if image has a name and it's not empty
+            image_name = self.image.name
+            return bool(image_name and len(image_name.strip()) > 0)
+        except (ValueError, AttributeError, OSError):
+            # Image field exists but file is missing or invalid
+            return False
     
     @property
     def avatar_letter(self):
