@@ -83,6 +83,14 @@ def validate_file(uploaded_file):
     
     return True, None
 
+def help_faq(request):
+    """
+    Merender halaman Bantuan/FAQ.
+    """
+    context = {
+        'is_authenticated': request.user.is_authenticated,
+    }
+    return render(request, 'soal/help.html', context)
 
 def generate_unique_filename(original_filename):
     """

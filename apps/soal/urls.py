@@ -8,6 +8,7 @@ app_name = 'soal'
 urlpatterns = [
     # Home page with file upload
     path('', views.home, name='home'),
+    path('help/', views.help_faq, name='help'),
     
     # File management
     path('download/<int:history_id>/', views.download_file, name='download_file'),
