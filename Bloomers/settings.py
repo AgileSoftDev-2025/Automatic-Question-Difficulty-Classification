@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
 from pathlib import Path
+import os
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -131,8 +132,18 @@ STATIC_ROOT = BASE_DIR / "staticfiles"
 
 # Media (uploaded files)
 MEDIA_URL = '/media/'
-MEDIA_ROOT = BASE_DIR / 'media'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+# Pengaturan URL Autentikasi
+# Ke mana mengarahkan pengguna jika mereka belum login dan mencoba mengakses halaman @login_required
+LOGIN_URL = 'users:login' 
+
+# Ke mana mengarahkan pengguna setelah mereka berhasil login
+LOGIN_REDIRECT_URL = 'soal:home' 
+
+# Ke mana mengarahkan pengguna setelah mereka logout
+LOGOUT_REDIRECT_URL = 'users:login'
