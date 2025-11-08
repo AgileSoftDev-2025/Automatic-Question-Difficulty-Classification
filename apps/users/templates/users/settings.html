@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+{% load static %}
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Settings - Bloomers</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <style>
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fade-in {
+            animation: fadeIn 0.5s ease-out;
+        }
+        .tab-active {
+            border-bottom: 3px solid #2563eb;
+            color: #2563eb;
+        }
+        @media (max-width: 768px) {
+            .settings-tabs {
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+            }
+            .settings-tabs::-webkit-scrollbar {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-blue-50 via-purple-50 to-blue-100 min-h-screen">
+    
+    <!-- Navigation -->
+    <nav class="bg-white shadow-md">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16 items-center">
+                
+                <div class="flex items-center">
+                    <svg class="w-10 h-10 text-blue-600" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M12 2L4 6V12C4 16.5 7.5 20.5 12 22C16.5 20.5 20 16.5 20 12V6L12 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="currentColor" opacity="0.2"/>
+                        <path d="M12 2L4 6V12C4 16.5 7.5 20.5 12 22C16.5 20.5 20 16.5 20 12V6L12 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    <span class="text-blue-600 text-3xl font-bold ml-3">BLOOMERS</span>
+                </div>
+                
+                <div class="hidden md:flex items-center space-x-6">
+                    <a href="{% url 'soal:home' %}" class="text-gray-600 hover:text-blue-600 font-medium transition-colors">Home</a>
+                    <a href="{% url 'klasifikasi:history' %}" class="text-gray-600 hover:text-blue-600 font-medium transition-colors">History</a>
+                    <a href="{% url 'soal:help' %}" class="text-gray-600 hover:text-blue-600 font-medium transition-colors">Help / FAQ</a>
+                    
+                    {% if user.is_authenticated %}
+                        <div class="relative">
+                            <button type="button" id="profile-menu-button" class="flex flex-row items-center space-x-2 text-blue-600 hover:text-blue-700 transition-colors group focus:outline-none">
+                                {% if user.profile.has_custom_image %}
+                                    <img src="{{ user.profile.image.url }}" 
+                                        alt="{{ user.username }}" 
+                                        class="w-10 h-10 rounded-full object-cover border-2 border-blue-200">
+                                {% else %}
+                                    <div class="w-10 h-10 rounded-full border-2 border-blue-200 bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
+                                        <span class="text-white text-lg font-bold">{{ user.profile.avatar_letter }}</span>
+                                    </div>
+                                {% endif %}
+                                <span class="text-gray-900 font-semibold group-hover:text-gray-700">
+                                    {{ user.username }}
+                                </span>
+                            </button>
+
+                            <div id="profile-menu-dropdown" 
+                                class="hidden absolute right-0 z-10 mt-2 w-48 origin-top-right rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none">
+                                <div class="py-1" role="menu">
+                                    <a href="{% url 'users:profile' %}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors" role="menuitem">
+                                        <i class="bi bi-person mr-2"></i> My Profile
+                                    </a>
+                                    <a href="{% url 'users:settings' %}" class="block px-4 py-2 text-sm text-blue-700 bg-blue-50" role="menuitem">
+                                        <i class="bi bi-gear mr-2"></i> Settings
+                                    </a>
+                                    <hr class="my-1">
+                                    <a href="{% url 'users:logout' %}" class="block px-4 py-2 text-sm text-red-600 hover:bg-gray-100 hover:text-red-700 transition-colors" role="menuitem">
+                                        <i class="bi bi-box-arrow-right mr-2"></i> Log Out
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    {% else %}
+                        <a href="{% url 'users:login' %}" 
+                        class="bg-blue-600 text-white px-6 py-2 rounded-full font-semibold hover:bg-blue-700 transition-all shadow-md hover:shadow-lg text-sm">
+                            Log In
+                        </a>
+                    {% endif %}
+                </div>
+
+                <div class="md:hidden">
+                    <button type="button" id="mobile-menu-button" class="text-gray-600 hover:text-blue-600 focus:outline-none">
+                        <i class="bi bi-list text-3xl"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div id="mobile-menu" class="hidden md:hidden pb-4">
+                <div class="space-y-2">
+                    <a href="{% url 'soal:home' %}" class="block px-4 py-2 text-gray-600 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-colors">Home</a>
+                    <a href="{% url 'klasifikasi:history' %}" class="block px-4 py-2 text-gray-600 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-colors">History</a>
+                    <a href="{% url 'soal:help' %}" class="block px-4 py-2 text-gray-600 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-colors">Help / FAQ</a>
+                    {% if user.is_authenticated %}
+                        <hr>
+                        <a href="{% url 'users:profile' %}" class="block px-4 py-2 text-gray-600 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-colors">My Profile</a>
+                        <a href="{% url 'users:settings' %}" class="block px-4 py-2 text-blue-600 bg-blue-50 rounded-lg font-semibold">Settings</a>
+                        <a href="{% url 'users:logout' %}" class="block px-4 py-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors">Log Out</a>
+                    {% else %}
+                        <a href="{% url 'users:login' %}" class="block w-full text-center bg-blue-600 text-white px-6 py-2 rounded-full font-semibold hover:bg-blue-700 transition-all shadow-md text-sm">
+                            Log In
+                        </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Header Section -->
+    <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12">
+        <div class="max-w-3xl">
+            <h1 class="text-3xl md:text-5xl font-bold text-gray-900 leading-tight mb-4">
+                <i class="bi bi-gear-fill text-blue-600"></i> Settings
+            </h1>
+            <p class="text-lg md:text-xl text-gray-700">
+                Customize your Bloomers experience and manage your account preferences.
+            </p>
+        </div>
+    </section>
+
+    <!-- Messages -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-4">
+        {% if messages %}
+            {% for message in messages %}
+            <div id="message-alert-{{ forloop.counter }}" 
+                 class="p-4 rounded-xl shadow-md mb-4 flex justify-between items-center animate-fade-in
+                        {% if message.tags == 'success' %} bg-green-100 border border-green-300 text-green-800
+                        {% elif message.tags == 'error' %} bg-red-100 border border-red-300 text-red-800
+                        {% else %} bg-blue-100 border border-blue-300 text-blue-800 {% endif %}"
+                 role="alert">
+                <div class="flex items-center">
+                    {% if message.tags == 'success' %}
+                        <i class="bi bi-check-circle-fill text-xl mr-3"></i>
+                    {% elif message.tags == 'error' %}
+                        <i class="bi bi-exclamation-triangle-fill text-xl mr-3"></i>
+                    {% else %}
+                        <i class="bi bi-info-circle-fill text-xl mr-3"></i>
+                    {% endif %}
+                    <span class="font-medium">{{ message }}</span>
+                </div>
+                <button type="button" class="text-2xl font-bold leading-none hover:opacity-70 transition-opacity ml-4" 
+                        onclick="this.parentElement.style.display='none'">
+                    &times;
+                </button>
+            </div>
+            {% endfor %}
+        {% endif %}
+    </div>
+
+    <!-- Settings Content -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-16">
+        <!-- Tabs Navigation -->
+        <div class="bg-white rounded-t-2xl shadow-lg overflow-hidden">
+            <div class="settings-tabs flex border-b border-gray-200">
+                <button type="button" data-tab="account" class="tab-button tab-active flex-1 px-4 sm:px-6 py-4 text-sm sm:text-base font-semibold text-gray-600 hover:text-blue-600 transition-colors whitespace-nowrap">
+                    <i class="bi bi-person-circle mr-2"></i>
+                    <span class="hidden sm:inline">Account</span>
+                </button>
+                <button type="button" data-tab="security" class="tab-button flex-1 px-4 sm:px-6 py-4 text-sm sm:text-base font-semibold text-gray-600 hover:text-blue-600 transition-colors whitespace-nowrap">
+                    <i class="bi bi-shield-lock mr-2"></i>
+                    <span class="hidden sm:inline">Security</span>
+                </button>
+                <button type="button" data-tab="notifications" class="tab-button flex-1 px-4 sm:px-6 py-4 text-sm sm:text-base font-semibold text-gray-600 hover:text-blue-600 transition-colors whitespace-nowrap">
+                    <i class="bi bi-bell mr-2"></i>
+                    <span class="hidden sm:inline">Notifications</span>
+                </button>
+                <button type="button" data-tab="preferences" class="tab-button flex-1 px-4 sm:px-6 py-4 text-sm sm:text-base font-semibold text-gray-600 hover:text-blue-600 transition-colors whitespace-nowrap">
+                    <i class="bi bi-sliders mr-2"></i>
+                    <span class="hidden sm:inline">Preferences</span>
+                </button>
+            </div>
+
+            <!-- Tab Contents -->
+            <div class="p-6 sm:p-8">
+                
+                <!-- Account Tab -->
+                <div id="account-tab" class="tab-content">
+                    <h2 class="text-2xl font-bold mb-6 text-gray-900">Account Information</h2>
+                    
+                    <form method="POST" action="{% url 'users:settings' %}" class="space-y-6">
+                        {% csrf_token %}
+                        <input type="hidden" name="form_type" value="account">
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                                <label for="first-name" class="block text-sm font-medium text-gray-700 mb-2">
+                                    <i class="bi bi-person mr-1"></i> First Name
+                                </label>
+                                <input type="text" 
+                                       name="first_name" 
+                                       id="first-name" 
+                                       value="{{ user.first_name }}"
+                                       maxlength="150"
+                                       class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                                       placeholder="Enter your first name">
+                            </div>
+                            
+                            <div>
+                                <label for="last-name" class="block text-sm font-medium text-gray-700 mb-2">
+                                    <i class="bi bi-person mr-1"></i> Last Name
+                                </label>
+                                <input type="text" 
+                                       name="last_name" 
+                                       id="last-name" 
+                                       value="{{ user.last_name }}"
+                                       maxlength="150"
+                                       class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                                       placeholder="Enter your last name">
+                            </div>
+                        </div>
+
+                        <div>
+                            <label for="username" class="block text-sm font-medium text-gray-700 mb-2">
+                                <i class="bi bi-at mr-1"></i> Username
+                            </label>
+                            <input type="text" 
+                                   name="username" 
+                                   id="username" 
+                                   value="{{ user.username }}" 
+                                   class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl shadow-sm bg-gray-50 text-gray-600 cursor-not-allowed"
+                                   readonly>
+                            <p class="text-gray-500 text-xs mt-1">Username cannot be changed.</p>
+                        </div>
+                        
+                        <div>
+                            <label for="email" class="block text-sm font-medium text-gray-700 mb-2">
+                                <i class="bi bi-envelope mr-1"></i> Email Address
+                            </label>
+                            <input type="email" 
+                                   name="email" 
+                                   id="email" 
+                                   value="{{ user.email }}" 
+                                   required
+                                   class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                                   placeholder="your.email@example.com">
+                            <p class="text-gray-500 text-xs mt-1">This email is used for login and notifications.</p>
+                        </div>
+
+                        <div class="pt-4 flex justify-end">
+                            <button type="submit" 
+                                    class="bg-blue-600 text-white px-8 py-3 rounded-full font-bold hover:bg-blue-700 transition-all shadow-lg hover:shadow-xl">
+                                <i class="bi bi-check-circle mr-2"></i>
+                                Save Changes
+                            </button>
+                        </div>
+                    </form>
+
+                    <hr class="my-8">
+
+                    <!-- Danger Zone -->
+                    <div class="bg-red-50 border-2 border-red-200 rounded-xl p-6">
+                        <h3 class="text-lg font-bold text-red-800 mb-3">
+                            <i class="bi bi-exclamation-triangle-fill mr-2"></i>
+                            Danger Zone
+                        </h3>
+                        <p class="text-red-700 mb-4">
+                            Once you delete your account, there is no going back. This will permanently delete all your data.
+                        </p>
+                        <button type="button" 
+                                id="delete-account-btn"
+                                class="bg-red-600 text-white px-6 py-2 rounded-full font-semibold hover:bg-red-700 transition-all shadow-md">
+                            <i class="bi bi-trash mr-2"></i>
+                            Delete My Account
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Security Tab -->
+                <div id="security-tab" class="tab-content hidden">
+                    <h2 class="text-2xl font-bold mb-6 text-gray-900">Security Settings</h2>
+                    
+                    <!-- Change Password -->
+                    <form method="POST" action="{% url 'users:settings' %}" class="space-y-6 mb-8">
+                        {% csrf_token %}
+                        <input type="hidden" name="form_type" value="password">
+                        
+                        <div>
+                            <label for="current-password" class="block text-sm font-medium text-gray-700 mb-2">
+                                <i class="bi bi-lock mr-1"></i> Current Password
+                            </label>
+                            <div class="relative">
+                                <input type="password" 
+                                       name="old_password" 
+                                       id="current-password"
+                                       required
+                                       class="w-full px-4 py-3 pr-12 border-2 border-gray-200 rounded-xl shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                                       placeholder="Enter current password">
+                                <button type="button" class="password-toggle absolute top-1/2 -translate-y-1/2 right-4 text-gray-400 hover:text-gray-600">
+                                    <i class="bi bi-eye-slash text-xl"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label for="new-password" class="block text-sm font-medium text-gray-700 mb-2">
+                                <i class="bi bi-lock-fill mr-1"></i> New Password
+                            </label>
+                            <div class="relative">
+                                <input type="password" 
+                                       name="new_password1" 
+                                       id="new-password"
+                                       required
+                                       minlength="8"
+                                       class="w-full px-4 py-3 pr-12 border-2 border-gray-200 rounded-xl shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                                       placeholder="Enter new password">
+                                <button type="button" class="password-toggle absolute top-1/2 -translate-y-1/2 right-4 text-gray-400 hover:text-gray-600">
+                                    <i class="bi bi-eye-slash text-xl"></i>
+                                </button>
+                            </div>
+                            <p class="text-gray-500 text-xs mt-1">Must be at least 8 characters with uppercase, lowercase, and numbers.</p>
+                        </div>
+
+                        <div>
+                            <label for="confirm-password" class="block text-sm font-medium text-gray-700 mb-2">
+                                <i class="bi bi-lock-fill mr-1"></i> Confirm New Password
+                            </label>
+                            <div class="relative">
+                                <input type="password" 
+                                       name="new_password2" 
+                                       id="confirm-password"
+                                       required
+                                       class="w-full px-4 py-3 pr-12 border-2 border-gray-200 rounded-xl shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                                       placeholder="Confirm new password">
+                                <button type="button" class="password-toggle absolute top-1/2 -translate-y-1/2 right-4 text-gray-400 hover:text-gray-600">
+                                    <i class="bi bi-eye-slash text-xl"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="pt-4 flex justify-end">
+                            <button type="submit" 
+                                    class="bg-blue-600 text-white px-8 py-3 rounded-full font-bold hover:bg-blue-700 transition-all shadow-lg hover:shadow-xl">
+                                <i class="bi bi-shield-check mr-2"></i>
+                                Update Password
+                            </button>
+                        </div>
+                    </form>
+
+                    <hr class="my-8">
+
+                    <!-- Active Sessions -->
+                    <div>
+                        <h3 class="text-xl font-bold mb-4 text-gray-900">Active Sessions</h3>
+                        <div class="bg-gray-50 border-2 border-gray-200 rounded-xl p-6">
+                            <div class="flex items-start justify-between">
+                                <div class="flex items-start space-x-4">
+                                    <i class="bi bi-laptop text-3xl text-blue-600"></i>
+                                    <div>
+                                        <p class="font-semibold text-gray-900">Current Session</p>
+                                        <p class="text-sm text-gray-600">Last active: Just now</p>
+                                        <p class="text-xs text-gray-500 mt-1">{{ request.META.REMOTE_ADDR }}</p>
+                                    </div>
+                                </div>
+                                <span class="px-3 py-1 bg-green-100 text-green-800 text-xs font-semibold rounded-full">
+                                    Active
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Notifications Tab -->
+                <div id="notifications-tab" class="tab-content hidden">
+                    <h2 class="text-2xl font-bold mb-6 text-gray-900">Notification Preferences</h2>
+                    
+                    <form method="POST" action="{% url 'users:settings' %}" class="space-y-6">
+                        {% csrf_token %}
+                        <input type="hidden" name="form_type" value="notifications">
+                        
+                        <div class="space-y-4">
+                            <div class="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
+                                <div class="flex-1">
+                                    <label for="email-classification" class="font-semibold text-gray-900 cursor-pointer">
+                                        Classification Complete
+                                    </label>
+                                    <p class="text-sm text-gray-600">Receive email when file classification is complete</p>
+                                </div>
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" id="email-classification" name="notif_classification" class="sr-only peer" checked>
+                                    <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                </label>
+                            </div>
+
+                            <div class="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
+                                <div class="flex-1">
+                                    <label for="email-updates" class="font-semibold text-gray-900 cursor-pointer">
+                                        Product Updates
+                                    </label>
+                                    <p class="text-sm text-gray-600">Get notified about new features and improvements</p>
+                                </div>
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" id="email-updates" name="notif_updates" class="sr-only peer">
+                                    <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                </label>
+                            </div>
+
+                            <div class="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
+                                <div class="flex-1">
+                                    <label for="email-tips" class="font-semibold text-gray-900 cursor-pointer">
+                                        Tips & Tutorials
+                                    </label>
+                                    <p class="text-sm text-gray-600">Receive helpful tips to get the most out of Bloomers</p>
+                                </div>
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" id="email-tips" name="notif_tips" class="sr-only peer" checked>
+                                    <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                </label>
+                            </div>
+
+                            <div class="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
+                                <div class="flex-1">
+                                    <label for="email-marketing" class="font-semibold text-gray-900 cursor-pointer">
+                                        Marketing Emails
+                                    </label>
+                                    <p class="text-sm text-gray-600">Receive promotional offers and newsletters</p>
+                                </div>
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" id="email-marketing" name="notif_marketing" class="sr-only peer">
+                                    <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="pt-4 flex justify-end">
+                            <button type="submit" 
+                                    class="bg-blue-600 text-white px-8 py-3 rounded-full font-bold hover:bg-blue-700 transition-all shadow-lg hover:shadow-xl">
+                                <i class="bi bi-check-circle mr-2"></i>
+                                Save Preferences
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Preferences Tab -->
+                <div id="preferences-tab" class="tab-content hidden">
+                    <h2 class="text-2xl font-bold mb-6 text-gray-900">Application Preferences</h2>
+                    
+                    <form method="POST" action="{% url 'users:settings' %}" class="space-y-6">
+                        {% csrf_token %}
+                        <input type="hidden" name="form_type" value="preferences">
+                        
+                        <div>
+                            <label for="language" class="block text-sm font-medium text-gray-700 mb-2">
+                                <i class="bi bi-translate mr-1"></i> Language
+                            </label>
+                            <select id="language" 
+                                    name="language"
+                                    class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all">
+                                <option value="en">English</option>
+                                <option value="id">Bahasa Indonesia</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label for="timezone" class="block text-sm font-medium text-gray-700 mb-2">
+                                <i class="bi bi-clock mr-1"></i> Timezone
+                            </label>
+                            <select id="timezone" 
+                                    name="timezone"
+                                    class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all">
+                                <option value="Asia/Jakarta">Asia/Jakarta (WIB)</option>
+                                <option value="Asia/Makassar">Asia/Makassar (WITA)</option>
+                                <option value="Asia/Jayapura">Asia/Jayapura (WIT)</option>
+                                <option value="UTC">UTC</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label for="results-per-page" class="block text-sm font-medium text-gray-700 mb-2">
+                                <i class="bi bi-list-ol mr-1"></i> Results Per Page
+                            </label>
+                            <select id="results-per-page" 
+                                    name="results_per_page"
+                                    class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all">
+                                <option value="10">10 items</option>
+                                <option value="25" selected>25 items</option>
+                                <option value="50">50 items</option>
+                                <option value="100">100 items</option>
+                            </select>
+                        </div>
+
+                        <div class="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
+                            <div class="flex-1">
+                                <label for="auto-download" class="font-semibold text-gray-900 cursor-pointer">
+                                    Auto-download Results
+                                </label>
+                                <p class="text-sm text-gray-600">Automatically download classification results when complete</p>
+                            </div>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" id="auto-download" name="auto_download" class="sr-only peer">
+                                <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                            </label>
+                        </div>
+
+                        <div class="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
+                            <div class="flex-1">
+                                <label for="show-tutorials" class="font-semibold text-gray-900 cursor-pointer">
+                                    Show Tutorial on Login
+                                </label>
+                                <p class="text-sm text-gray-600">Display helpful tutorials when you log in</p>
+                            </div>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" id="show-tutorials" name="show_tutorials" class="sr-only peer" checked>
+                                <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                            </label>
+                        </div>
+
+                        <div class="pt-4 flex justify-end">
+                            <button type="submit" 
+                                    class="bg-blue-600 text-white px-8 py-3 rounded-full font-bold hover:bg-blue-700 transition-all shadow-lg hover:shadow-xl">
+                                <i class="bi bi-check-circle mr-2"></i>
+                                Save Preferences
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+            </div>
+        </div>
+    </main>
+
+    <!-- Delete Account Modal -->
+    <div id="delete-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 sm:p-8 animate-fade-in">
+            <div class="text-center mb-6">
+                <div class="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-red-100 mb-4">
+                    <i class="bi bi-exclamation-triangle-fill text-3xl text-red-600"></i>
+                </div>
+                <h3 class="text-2xl font-bold text-gray-900 mb-2">Delete Account</h3>
+                <p class="text-gray-600">
+                    This action cannot be undone. All your data, including classification history, will be permanently deleted.
+                </p>
+            </div>
+
+            <form method="POST" action="{% url 'users:delete_account' %}" id="delete-account-form">
+                {% csrf_token %}
+                
+                <div class="mb-6">
+                    <label for="confirm-password-delete" class="block text-sm font-medium text-gray-700 mb-2">
+                        Enter your password to confirm
+                    </label>
+                    <input type="password" 
+                           name="password" 
+                           id="confirm-password-delete"
+                           required
+                           class="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                           placeholder="Enter your password">
+                </div>
+
+                <div class="flex space-x-3">
+                    <button type="button" 
+                            id="cancel-delete-btn"
+                            class="flex-1 bg-gray-200 text-gray-800 px-6 py-3 rounded-full font-semibold hover:bg-gray-300 transition-all">
+                        Cancel
+                    </button>
+                    <button type="submit" 
+                            class="flex-1 bg-red-600 text-white px-6 py-3 rounded-full font-semibold hover:bg-red-700 transition-all">
+                        Delete Account
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="{% static 'js/settings.js' %}"></script>
+    <script src="{% static 'js/nav.js' %}"></script>
+</body>
+</html>

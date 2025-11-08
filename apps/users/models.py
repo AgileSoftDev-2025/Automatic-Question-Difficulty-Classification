@@ -56,6 +56,19 @@ class Profile(models.Model):
     created_at = models.DateTimeField(default=timezone.now)
     updated_at = models.DateTimeField(auto_now=True)
     
+    # Notification Preferences
+    notif_classification = models.BooleanField(default=True)
+    notif_updates = models.BooleanField(default=False)
+    notif_tips = models.BooleanField(default=True)
+    notif_marketing = models.BooleanField(default=False)
+    
+    # Application Preferences
+    language = models.CharField(max_length=10, default='en')
+    timezone = models.CharField(max_length=50, default='Asia/Jakarta')
+    results_per_page = models.IntegerField(default=25)
+    auto_download = models.BooleanField(default=False)
+    show_tutorials = models.BooleanField(default=True)
+    
     def __str__(self):
         return f"{self.user.username}'s Profile"
     

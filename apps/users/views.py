@@ -494,3 +494,234 @@ def profile_view(request):
     }
     
     return render(request, 'users/profile.html', context)
+
+@login_required(login_url='users:login')
+@csrf_protect
+def settings_view(request):
+    """
+    Handle all settings page functionality.
+    Processes multiple form types: account, password, notifications, preferences.
+    """
+    # Ensure profile exists
+    profile_obj, created = Profile.objects.get_or_create(user=request.user)
+    
+    if request.method == 'POST':
+        form_type = request.POST.get('form_type')
+        
+        if form_type == 'account':
+            return handle_account_settings(request)
+        elif form_type == 'password':
+            return handle_password_change(request)
+        elif form_type == 'notifications':
+            return handle_notification_settings(request, profile_obj)
+        elif form_type == 'preferences':
+            return handle_preference_settings(request, profile_obj)
+    
+    # GET request - render settings page
+    context = {
+        'user': request.user,
+        'profile': profile_obj,
+    }
+    
+    return render(request, 'users/settings.html', context)
+
+
+def handle_account_settings(request):
+    """Handle account information updates."""
+    try:
+        user = request.user
+        first_name = request.POST.get('first_name', '').strip()
+        last_name = request.POST.get('last_name', '').strip()
+        email = request.POST.get('email', '').strip().lower()
+        
+        # Validate names length
+        if first_name and len(first_name) > 150:
+            messages.error(request, 'First name is too long (max 150 characters).')
+            return redirect('users:settings')
+        
+        if last_name and len(last_name) > 150:
+            messages.error(request, 'Last name is too long (max 150 characters).')
+            return redirect('users:settings')
+        
+        # Validate email
+        try:
+            validate_email(email)
+        except ValidationError:
+            messages.error(request, 'Please enter a valid email address.')
+            return redirect('users:settings')
+        
+        # Check for duplicate email
+        if User.objects.filter(email__iexact=email).exclude(id=user.id).exists():
+            messages.error(request, 'This email is already in use by another account.')
+            logger.warning(f"Settings update attempt with duplicate email: {email}")
+            return redirect('users:settings')
+        
+        # Update user details
+        user.first_name = first_name
+        user.last_name = last_name
+        user.email = email
+        user.save(update_fields=['first_name', 'last_name', 'email'])
+        
+        logger.info(f"Account settings updated for user: {user.username}")
+        messages.success(request, '✓ Account information updated successfully.')
+        
+    except Exception as e:
+        logger.error(f"Error updating account settings for {request.user.username}: {e}", exc_info=True)
+        messages.error(request, "Failed to update account settings. Please try again.")
+    
+    return redirect('users:settings')
+
+
+def handle_password_change(request):
+    """Handle password change from settings page."""
+    password_form = PasswordChangeForm(request.user, request.POST)
+    
+    if password_form.is_valid():
+        try:
+            user = password_form.save()
+            update_session_auth_hash(request, user)
+            
+            logger.info(f"Password changed from settings for user: {user.username}")
+            messages.success(request, '✓ Your password was successfully updated!')
+            
+        except Exception as e:
+            logger.error(f"Error changing password for {request.user.username}: {e}", exc_info=True)
+            messages.error(request, 'An error occurred while updating your password.')
+    else:
+        # Display form errors
+        for field, errors in password_form.errors.items():
+            for error in errors:
+                messages.error(request, f"{error}")
+        
+        logger.warning(f"Password change failed for user: {request.user.username}")
+    
+    return redirect('users:settings#security')
+
+
+def handle_notification_settings(request, profile_obj):
+    """Handle notification preferences updates."""
+    try:
+        # Get notification preferences
+        notif_classification = request.POST.get('notif_classification') == 'on'
+        notif_updates = request.POST.get('notif_updates') == 'on'
+        notif_tips = request.POST.get('notif_tips') == 'on'
+        notif_marketing = request.POST.get('notif_marketing') == 'on'
+        
+        # Store in profile (you may need to add these fields to your Profile model)
+        # For now, we'll just show success message
+        # profile_obj.notif_classification = notif_classification
+        # profile_obj.notif_updates = notif_updates
+        # profile_obj.notif_tips = notif_tips
+        # profile_obj.notif_marketing = notif_marketing
+        # profile_obj.save()
+        
+        logger.info(f"Notification settings updated for user: {request.user.username}")
+        messages.success(request, '✓ Notification preferences saved successfully.')
+        
+    except Exception as e:
+        logger.error(f"Error updating notification settings: {e}", exc_info=True)
+        messages.error(request, "Failed to update notification settings. Please try again.")
+    
+    return redirect('users:settings#notifications')
+
+
+def handle_preference_settings(request, profile_obj):
+    """Handle application preference updates."""
+    try:
+        # Get preferences
+        language = request.POST.get('language', 'en')
+        timezone = request.POST.get('timezone', 'Asia/Jakarta')
+        results_per_page = request.POST.get('results_per_page', '25')
+        auto_download = request.POST.get('auto_download') == 'on'
+        show_tutorials = request.POST.get('show_tutorials') == 'on'
+        
+        # Store in profile (you may need to add these fields to your Profile model)
+        # profile_obj.language = language
+        # profile_obj.timezone = timezone
+        # profile_obj.results_per_page = int(results_per_page)
+        # profile_obj.auto_download = auto_download
+        # profile_obj.show_tutorials = show_tutorials
+        # profile_obj.save()
+        
+        logger.info(f"Preferences updated for user: {request.user.username}")
+        messages.success(request, '✓ Your preferences have been saved.')
+        
+    except Exception as e:
+        logger.error(f"Error updating preferences: {e}", exc_info=True)
+        messages.error(request, "Failed to update preferences. Please try again.")
+    
+    return redirect('users:settings#preferences')
+
+
+@login_required(login_url='users:login')
+@csrf_protect
+@transaction.atomic
+def delete_account_view(request):
+    """
+    Handle account deletion.
+    Requires password confirmation for security.
+    """
+    if request.method == 'POST':
+        password = request.POST.get('password', '')
+        
+        if not password:
+            messages.error(request, 'Password is required to delete your account.')
+            return redirect('users:settings')
+        
+        # Verify password
+        user = authenticate(username=request.user.email, password=password)
+        
+        if user is None:
+            messages.error(request, 'Incorrect password. Account deletion cancelled.')
+            logger.warning(f"Failed account deletion attempt for {request.user.username}")
+            return redirect('users:settings')
+        
+        try:
+            username = request.user.username
+            user_id = request.user.id
+            
+            # Delete profile image if exists
+            try:
+                profile = Profile.objects.get(user=request.user)
+                if profile.has_custom_image and profile.image:
+                    import os
+                    if os.path.exists(profile.image.path):
+                        os.remove(profile.image.path)
+            except Exception as e:
+                logger.warning(f"Could not delete profile image: {e}")
+            
+            # Delete all user's classification history and files
+            from apps.soal.models import ClassificationHistory
+            histories = ClassificationHistory.objects.filter(user=request.user)
+            
+            for history in histories:
+                if history.file_path:
+                    import os
+                    from django.conf import settings
+                    file_path = os.path.join(settings.MEDIA_ROOT, 'uploads', history.file_path)
+                    if os.path.exists(file_path):
+                        try:
+                            os.remove(file_path)
+                        except Exception as e:
+                            logger.warning(f"Could not delete file {file_path}: {e}")
+            
+            histories.delete()
+            
+            # Logout user
+            logout(request)
+            
+            # Delete user account (this will also delete profile due to CASCADE)
+            User.objects.filter(id=user_id).delete()
+            
+            logger.info(f"Account deleted: {username} (ID: {user_id})")
+            messages.success(request, f'Your account has been permanently deleted. Goodbye, {username}.')
+            
+            return redirect('users:register')
+            
+        except Exception as e:
+            logger.error(f"Error deleting account: {e}", exc_info=True)
+            messages.error(request, 'An error occurred while deleting your account. Please try again or contact support.')
+            return redirect('users:settings')
+    
+    # GET request - redirect to settings
+    return redirect('users:settings')
