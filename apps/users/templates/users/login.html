@@ -8,85 +8,92 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
 </head>
-<body class="bg-gray-50">
+<body class="bg-gradient-to-br from-blue-50 via-purple-50 to-blue-100 min-h-screen">
     <div class="flex min-h-screen">
         <!-- Left Side -->
-        <div class="w-1/2 bg-gray-50 flex flex-col justify-center px-24">
-            <div class="flex items-center justify-start mb-12">
+        <div class="w-1/2 flex flex-col justify-center px-24">
+            <div class="flex items-center justify-start mb-16">
                 <div class="flex items-center">
-                    <svg class="w-8 h-8 text-blue-500" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M12 3L3 8L12 13L21 8L12 3Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                        <path d="M3 13L12 18L21 13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                        <path d="M3 18L12 23L21 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <svg class="w-10 h-10 text-blue-600" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M12 2L4 6V12C4 16.5 7.5 20.5 12 22C16.5 20.5 20 16.5 20 12V6L12 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="currentColor" opacity="0.2"/>
+                        <path d="M12 2L4 6V12C4 16.5 7.5 20.5 12 22C16.5 20.5 20 16.5 20 12V6L12 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                     </svg>
-                    <span class="text-blue-500 text-4xl font-bold ml-2">BLOOMERS</span>
+                    <span class="text-blue-600 text-3xl font-bold ml-3">BLOOMERS</span>
                 </div>
             </div>
 
-            <h1 class="text-4xl font-extrabold mb-4 leading-tight">
-                Elevate the Way You <br> Assess
+            <h1 class="text-5xl font-bold mb-6 leading-tight text-gray-900">
+                Elevate the Way You Assess
             </h1>
-            <p class="text-gray-600 text-lg">
-                Bloomers helps educators streamline question <br>
-                analysis with smart AI that classifies cognitive levels <br>
+            <p class="text-gray-700 text-xl leading-relaxed">
+                Bloomers helps educators streamline question<br>
+                analysis with smart AI that classifies cognitive levels<br>
                 instantly and objectively.
             </p>
         </div>
 
         <!-- Right Side -->
-        <div class="w-1/2 bg-gradient-to-b from-blue-50 to-blue-100 flex flex-col justify-center items-center">
-            <div class="w-2/3">
-                <h2 class="text-2xl font-bold text-center mb-8">Welcome Back to Bloomers</h2>
+        <div class="w-1/2 flex flex-col justify-center items-center px-16">
+            <div class="w-full max-w-lg">
+                <h2 class="text-3xl font-bold text-center mb-12 text-gray-900">Welcome Back to<br>Bloomers</h2>
 
                 <!-- Messages -->
                 {% if messages %}
                     {% for message in messages %}
-                        <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg mb-4">
+                        <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg mb-6">
                             {{ message }}
                         </div>
                     {% endfor %}
                 {% endif %}
 
                 <!-- Login Form -->
-                <form method="POST" class="flex flex-col space-y-4">
+                <form method="POST" class="flex flex-col space-y-6" id="login-form">
                     {% csrf_token %}
                     
                     <div>
-                        <label class="block font-medium mb-1">Email</label>
+                        <label class="block font-semibold mb-2 text-gray-900">Email</label>
                         <input 
                             type="email" 
                             name="email"
                             required
                             value="{{ request.POST.email }}"
-                            class="w-full border rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            class="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white">
                     </div>
 
-                    <div>
-                        <label class="block font-medium mb-1">Password</label>
+                    <div class="relative">
+                        <label class="block font-semibold mb-2 text-gray-900">Password</label>
                         <input 
                             type="password" 
                             name="password"
+                            id="password-input"
                             required
-                            class="w-full border rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            class="w-full border-2 border-gray-200 rounded-xl px-4 py-3 pr-12 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white">
+                        
+                        <button type="button" id="password-toggle" class="absolute top-11 right-4 text-gray-400 hover:text-gray-600">
+                            <i class="bi bi-eye-slash text-xl"></i>
+                        </button>
                     </div>
 
-                    <div class="text-right text-sm">
-                        <a href="#" class="text-blue-600 font-medium hover:underline">Forgot Password?</a>
+                    <div class="text-right">
+                        <a href="#" class="text-blue-600 font-semibold hover:underline">Forgot Password?</a>
                     </div>
 
                     <button 
                         type="submit" 
-                        class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 rounded-lg shadow">
+                        id="login-submit-btn"
+                        class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-full shadow-lg transition-all duration-200 disabled:bg-blue-400 disabled:cursor-not-allowed text-lg">
                         Sign In
                     </button>
 
-                    <p class="text-center mt-4 text-gray-700">
-                        Don't have an account? 
-                        <a href="{% url 'users:register' %}" class="text-blue-600 hover:underline font-medium">Sign up here</a>
+                    <p class="text-center mt-6 text-gray-700 text-lg">
+                        already have an account?
+                        <a href="{% url 'users:register' %}" class="text-blue-600 hover:underline font-semibold">Sign up here</a>
                     </p>
                 </form>
             </div>
         </div>
     </div>
+
+    <script src="{% static 'js/login.js' %}"></script>
 </body>
 </html>

@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+{% load static %}
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Help/FAQ - Bloomers</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+</head>
+<body class="bg-gradient-to-br from-blue-50 via-purple-50 to-blue-100 min-h-screen">
+    
+    <nav class="bg-white shadow-md">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16 items-center">
+                
+                <div class="flex items-center">
+                    <svg class="w-10 h-10 text-blue-600" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M12 2L4 6V12C4 16.5 7.5 20.5 12 22C16.5 20.5 20 16.5 20 12V6L12 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="currentColor" opacity="0.2"/>
+                        <path d="M12 2L4 6V12C4 16.5 7.5 20.5 12 22C16.5 20.5 20 16.5 20 12V6L12 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    <span class="text-blue-600 text-3xl font-bold ml-3">BLOOMERS</span>
+                </div>
+                
+                <div class="flex items-center space-x-6">
+                    <a href="{% url 'soal:home' %}" class="text-gray-600 hover:text-blue-600 font-medium transition-colors">Home</a>
+                    <a href="{% url 'klasifikasi:history' %}" class="text-gray-600 hover:text-blue-600 font-medium transition-colors">History</a>
+                    <a href="{% url 'soal:help' %}" class="text-blue-600 hover:text-blue-700 font-semibold transition-colors">Help / FAQ</a>
+                    
+                    {% if user.is_authenticated %}
+                        <div class="relative">
+                            <button type="button" id="profile-menu-button" class="flex flex-col items-center justify-center text-blue-600 hover:text-blue-700 transition-colors group focus:outline-none">
+                                <i class="bi bi-person-circle text-4xl mb-1"></i>
+                                <span class="text-gray-900 font-semibold text-sm group-hover:text-gray-700">
+                                    {{ user.username }}
+                                </span>
+                            </button>
+                            <div id="profile-menu-dropdown" 
+                                 class="hidden absolute right-0 z-10 mt-2 w-48 origin-top-right rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none">
+                                <div class="py-1" role="menu">
+                                    <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors" role="menuitem">
+                                        <i class="bi bi-person mr-2"></i> My Profile
+                                    </a>
+                                    <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors" role="menuitem">
+                                        <i class="bi bi-gear mr-2"></i> Settings
+                                    </a>
+                                    <hr class="my-1">
+                                    <a href="{% url 'users:logout' %}" class="block px-4 py-2 text-sm text-red-600 hover:bg-gray-100 hover:text-red-700 transition-colors" role="menuitem">
+                                        <i class="bi bi-box-arrow-right mr-2"></i> Log Out
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    {% else %}
+                        <a href="{% url 'users:login' %}" 
+                           class="bg-blue-600 text-white px-6 py-2 rounded-full font-semibold hover:bg-blue-700 transition-all shadow-md hover:shadow-lg text-sm">
+                            Log In
+                        </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <div class="max-w-3xl">
+            <h1 class="text-5xl font-bold text-gray-900 leading-tight mb-4">
+                Help Center & <span class="text-blue-600">FAQ</span>
+            </h1>
+            <p class="text-xl text-gray-700">
+                Have questions? We have answers. Find everything you need to know about Bloomers right here.
+            </p>
+        </div>
+    </section>
+
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-16">
+        <div class="max-w-3xl mx-auto bg-white rounded-2xl shadow-lg p-8">
+            <div id="faq-accordion" class="space-y-4">
+                
+                <div class="border-b border-gray-200 pb-4">
+                    <button class="faq-button w-full flex justify-between items-center text-left py-2">
+                        <span class="text-lg font-semibold text-gray-900">What is Bloomers?</span>
+                        <i class="bi bi-plus-circle text-blue-600 text-2xl transition-transform"></i>
+                    </button>
+                    <div class="faq-panel hidden overflow-hidden pt-4 text-gray-700">
+                        <p>Bloomers is a web application designed to help educators and content creators. Its primary function is to automatically analyze and classify questions based on Bloom's Taxonomy (C1-C6), helping to ensure cognitive diversity in evaluation materials.</p>
+                    </div>
+                </div>
+
+                <div class="border-b border-gray-200 pb-4">
+                    <button class="faq-button w-full flex justify-between items-center text-left py-2">
+                        <span class="text-lg font-semibold text-gray-900">What file formats are supported?</span>
+                        <i class="bi bi-plus-circle text-blue-600 text-2xl transition-transform"></i>
+                    </button>
+                    <div class="faq-panel hidden overflow-hidden pt-4 text-gray-700">
+                        <p>Based on `views.py` (`ALLOWED_EXTENSIONS`), we currently support the following file formats:</p>
+                        <ul class="list-disc list-inside mt-2 ml-4 space-y-1">
+                            <li>.txt (Plain Text)</li>
+                            <li>.pdf (Portable Document Format)</li>
+                            <li>.csv (Comma-Separated Values)</li>
+                            <li>.docx (Microsoft Word Document)</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="border-b border-gray-200 pb-4">
+                    <button class="faq-button w-full flex justify-between items-center text-left py-2">
+                        <span class="text-lg font-semibold text-gray-900">What is the maximum allowed file size?</span>
+                        <i class="bi bi-plus-circle text-blue-600 text-2xl transition-transform"></i>
+                    </button>
+                    <div class="faq-panel hidden overflow-hidden pt-4 text-gray-700">
+                        <p>The maximum file size you can upload is <strong>10MB</strong>. This limit is set in `views.py` (`MAX_FILE_SIZE`).</p>
+                    </div>
+                </div>
+
+                <div class="border-b border-gray-200 pb-4">
+                    <button class="faq-button w-full flex justify-between items-center text-left py-2">
+                        <span class="text-lg font-semibold text-gray-900">Why did my upload fail?</span>
+                        <i class="bi bi-plus-circle text-blue-600 text-2xl transition-transform"></i>
+                    </button>
+                    <div class="faq-panel hidden overflow-hidden pt-4 text-gray-700">
+                        <p>An upload can fail for several common reasons, which are checked by our `validate_file` function:</p>
+                        <ul class="list-disc list-inside mt-2 ml-4 space-y-1">
+                            <li><strong>Unsupported Format:</strong> You uploaded a file type other than .txt, .pdf, .csv, or .docx.</li>
+                            <li><strong>Size Exceeded:</strong> Your file is larger than the 10MB maximum limit.</li>
+                            <li><strong>Empty File:</strong> The file you uploaded has no content (0 bytes in size).</li>
+                            <li><strong>No File Selected:</strong> You clicked "Classify" without selecting a file first.</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="border-b border-gray-200 pb-4">
+                    <button class="faq-button w-full flex justify-between items-center text-left py-2">
+                        <span class="text-lg font-semibold text-gray-900">Do I need to create an account?</span>
+                        <i class="bi bi-plus-circle text-blue-600 text-2xl transition-transform"></i>
+                    </button>
+                    <div class="faq-panel hidden overflow-hidden pt-4 text-gray-700">
+                        <p>You don't *need* an account to try a classification. However, there is a big difference (as seen in `handle_file_upload`):</p>
+                        <ul class="list-disc list-inside mt-2 ml-4 space-y-1">
+                            <li><strong>Guest (Anonymous) Users:</strong> Your file is processed, but no history is saved. The result is temporary and stored in the server cache (`handle_anonymous_upload`) for up to <strong>1 hour</strong>.</li>
+                            <li><strong>Registered Users:</strong> Your file is saved permanently to your account (`handle_authenticated_upload`). You get a complete classification history, can track statuses, and re-download your original files at any time.</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="border-b border-gray-200 pb-4">
+                    <button class="faq-button w-full flex justify-between items-center text-left py-2">
+                        <span class="text-lg font-semibold text-gray-900">What does the "Pending" status in my history mean?</span>
+                        <i class="bi bi-plus-circle text-blue-600 text-2xl transition-transform"></i>
+                    </button>
+                    <div class="faq-panel hidden overflow-hidden pt-4 text-gray-700">
+                        <p>When you upload a file as a registered user, its initial status is set to <strong>'pending'</strong>. This means your file has been successfully received and is waiting in the queue to be processed by our classification system. This process is usually fast but may take a few moments depending on server load.</p>
+                        <p class="mt-2">Please refresh the page after a short time to see the updated status (e.g., 'Completed' or 'Failed').</p>
+                    </div>
+                </div>
+
+                <div class="border-b border-gray-200 pb-4">
+                    <button class="faq-button w-full flex justify-between items-center text-left py-2">
+                        <span class="text-lg font-semibold text-gray-900">What do the "Download" and "Delete" buttons do?</span>
+                        <i class="bi bi-plus-circle text-blue-600 text-2xl transition-transform"></i>
+                    </button>
+                    <div class="faq-panel hidden overflow-hidden pt-4 text-gray-700">
+                        <ul class="list-disc list-inside mt-2 ml-4 space-y-1">
+                            <li><strong>Download:</strong> (The `download_file` function) This button lets you download the <strong>original file</strong> you previously uploaded. It is *not* a results report.</li>
+                            <li><strong>Delete:</strong> (The `delete_history` function) This button will <strong>permanently delete</strong> the history record from the database AND its associated physical file from our server. This action cannot be undone.</li>
+                        </ul>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </main>
+
+    <script src="{% static 'js/help.js' %}"></script>
+    </body>
+</html>
