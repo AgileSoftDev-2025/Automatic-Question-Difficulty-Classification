@@ -25,7 +25,12 @@ logger = logging.getLogger(__name__)
 # Uncomment when models are ready
 # from .models import Classification, Question
 
-
+def redirect_to_main_home(request):
+    """
+    Redirect /klasifikasi/ to main home page
+    Since home functionality is in the 'soal' app
+    """
+    return redirect('soal:home')
 @login_required
 @require_http_methods(["GET"])
 def hasil_klasifikasi(request, pk=None):

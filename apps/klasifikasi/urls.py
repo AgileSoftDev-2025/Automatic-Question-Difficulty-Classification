@@ -9,7 +9,7 @@ app_name = 'klasifikasi'
 
 urlpatterns = [
     # Home page
-    path('', views.home, name='home'),
+    path('', views.redirect_to_main_home, name='home'),
     
     # Classification results
     path('hasil/<int:pk>/', views.hasil_klasifikasi, name='hasil_klasifikasi'),
