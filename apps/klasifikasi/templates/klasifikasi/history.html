@@ -83,11 +83,15 @@
                 <a href="{% url 'soal:help' %}" class="block px-4 py-2 text-gray-600 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-colors">Help / FAQ</a>
                 {% if user.is_authenticated %}
                     <hr>
-                    <a href="{% url 'users:profile' %}" class="block px-4 py-2 text-gray-600 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-colors">My Profile</a>
-                    <a href="{% url 'users:logout' %}" class="block px-4 py-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors">Log Out</a>
+                    <a href="{% url 'users:profile' %}" class="block px-4 py-2 text-gray-600 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-colors">
+                        <i class="bi bi-person mr-2"></i> My Profile
+                    </a>
+                    <a href="{% url 'users:logout' %}" class="block px-4 py-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors">
+                        <i class="bi bi-gear mr-2"></i>Log Out
+                    </a>
                 {% else %}
                     <a href="{% url 'users:login' %}" class="block w-full text-center bg-blue-600 text-white px-6 py-2 rounded-full font-semibold hover:bg-blue-700 transition-all shadow-md text-sm">
-                        Log In
+                        <i class="bi bi-box-arrow-right mr-2"></i>Log In
                     </a>
                 {% endif %}
             </div>
@@ -343,7 +347,6 @@
         </div>
     </div>
 
-    <script src="{% static 'js/nav.js' %}"></script>
     <script src="{% static 'js/history.js' %}"></script>
     
 </body>

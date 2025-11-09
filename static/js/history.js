@@ -14,8 +14,48 @@ document.addEventListener('DOMContentLoaded', function() {
     const confirmDeleteBtn = document.getElementById('confirm-delete-btn');
     const cancelDeleteBtn = document.getElementById('cancel-delete-btn');
     const deleteFilename = document.getElementById('delete-filename');
+    const profileMenuButton = document.getElementById('profile-menu-button');
+    const profileMenuDropdown = document.getElementById('profile-menu-dropdown');
     
     let currentDeleteId = null;
+
+    // ========== NAVIGATION: Profile Dropdown Menu ==========
+    if (profileMenuButton && profileMenuDropdown) {
+        console.log('Initializing profile dropdown...');
+        
+        profileMenuButton.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log('Profile button clicked');
+            
+            // Toggle dropdown
+            const isHidden = profileMenuDropdown.classList.contains('hidden');
+            profileMenuDropdown.classList.toggle('hidden');
+            console.log('Dropdown is now:', isHidden ? 'visible' : 'hidden');
+            
+            // Close mobile menu if open
+            if (mobileMenu && !mobileMenu.classList.contains('hidden')) {
+                mobileMenu.classList.add('hidden');
+            }
+        });
+        
+        // Close dropdown when clicking outside
+        document.addEventListener('click', function(e) {
+            if (!profileMenuButton.contains(e.target) && !profileMenuDropdown.contains(e.target)) {
+                if (!profileMenuDropdown.classList.contains('hidden')) {
+                    profileMenuDropdown.classList.add('hidden');
+                    console.log('Dropdown closed by outside click');
+                }
+            }
+        });
+        
+        console.log('Profile dropdown initialized successfully');
+    } else {
+        console.warn('Profile dropdown elements not found:', {
+            button: !!profileMenuButton,
+            dropdown: !!profileMenuDropdown
+        });
+    }
 
     // ========== Mobile Menu ==========
     if (mobileMenuButton && mobileMenu) {
