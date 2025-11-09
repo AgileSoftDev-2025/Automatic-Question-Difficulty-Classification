@@ -490,6 +490,7 @@ def home(request):
 def history_view(request):
     """
     Display classification history with enhanced filtering and pagination
+    CURRENTLY USING HARDCODED DATA - Model not ready yet
     """
     try:
         search_query = request.GET.get('search', '').strip()
@@ -498,7 +499,7 @@ def history_view(request):
         date_from = request.GET.get('date_from', '')
         date_to = request.GET.get('date_to', '')
         
-        # DUMMY DATA - Replace with actual model query
+        # HARDCODED DUMMY DATA - Always use this until model is ready
         classifications_dummy = [
             {
                 'id': 1,
@@ -539,76 +540,74 @@ def history_view(request):
                 'q6_count': 0,
                 'status': 'completed',
             },
+            {
+                'id': 4,
+                'filename': 'Ujian Akhir Semester.docx',
+                'total_questions': 25,
+                'created_at': '01/11/2025',
+                'q1_count': 5,
+                'q2_count': 6,
+                'q3_count': 5,
+                'q4_count': 4,
+                'q5_count': 3,
+                'q6_count': 2,
+                'status': 'completed',
+            },
+            {
+                'id': 5,
+                'filename': 'Latihan Soal Algoritma.pdf',
+                'total_questions': 18,
+                'created_at': '25/10/2025',
+                'q1_count': 3,
+                'q2_count': 4,
+                'q3_count': 3,
+                'q4_count': 3,
+                'q5_count': 3,
+                'q6_count': 2,
+                'status': 'completed',
+            },
         ]
         
-        # WHEN MODEL IS READY:
-        """
-        queryset = Classification.objects.filter(user=request.user)
+        # Make a copy to work with
+        filtered_classifications = classifications_dummy.copy()
         
-        # Apply filters
+        # Apply search filter
         if search_query:
-            queryset = queryset.filter(
-                Q(filename__icontains=search_query) |
-                Q(id__icontains=search_query)
-            )
+            filtered_classifications = [
+                c for c in filtered_classifications 
+                if search_query.lower() in c['filename'].lower() or 
+                   search_query in str(c['id'])
+            ]
         
+        # Apply status filter
         if status_filter != 'all':
-            queryset = queryset.filter(status=status_filter)
+            filtered_classifications = [
+                c for c in filtered_classifications 
+                if c['status'] == status_filter
+            ]
         
+        # Apply date filters (if provided)
         if date_from:
             try:
                 date_from_obj = datetime.strptime(date_from, '%Y-%m-%d')
-                queryset = queryset.filter(created_at__gte=date_from_obj)
+                filtered_classifications = [
+                    c for c in filtered_classifications
+                    if datetime.strptime(c['created_at'], '%d/%m/%Y') >= date_from_obj
+                ]
             except ValueError:
                 pass
         
         if date_to:
             try:
                 date_to_obj = datetime.strptime(date_to, '%Y-%m-%d')
-                queryset = queryset.filter(created_at__lte=date_to_obj)
+                filtered_classifications = [
+                    c for c in filtered_classifications
+                    if datetime.strptime(c['created_at'], '%d/%m/%Y') <= date_to_obj
+                ]
             except ValueError:
                 pass
         
-        # Apply sorting
-        sort_mapping = {
-            'date-desc': '-created_at',
-            'date-asc': 'created_at',
-            'questions-desc': '-total_questions',
-            'questions-asc': 'total_questions',
-            'name-asc': 'filename',
-            'name-desc': '-filename',
-        }
-        
-        order_by = sort_mapping.get(sort_by, '-created_at')
-        classifications = queryset.order_by(order_by)
-        
-        # Calculate statistics
-        stats = classifications.aggregate(
-            total=Count('id'),
-            total_questions=Sum('total_questions'),
-            completed=Count('id', filter=Q(status='completed')),
-            processing=Count('id', filter=Q(status='processing')),
-            failed=Count('id', filter=Q(status='failed'))
-        )
-        
-        last_classification = classifications.first()
-        last_activity = last_classification.formatted_created_at if last_classification else 'N/A'
-        """
-        
-        # Filter dummy data
-        if search_query:
-            classifications_dummy = [
-                c for c in classifications_dummy 
-                if search_query.lower() in c['filename'].lower()
-            ]
-        
-        if status_filter != 'all':
-            classifications_dummy = [
-                c for c in classifications_dummy 
-                if c['status'] == status_filter
-            ]
-        
-        # Sort dummy data
+        # Sort data based on sort_by parameter
         sort_functions = {
             'date-desc': lambda x: datetime.strptime(x['created_at'], '%d/%m/%Y'),
             'date-asc': lambda x: datetime.strptime(x['created_at'], '%d/%m/%Y'),
@@ -620,16 +619,19 @@ def history_view(request):
         
         if sort_by in sort_functions:
             reverse = 'desc' in sort_by
-            classifications_dummy.sort(key=sort_functions[sort_by], reverse=reverse)
+            filtered_classifications.sort(
+                key=sort_functions[sort_by], 
+                reverse=reverse
+            )
         
-        # Calculate statistics
-        total_classifications = len(classifications_dummy)
-        total_questions = sum(c['total_questions'] for c in classifications_dummy)
-        last_activity = classifications_dummy[0]['created_at'] if classifications_dummy else 'N/A'
+        # Calculate statistics from filtered data
+        total_classifications = len(filtered_classifications)
+        total_questions = sum(c['total_questions'] for c in filtered_classifications)
+        last_activity = filtered_classifications[0]['created_at'] if filtered_classifications else 'N/A'
         
         # Pagination
         page = request.GET.get('page', 1)
-        paginator = Paginator(classifications_dummy, 10)
+        paginator = Paginator(filtered_classifications, 10)
         
         try:
             page_obj = paginator.page(page)
@@ -648,14 +650,47 @@ def history_view(request):
             'status_filter': status_filter,
             'date_from': date_from,
             'date_to': date_to,
+            'is_hardcoded': True,  # Flag to indicate using dummy data
         }
         
         return render(request, 'klasifikasi/history.html', context)
         
     except Exception as e:
         logger.error(f"Error in history_view: {str(e)}", exc_info=True)
-        messages.error(request, 'An error occurred while loading history.')
-        return redirect('klasifikasi:home')
+        
+        # Even on error, return hardcoded data
+        classifications_dummy = [
+            {
+                'id': 1,
+                'filename': 'SOAL LATIHAN UTS.pdf',
+                'total_questions': 21,
+                'created_at': '09/11/2025',
+                'q1_count': 4,
+                'q2_count': 5,
+                'q3_count': 4,
+                'q4_count': 2,
+                'q5_count': 2,
+                'q6_count': 4,
+                'status': 'completed',
+            },
+        ]
+        
+        page_obj = Paginator(classifications_dummy, 10).page(1)
+        
+        context = {
+            'classifications': page_obj,
+            'total_classifications': 1,
+            'total_questions': 21,
+            'last_activity': '09/11/2025',
+            'search_query': '',
+            'sort_by': 'date-desc',
+            'status_filter': 'all',
+            'date_from': '',
+            'date_to': '',
+            'is_hardcoded': True,
+        }
+        
+        return render(request, 'klasifikasi/history.html', context)
 
 
 @login_required

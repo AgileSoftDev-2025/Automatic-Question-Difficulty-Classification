@@ -87,11 +87,11 @@
                         <i class="bi bi-person mr-2"></i> My Profile
                     </a>
                     <a href="{% url 'users:logout' %}" class="block px-4 py-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors">
-                        <i class="bi bi-gear mr-2"></i>Log Out
+                        <i class="bi bi-box-arrow-in-right mr-2"></i>Log Out
                     </a>
                 {% else %}
                     <a href="{% url 'users:login' %}" class="block w-full text-center bg-blue-600 text-white px-6 py-2 rounded-full font-semibold hover:bg-blue-700 transition-all shadow-md text-sm">
-                        <i class="bi bi-box-arrow-right mr-2"></i>Log In
+                        <i class="bi bi-box-arrow-in-right mr-2"></i>Log In
                     </a>
                 {% endif %}
             </div>
@@ -104,6 +104,7 @@
         <!-- Header with Stats -->
         <div class="mb-8">
             <h1 class="text-3xl font-bold text-blue-600 mb-4">Your Classification History</h1>
+            
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div class="bg-white rounded-lg shadow-sm p-4">
                     <div class="flex items-center">
@@ -137,26 +138,32 @@
 
         <!-- Filters and Search -->
         <div class="bg-white rounded-xl shadow-sm p-4 mb-6">
-            <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <form method="GET" action="{% url 'klasifikasi:history' %}" class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                 <div class="flex-1">
                     <div class="relative">
-                        <input type="text" id="search-input" placeholder="Search by filename..." 
+                        <input type="text" name="search" id="search-input" placeholder="Search by filename..." 
+                               value="{{ search_query }}"
                                class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
                         <i class="bi bi-search absolute left-3 top-3 text-gray-400"></i>
                     </div>
                 </div>
                 <div class="flex gap-2">
-                    <select id="sort-select" class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
-                        <option value="date-desc">Date (Newest)</option>
-                        <option value="date-asc">Date (Oldest)</option>
-                        <option value="questions-desc">Questions (Most)</option>
-                        <option value="questions-asc">Questions (Least)</option>
+                    <select name="sort" id="sort-select" class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                        <option value="date-desc" {% if sort_by == 'date-desc' %}selected{% endif %}>Date (Newest)</option>
+                        <option value="date-asc" {% if sort_by == 'date-asc' %}selected{% endif %}>Date (Oldest)</option>
+                        <option value="questions-desc" {% if sort_by == 'questions-desc' %}selected{% endif %}>Questions (Most)</option>
+                        <option value="questions-asc" {% if sort_by == 'questions-asc' %}selected{% endif %}>Questions (Least)</option>
+                        <option value="name-asc" {% if sort_by == 'name-asc' %}selected{% endif %}>Name (A-Z)</option>
+                        <option value="name-desc" {% if sort_by == 'name-desc' %}selected{% endif %}>Name (Z-A)</option>
                     </select>
-                    <button id="refresh-btn" class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors">
-                        <i class="bi bi-arrow-clockwise"></i>
+                    <button type="submit" class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors">
+                        <i class="bi bi-funnel"></i>
                     </button>
+                    <a href="{% url 'klasifikasi:history' %}" class="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors">
+                        <i class="bi bi-arrow-clockwise"></i>
+                    </a>
                 </div>
-            </div>
+            </form>
         </div>
 
         <!-- Messages -->
@@ -179,7 +186,7 @@
                 <table class="min-w-full" id="history-table">
                     <thead class="bg-blue-100">
                         <tr>
-                            <th class="px-6 py-4 text-left text-sm font-semibold text-gray-700"># <i class="bi bi-list ml-1"></i></th>
+                            <th class="px-6 py-4 text-left text-sm font-semibold text-gray-700">#</th>
                             <th class="px-6 py-4 text-left text-sm font-semibold text-gray-700">File Name</th>
                             <th class="px-6 py-4 text-left text-sm font-semibold text-gray-700">Questions</th>
                             <th class="px-6 py-4 text-left text-sm font-semibold text-gray-700">Date</th>
@@ -189,8 +196,7 @@
                             <th class="px-6 py-4 text-center text-sm font-semibold text-gray-700" title="C4: Analyze">C4</th>
                             <th class="px-6 py-4 text-center text-sm font-semibold text-gray-700" title="C5: Evaluate">C5</th>
                             <th class="px-6 py-4 text-center text-sm font-semibold text-gray-700" title="C6: Create">C6</th>
-                            <th class="px-6 py-4 text-center text-sm font-semibold text-gray-700">Report</th>
-                            <th class="px-6 py-4 text-center text-sm font-semibold text-gray-700">Action</th>
+                            <th class="px-6 py-4 text-center text-sm font-semibold text-gray-700">Actions</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-200" id="table-body">
@@ -240,38 +246,33 @@
                                 </span>
                             </td>
                             <td class="px-6 py-4 text-center">
-                                <a href="{% url 'klasifikasi:view_report' classification.id %}" 
-                                   class="text-blue-600 hover:text-blue-800 transition-colors inline-block mr-2" 
-                                   title="View Report">
-                                    <i class="bi bi-file-earmark-text text-xl"></i>
-                                </a>
-                                <a href="{% url 'klasifikasi:download_report' classification.id %}" 
-                                   class="text-blue-600 hover:text-blue-800 transition-colors inline-block" 
-                                   title="Download Report">
-                                    <i class="bi bi-download text-xl"></i>
-                                </a>
-                            </td>
-                            <td class="px-6 py-4 text-center">
-                                <a href="{% url 'klasifikasi:view_detail' classification.id %}" 
-                                   class="text-gray-600 hover:text-gray-800 transition-colors inline-block mr-2" 
-                                   title="View Details">
-                                    <i class="bi bi-eye text-xl"></i>
-                                </a>
-                                <button class="text-red-600 hover:text-red-800 transition-colors delete-btn" 
-                                        data-id="{{ classification.id }}" 
-                                        data-filename="{{ classification.filename }}"
-                                        title="Delete">
-                                    <i class="bi bi-trash text-xl"></i>
-                                </button>
+                                <div class="flex items-center justify-center gap-2">
+                                    <a href="{% url 'klasifikasi:hasil_klasifikasi' classification.id %}" 
+                                       class="text-blue-600 hover:text-blue-800 transition-colors inline-block" 
+                                       title="View Results">
+                                        <i class="bi bi-eye text-xl"></i>
+                                    </a>
+                                    <a href="{% url 'klasifikasi:download_report' classification.id %}" 
+                                       class="text-green-600 hover:text-green-800 transition-colors inline-block" 
+                                       title="Download Report">
+                                        <i class="bi bi-download text-xl"></i>
+                                    </a>
+                                    <button class="text-red-600 hover:text-red-800 transition-colors delete-btn" 
+                                            data-id="{{ classification.id }}" 
+                                            data-filename="{{ classification.filename }}"
+                                            title="Delete">
+                                        <i class="bi bi-trash text-xl"></i>
+                                    </button>
+                                </div>
                             </td>
                         </tr>
                         {% empty %}
                         <tr>
-                            <td colspan="12" class="px-6 py-12 text-center text-gray-500">
+                            <td colspan="11" class="px-6 py-12 text-center text-gray-500">
                                 <i class="bi bi-inbox text-6xl mb-4 block"></i>
                                 <p class="text-lg font-medium">No classification history yet</p>
                                 <p class="text-sm mt-2">Upload a file to start classifying questions</p>
-                                <a href="{% url 'klasifikasi:home' %}" class="inline-block mt-4 px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors">
+                                <a href="{% url 'soal:home' %}" class="inline-block mt-4 px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors">
                                     Go to Home
                                 </a>
                             </td>
@@ -287,10 +288,10 @@
         <div class="mt-6 flex justify-center">
             <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
                 {% if classifications.has_previous %}
-                <a href="?page=1" class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
+                <a href="?page=1{% if search_query %}&search={{ search_query }}{% endif %}{% if sort_by %}&sort={{ sort_by }}{% endif %}" class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
                     <i class="bi bi-chevron-double-left"></i>
                 </a>
-                <a href="?page={{ classifications.previous_page_number }}" class="relative inline-flex items-center px-2 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
+                <a href="?page={{ classifications.previous_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if sort_by %}&sort={{ sort_by }}{% endif %}" class="relative inline-flex items-center px-2 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
                     <i class="bi bi-chevron-left"></i>
                 </a>
                 {% endif %}
@@ -301,17 +302,17 @@
                     {{ num }}
                 </span>
                 {% elif num > classifications.number|add:'-3' and num < classifications.number|add:'3' %}
-                <a href="?page={{ num }}" class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50">
+                <a href="?page={{ num }}{% if search_query %}&search={{ search_query }}{% endif %}{% if sort_by %}&sort={{ sort_by }}{% endif %}" class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50">
                     {{ num }}
                 </a>
                 {% endif %}
                 {% endfor %}
 
                 {% if classifications.has_next %}
-                <a href="?page={{ classifications.next_page_number }}" class="relative inline-flex items-center px-2 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
+                <a href="?page={{ classifications.next_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if sort_by %}&sort={{ sort_by }}{% endif %}" class="relative inline-flex items-center px-2 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
                     <i class="bi bi-chevron-right"></i>
                 </a>
-                <a href="?page={{ classifications.paginator.num_pages }}" class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
+                <a href="?page={{ classifications.paginator.num_pages }}{% if search_query %}&search={{ search_query }}{% endif %}{% if sort_by %}&sort={{ sort_by }}{% endif %}" class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
                     <i class="bi bi-chevron-double-right"></i>
                 </a>
                 {% endif %}
@@ -347,7 +348,89 @@
         </div>
     </div>
 
-    <script src="{% static 'js/history.js' %}"></script>
+    <script>
+        // Mobile menu toggle
+        document.getElementById('mobile-menu-button')?.addEventListener('click', function() {
+            document.getElementById('mobile-menu').classList.toggle('hidden');
+        });
+
+        // Profile menu toggle
+        document.getElementById('profile-menu-button')?.addEventListener('click', function() {
+            document.getElementById('profile-menu-dropdown').classList.toggle('hidden');
+        });
+
+        // Close profile menu when clicking outside
+        document.addEventListener('click', function(event) {
+            const menu = document.getElementById('profile-menu-dropdown');
+            const button = document.getElementById('profile-menu-button');
+            if (menu && button && !button.contains(event.target) && !menu.contains(event.target)) {
+                menu.classList.add('hidden');
+            }
+        });
+
+        // Auto-submit search form on sort change
+        document.getElementById('sort-select')?.addEventListener('change', function() {
+            this.closest('form').submit();
+        });
+
+        // Close messages
+        document.querySelectorAll('.close-message').forEach(button => {
+            button.addEventListener('click', function() {
+                this.closest('[role="alert"]').remove();
+            });
+        });
+
+        // Delete modal functionality
+        let deleteId = null;
+        const deleteModal = document.getElementById('delete-modal');
+        const deleteFilenameSpan = document.getElementById('delete-filename');
+        const confirmDeleteBtn = document.getElementById('confirm-delete-btn');
+        const cancelDeleteBtn = document.getElementById('cancel-delete-btn');
+
+        document.querySelectorAll('.delete-btn').forEach(button => {
+            button.addEventListener('click', function() {
+                deleteId = this.dataset.id;
+                const filename = this.dataset.filename;
+                deleteFilenameSpan.textContent = filename;
+                deleteModal.classList.remove('hidden');
+            });
+        });
+
+        cancelDeleteBtn?.addEventListener('click', function() {
+            deleteModal.classList.add('hidden');
+            deleteId = null;
+        });
+
+        confirmDeleteBtn?.addEventListener('click', function() {
+            if (deleteId) {
+                // Create a form and submit it
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = `/klasifikasi/delete/${deleteId}/`;
+                
+                // Add CSRF token
+                const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value;
+                if (csrfToken) {
+                    const csrfInput = document.createElement('input');
+                    csrfInput.type = 'hidden';
+                    csrfInput.name = 'csrfmiddlewaretoken';
+                    csrfInput.value = csrfToken;
+                    form.appendChild(csrfInput);
+                }
+                
+                document.body.appendChild(form);
+                form.submit();
+            }
+        });
+
+        // Close modal when clicking outside
+        deleteModal?.addEventListener('click', function(event) {
+            if (event.target === deleteModal) {
+                deleteModal.classList.add('hidden');
+                deleteId = null;
+            }
+        });
+    </script>
     
 </body>
 </html>
