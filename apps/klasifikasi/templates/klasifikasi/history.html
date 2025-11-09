@@ -10,62 +10,90 @@
 </head>
 <body class="bg-gradient-to-b from-blue-50 to-gray-100 min-h-screen">
     
-    <!-- Navbar -->
-    <nav class="bg-white shadow-sm sticky top-0 z-50">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex justify-between h-16 items-center">
-                <div class="flex items-center">
-                    <svg class="w-8 h-8 text-blue-500" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M12 3L3 8L12 13L21 8L12 3Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                        <path d="M3 13L12 18L21 13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                        <path d="M3 18L12 23L21 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    </svg>
-                    <span class="text-blue-500 text-4xl font-bold ml-2">BLOOMERS</span>
-                </div>
+    <!-- Updated Navbar for History Page -->
+<nav class="bg-white shadow-md">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex justify-between h-16 items-center">
+            
+            <div class="flex items-center">
+                <svg class="w-10 h-10 text-blue-600" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M12 2L4 6V12C4 16.5 7.5 20.5 12 22C16.5 20.5 20 16.5 20 12V6L12 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="currentColor" opacity="0.2"/>
+                    <path d="M12 2L4 6V12C4 16.5 7.5 20.5 12 22C16.5 20.5 20 16.5 20 12V6L12 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                <span class="text-blue-600 text-3xl font-bold ml-3">BLOOMERS</span>
+            </div>
+            
+            <div class="hidden md:flex items-center space-x-6">
+                <a href="{% url 'soal:home' %}" class="text-gray-600 hover:text-blue-600 font-medium transition-colors">Home</a>
+                <a href="{% url 'klasifikasi:history' %}" class="text-blue-600 hover:text-blue-700 font-semibold transition-colors">History</a>
+                <a href="{% url 'soal:help' %}" class="text-gray-600 hover:text-blue-600 font-medium transition-colors">Help / FAQ</a>
                 
-                <div class="hidden md:flex items-center space-x-6">
-                    <a href="{% url 'soal:home' %}" class="text-gray-600 hover:text-blue-700 font-semibold transition-colors">Home</a>
-                    <a href="{% url 'klasifikasi:history' %}" class="text-blue-600 font-medium transition-colors">History</a>
-                    <a href="{% url 'soal:help' %}" class="text-gray-600 hover:text-blue-600 font-medium transition-colors">Help / FAQ</a>
-                    
+                {% if user.is_authenticated %}
                     <div class="relative">
-                        <button type="button" id="profile-menu-button" class="flex flex-col items-center justify-center text-blue-500 hover:text-blue-600 transition-colors group">
-                            <i class="bi bi-person-circle text-4xl mb-1"></i>
-                            <span class="text-gray-900 font-semibold text-sm group-hover:text-gray-700">
-                                {{ request.user.first_name|default:request.user.username }}
+                        <button type="button" id="profile-menu-button" class="flex flex-row items-center space-x-2 text-blue-600 hover:text-blue-700 transition-colors group focus:outline-none">
+                            {% if user.profile.has_custom_image %}
+                                <img src="{{ user.profile.image.url }}" 
+                                     alt="{{ user.username }}" 
+                                     class="w-10 h-10 rounded-full object-cover border-2 border-blue-200">
+                            {% else %}
+                                <div class="w-10 h-10 rounded-full border-2 border-blue-200 bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
+                                    <span class="text-white text-lg font-bold">{{ user.profile.avatar_letter }}</span>
+                                </div>
+                            {% endif %}
+                            <span class="text-gray-900 font-semibold group-hover:text-gray-700">
+                                {{ user.username }}
                             </span>
                         </button>
 
                         <div id="profile-menu-dropdown" 
                              class="hidden absolute right-0 z-10 mt-2 w-48 origin-top-right rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none">
-                            <div class="py-1" role="menu" aria-orientation="vertical" aria-labelledby="profile-menu-button">
-                                <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100" role="menuitem">
-                                    My Profile
+                            <div class="py-1" role="menu">
+                                <a href="{% url 'users:profile' %}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors" role="menuitem">
+                                    <i class="bi bi-person mr-2"></i> My Profile
                                 </a>
-                                <a href="{% url 'users:logout' %}" class="block px-4 py-2 text-sm text-red-600 hover:bg-gray-100 hover:text-red-700" role="menuitem">
-                                    Log Out
+                                <a href="{% url 'users:settings' %}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors" role="menuitem">
+                                    <i class="bi bi-gear mr-2"></i> Settings
+                                </a>
+                                <hr class="my-1">
+                                <a href="{% url 'users:logout' %}" class="block px-4 py-2 text-sm text-red-600 hover:bg-gray-100 hover:text-red-700 transition-colors" role="menuitem">
+                                    <i class="bi bi-box-arrow-right mr-2"></i> Log Out
                                 </a>
                             </div>
                         </div>
                     </div>
-                </div>
+                {% else %}
+                    <a href="{% url 'users:login' %}" 
+                       class="bg-blue-600 text-white px-6 py-2 rounded-full font-semibold hover:bg-blue-700 transition-all shadow-md hover:shadow-lg text-sm">
+                        Log In
+                    </a>
+                {% endif %}
+            </div>
 
-                <!-- Mobile Menu Button -->
-                <button id="mobile-menu-button" class="md:hidden text-gray-600 hover:text-blue-600">
+            <div class="md:hidden">
+                <button type="button" id="mobile-menu-button" class="text-gray-600 hover:text-blue-600 focus:outline-none">
                     <i class="bi bi-list text-3xl"></i>
                 </button>
             </div>
+        </div>
 
-            <!-- Mobile Menu -->
-            <div id="mobile-menu" class="hidden md:hidden pb-4">
-                <a href="{% url 'klasifikasi:home' %}" class="block py-2 text-gray-600 hover:text-blue-700 font-semibold">Home</a>
-                <a href="{% url 'klasifikasi:history' %}" class="block py-2 text-blue-600 font-medium">History</a>
-                <a href="#" class="block py-2 text-gray-600 hover:text-blue-600 font-medium">Help / FAQ</a>
-                <a href="#" class="block py-2 text-gray-700 hover:text-gray-900">My Profile</a>
-                <a href="{% url 'users:logout' %}" class="block py-2 text-red-600 hover:text-red-700">Log Out</a>
+        <div id="mobile-menu" class="hidden md:hidden pb-4">
+            <div class="space-y-2">
+                <a href="{% url 'soal:home' %}" class="block px-4 py-2 text-gray-600 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-colors">Home</a>
+                <a href="{% url 'klasifikasi:history' %}" class="block px-4 py-2 text-blue-600 bg-blue-50 rounded-lg font-semibold">History</a>
+                <a href="{% url 'soal:help' %}" class="block px-4 py-2 text-gray-600 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-colors">Help / FAQ</a>
+                {% if user.is_authenticated %}
+                    <hr>
+                    <a href="{% url 'users:profile' %}" class="block px-4 py-2 text-gray-600 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-colors">My Profile</a>
+                    <a href="{% url 'users:logout' %}" class="block px-4 py-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors">Log Out</a>
+                {% else %}
+                    <a href="{% url 'users:login' %}" class="block w-full text-center bg-blue-600 text-white px-6 py-2 rounded-full font-semibold hover:bg-blue-700 transition-all shadow-md text-sm">
+                        Log In
+                    </a>
+                {% endif %}
             </div>
         </div>
-    </nav>
+    </div>
+</nav>
 
     <!-- Main Content -->
     <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -315,6 +343,8 @@
         </div>
     </div>
 
+    <script src="{% static 'js/nav.js' %}"></script>
     <script src="{% static 'js/history.js' %}"></script>
+    
 </body>
 </html>

@@ -15,8 +15,7 @@
     filePreview: document.getElementById('file-preview'),
     fileName: document.getElementById('file-name'),
     removeFileBtn: document.getElementById('remove-file-btn'),
-    profileMenuButton: document.getElementById('profile-menu-button'),
-    profileMenuDropdown: document.getElementById('profile-menu-dropdown'),
+    // Referensi ke dropdown dihapus dari sini
     deleteHistoryBtns: document.querySelectorAll('.delete-history-btn'),
     clearAllHistoryBtn: document.getElementById('clear-all-history-btn'),
     clearAllForm: document.getElementById('clear-all-form')
@@ -33,7 +32,7 @@
    */
   function validateFile(file) {
     const allowedTypes = ['text/plain', 'application/pdf', 'text/csv', 
-                         'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+                          'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
     const allowedExtensions = ['txt', 'pdf', 'csv', 'docx'];
     const maxSizeMB = 10;
     
@@ -229,28 +228,8 @@
   // 4. PROFILE MENU DROPDOWN
   // ==========================================
   
-  if (elements.profileMenuButton && elements.profileMenuDropdown) {
-    // Toggle dropdown on button click
-    elements.profileMenuButton.addEventListener('click', (e) => {
-      e.stopPropagation();
-      elements.profileMenuDropdown.classList.toggle('hidden');
-    });
-
-    // Close dropdown when clicking outside
-    document.addEventListener('click', (e) => {
-      if (!elements.profileMenuButton.contains(e.target) && 
-          !elements.profileMenuDropdown.contains(e.target)) {
-        elements.profileMenuDropdown.classList.add('hidden');
-      }
-    });
-
-    // Close dropdown on ESC key
-    document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape' && !elements.profileMenuDropdown.classList.contains('hidden')) {
-        elements.profileMenuDropdown.classList.add('hidden');
-      }
-    });
-  }
+  // SELURUH BAGIAN INI SENGAJA DIHAPUS
+  // Logika ini sekarang ada di static/js/nav.js
 
   // ==========================================
   // 5. HISTORY TABLE ACTIONS
@@ -296,13 +275,14 @@
     document.body.appendChild(notification);
     
     // Auto-remove after 5 seconds
-    setTimeout(() => {
+    const timer = setTimeout(() => {
       notification.style.opacity = '0';
       setTimeout(() => notification.remove(), 300);
     }, 5000);
     
     // Remove on click
     notification.querySelector('button').addEventListener('click', () => {
+      clearTimeout(timer); // Hentikan auto-remove jika ditutup manual
       notification.style.opacity = '0';
       setTimeout(() => notification.remove(), 300);
     });
@@ -341,11 +321,21 @@
   if (messageAlerts.length > 0) {
     messageAlerts.forEach(alert => {
       // Auto-dismiss after 5 seconds
-      setTimeout(() => {
-        alert.style.opacity = '0';
-        alert.style.transform = 'translateX(100%)';
-        setTimeout(() => alert.remove(), 300);
+      const timer = setTimeout(() => {
+        if (alert) {
+          alert.style.opacity = '0';
+          alert.style.transform = 'translateX(100%)';
+          setTimeout(() => alert.remove(), 300);
+        }
       }, 5000);
+      
+      // Hentikan timer jika ditutup manual
+      const closeButton = alert.querySelector('button');
+      if (closeButton) {
+          closeButton.addEventListener('click', () => {
+              clearTimeout(timer);
+          });
+      }
     });
   }
 
@@ -358,6 +348,13 @@
     
     if (form) {
       form.addEventListener('submit', (e) => {
+        // Cek jika tombol classify masih disabled (berarti tidak ada file)
+        if (elements.classifyBtn.disabled) {
+            e.preventDefault(); // Hentikan submit
+            showNotification('Please select a valid file first.', 'error');
+            return;
+        }
+          
         // Show loading state
         elements.classifyBtn.disabled = true;
         elements.classifyBtn.innerHTML = `
@@ -381,10 +378,7 @@
   function handleResize() {
     const isMobile = window.innerWidth < 768;
     
-    // Close dropdown on mobile when resizing to desktop
-    if (!isMobile && elements.profileMenuDropdown) {
-      elements.profileMenuDropdown.classList.add('hidden');
-    }
+    // (Logika dropdown dipindah ke nav.js)
   }
 
   // Debounce resize handler
@@ -400,12 +394,15 @@
   
   // Allow file selection with Enter/Space on drop zone
   if (elements.dropZone) {
-    elements.dropZone.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter' || e.key === ' ') {
-        e.preventDefault();
-        elements.fileInput?.click();
-      }
-    });
+      // Menambahkan tabindex agar bisa di-fokus
+      elements.dropZone.setAttribute('tabindex', '0');
+      
+      elements.dropZone.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              elements.fileInput?.click();
+          }
+      });
   }
 
   // ==========================================

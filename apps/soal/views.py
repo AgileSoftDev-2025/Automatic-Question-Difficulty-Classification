@@ -14,6 +14,7 @@ import os
 import uuid
 import mimetypes
 import logging
+from pathlib import Path
 
 from .models import ClassificationHistory
 
@@ -27,28 +28,12 @@ TEMP_FILE_CACHE_TIMEOUT = 3600  # 1 hour
 
 
 def allowed_file(filename):
-    """
-    Check if file extension is allowed.
-    
-    Args:
-        filename (str): The name of the file to check
-        
-    Returns:
-        bool: True if file extension is allowed, False otherwise
-    """
+    """Check if file extension is allowed."""
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 
 def get_file_size_mb(file):
-    """
-    Get file size in megabytes.
-    
-    Args:
-        file: Django UploadedFile object
-        
-    Returns:
-        float: File size in MB
-    """
+    """Get file size in megabytes."""
     return file.size / (1024 * 1024)
 
 
@@ -56,9 +41,6 @@ def validate_file(uploaded_file):
     """
     Validate uploaded file for type and size.
     
-    Args:
-        uploaded_file: Django UploadedFile object
-        
     Returns:
         tuple: (is_valid: bool, error_message: str or None)
     """
@@ -83,25 +65,17 @@ def validate_file(uploaded_file):
     
     return True, None
 
+
 def help_faq(request):
-    """
-    Merender halaman Bantuan/FAQ.
-    """
+    """Render help/FAQ page."""
     context = {
         'is_authenticated': request.user.is_authenticated,
     }
     return render(request, 'soal/help.html', context)
 
+
 def generate_unique_filename(original_filename):
-    """
-    Generate a unique filename to prevent overwriting.
-    
-    Args:
-        original_filename (str): Original filename
-        
-    Returns:
-        str: Unique filename with UUID prefix
-    """
+    """Generate a unique filename to prevent overwriting."""
     file_extension = original_filename.rsplit('.', 1)[1].lower()
     safe_name = original_filename.rsplit('.', 1)[0][:50]  # Limit name length
     return f"{uuid.uuid4().hex}_{safe_name}.{file_extension}"
@@ -112,9 +86,6 @@ def home(request):
     """
     Home page with file upload functionality.
     Handles both authenticated and anonymous users.
-    
-    GET: Display home page with upload form and history (if authenticated)
-    POST: Handle file upload and create classification record
     """
     context = {
         'is_authenticated': request.user.is_authenticated,
@@ -158,22 +129,14 @@ def home(request):
 
 
 def handle_file_upload(request, context):
-    """
-    Handle file upload logic for both authenticated and anonymous users.
-    
-    Args:
-        request: Django request object
-        context: Dictionary of template context
-        
-    Returns:
-        HttpResponse: Redirect to home page
-    """
+    """Handle file upload logic for both authenticated and anonymous users."""
     uploaded_file = request.FILES.get('file')
     
     # Validate file
     is_valid, error_message = validate_file(uploaded_file)
     if not is_valid:
         messages.error(request, error_message)
+        logger.warning(f"File validation failed: {error_message}")
         return redirect('soal:home')
     
     try:
@@ -192,17 +155,13 @@ def handle_authenticated_upload(request, uploaded_file):
     """
     Handle file upload for authenticated users.
     Saves file permanently and creates database record.
-    
-    Args:
-        request: Django request object
-        uploaded_file: Django UploadedFile object
-        
-    Returns:
-        HttpResponse: Redirect to home page
     """
-    # Setup file storage
-    upload_path = settings.MEDIA_ROOT / 'uploads'
-    upload_path.mkdir(parents=True, exist_ok=True)
+    # Setup file storage - use os.path for better compatibility
+    upload_path = os.path.join(settings.MEDIA_ROOT, 'uploads')
+    
+    # Create directory if it doesn't exist
+    os.makedirs(upload_path, exist_ok=True)
+    
     fs = FileSystemStorage(location=upload_path)
     
     # Generate unique filename
@@ -212,6 +171,9 @@ def handle_authenticated_upload(request, uploaded_file):
     try:
         saved_filename = fs.save(unique_filename, uploaded_file)
         file_url = fs.url(saved_filename)
+        
+        logger.info(f"File saved: {saved_filename}")
+        
     except Exception as e:
         logger.error(f"Error saving file: {str(e)}", exc_info=True)
         messages.error(request, "Failed to save the file. Please try again.")
@@ -241,11 +203,12 @@ def handle_authenticated_upload(request, uploaded_file):
     except Exception as e:
         # Cleanup file if database record creation fails
         try:
-            file_path = upload_path / saved_filename
-            if file_path.exists():
-                file_path.unlink()
-        except:
-            pass
+            file_path = os.path.join(upload_path, saved_filename)
+            if os.path.exists(file_path):
+                os.remove(file_path)
+                logger.info(f"Cleaned up file after DB error: {file_path}")
+        except Exception as cleanup_error:
+            logger.error(f"Error during cleanup: {cleanup_error}")
         
         logger.error(f"Error creating classification record: {str(e)}", exc_info=True)
         messages.error(request, "Failed to create classification record. Please try again.")
@@ -257,13 +220,6 @@ def handle_anonymous_upload(request, uploaded_file):
     """
     Handle file upload for anonymous users.
     Stores file temporarily in cache.
-    
-    Args:
-        request: Django request object
-        uploaded_file: Django UploadedFile object
-        
-    Returns:
-        HttpResponse: Redirect to home page
     """
     cache_key = f'temp_file_{uuid.uuid4().hex}'
     
@@ -297,15 +253,7 @@ def handle_anonymous_upload(request, uploaded_file):
 @login_required
 @require_http_methods(["GET", "POST"])
 def delete_history(request, history_id):
-    """
-    Delete a classification history entry and associated file.
-    
-    Args:
-        history_id (int): ID of the classification history to delete
-        
-    Returns:
-        HttpResponse: Redirect to home page
-    """
+    """Delete a classification history entry and associated file."""
     history = get_object_or_404(
         ClassificationHistory, 
         id=history_id, 
@@ -317,7 +265,7 @@ def delete_history(request, history_id):
     try:
         # Delete the physical file
         if history.file_path:
-            file_path = settings.MEDIA_ROOT / 'uploads' / history.file_path
+            file_path = os.path.join(settings.MEDIA_ROOT, 'uploads', history.file_path)
             if os.path.exists(file_path):
                 try:
                     os.remove(file_path)
@@ -340,15 +288,7 @@ def delete_history(request, history_id):
 
 @login_required
 def download_file(request, history_id):
-    """
-    Download a previously uploaded file.
-    
-    Args:
-        history_id (int): ID of the classification history
-        
-    Returns:
-        FileResponse: File download response
-    """
+    """Download a previously uploaded file."""
     history = get_object_or_404(
         ClassificationHistory, 
         id=history_id, 
@@ -359,7 +299,7 @@ def download_file(request, history_id):
         logger.warning(f"File path not found for history {history_id}")
         raise Http404("File not found")
     
-    file_path = settings.MEDIA_ROOT / 'uploads' / history.file_path
+    file_path = os.path.join(settings.MEDIA_ROOT, 'uploads', history.file_path)
     
     if not os.path.exists(file_path):
         logger.error(f"Physical file missing: {file_path}")
@@ -367,7 +307,7 @@ def download_file(request, history_id):
         return redirect('soal:home')
     
     # Determine content type
-    content_type, _ = mimetypes.guess_type(str(file_path))
+    content_type, _ = mimetypes.guess_type(file_path)
     if not content_type:
         content_type = 'application/octet-stream'
     
@@ -393,9 +333,6 @@ def clear_all_history(request):
     """
     Clear all classification history for the current user.
     Deletes all files and database records.
-    
-    Returns:
-        HttpResponse: Redirect to home page
     """
     try:
         histories = ClassificationHistory.objects.filter(user=request.user)
@@ -409,7 +346,7 @@ def clear_all_history(request):
         deleted_files = 0
         for history in histories:
             if history.file_path:
-                file_path = settings.MEDIA_ROOT / 'uploads' / history.file_path
+                file_path = os.path.join(settings.MEDIA_ROOT, 'uploads', history.file_path)
                 if os.path.exists(file_path):
                     try:
                         os.remove(file_path)
@@ -441,9 +378,6 @@ def validate_file_ajax(request):
     """
     AJAX endpoint to validate file before upload.
     Useful for client-side validation feedback.
-    
-    Returns:
-        JsonResponse: Validation result
     """
     uploaded_file = request.FILES.get('file')
     

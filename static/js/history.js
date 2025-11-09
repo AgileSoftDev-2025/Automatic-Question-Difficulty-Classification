@@ -4,8 +4,6 @@
 
 document.addEventListener('DOMContentLoaded', function() {
     // ========== Elements ==========
-    const profileMenuButton = document.getElementById('profile-menu-button');
-    const profileMenuDropdown = document.getElementById('profile-menu-dropdown');
     const mobileMenuButton = document.getElementById('mobile-menu-button');
     const mobileMenu = document.getElementById('mobile-menu');
     const searchInput = document.getElementById('search-input');
@@ -18,21 +16,6 @@ document.addEventListener('DOMContentLoaded', function() {
     const deleteFilename = document.getElementById('delete-filename');
     
     let currentDeleteId = null;
-
-    // ========== Profile Dropdown ==========
-    if (profileMenuButton && profileMenuDropdown) {
-        profileMenuButton.addEventListener('click', (e) => {
-            e.stopPropagation();
-            profileMenuDropdown.classList.toggle('hidden');
-        });
-
-        // Close dropdown when clicking outside
-        document.addEventListener('click', (e) => {
-            if (!profileMenuButton.contains(e.target) && !profileMenuDropdown.contains(e.target)) {
-                profileMenuDropdown.classList.add('hidden');
-            }
-        });
-    }
 
     // ========== Mobile Menu ==========
     if (mobileMenuButton && mobileMenu) {

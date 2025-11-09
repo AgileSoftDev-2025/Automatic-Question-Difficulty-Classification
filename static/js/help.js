@@ -1,5 +1,9 @@
+// ===================================
+// FILE: help.js
+// ===================================
+
 document.addEventListener('DOMContentLoaded', () => {
-    // Temukan semua tombol di dalam accordion
+    // ========== FAQ Accordion ==========
     const faqButtons = document.querySelectorAll('.faq-button');
 
     faqButtons.forEach(button => {
@@ -48,20 +52,8 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // Skrip untuk dropdown profil (disalin dari home.html untuk konsistensi)
-    const profileMenuButton = document.getElementById('profile-menu-button');
-    const profileMenuDropdown = document.getElementById('profile-menu-dropdown');
+    // NOTE: Profile dropdown is handled by nav.js
+    // Removed duplicate code to prevent conflicts
 
-    if (profileMenuButton) {
-        profileMenuButton.addEventListener('click', () => {
-            profileMenuDropdown.classList.toggle('hidden');
-        });
-
-        // Menutup dropdown jika diklik di luar
-        document.addEventListener('click', (event) => {
-            if (!profileMenuButton.contains(event.target) && !profileMenuDropdown.contains(event.target)) {
-                profileMenuDropdown.classList.add('hidden');
-            }
-        });
-    }
+    console.log('Help page JavaScript loaded successfully');
 });
