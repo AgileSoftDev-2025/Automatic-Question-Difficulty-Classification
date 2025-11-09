@@ -8,6 +8,7 @@
     <title>Hasil Klasifikasi - {{ filename|default:'file' }}</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     {% load static %}
     <style>
         /* Custom scrollbar */
@@ -62,6 +63,21 @@
             }
         }
 
+        @keyframes fadeOut {
+            from {
+                opacity: 1;
+                transform: translateX(0);
+            }
+            to {
+                opacity: 0;
+                transform: translateX(400px);
+            }
+        }
+
+        .toast.fade-out {
+            animation: fadeOut 0.3s ease-out forwards;
+        }
+
         /* Mobile menu toggle */
         @media (max-width: 1024px) {
             .sidebar-mobile {
@@ -80,101 +96,163 @@
         .category-c4 { background-color: #fed7aa; color: #9a3412; }
         .category-c5 { background-color: #fecaca; color: #991b1b; }
         .category-c6 { background-color: #e9d5ff; color: #6b21a8; }
+
+        /* Chart container */
+        .chart-container {
+            position: relative;
+            height: 300px;
+            margin: 0 auto;
+        }
+
+        @media (max-width: 640px) {
+            .chart-container {
+                height: 250px;
+            }
+        }
+
+        /* Stat card hover effect */
+        .stat-card {
+            transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Flash effect */
+        @keyframes flash {
+            0%, 100% {
+                box-shadow: 0 0 0 0 rgba(59, 130, 246, 0);
+            }
+            50% {
+                box-shadow: 0 0 0 8px rgba(59, 130, 246, 0.3);
+            }
+        }
+
+        .flash {
+            animation: flash 0.8s ease-in-out;
+        }
+
+        /* Navigation arrow buttons */
+        .nav-arrow {
+            transition: all 0.2s ease-in-out;
+        }
+
+        .nav-arrow:hover:not(:disabled) {
+            transform: scale(1.05);
+        }
+
+        .nav-arrow:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* Overlay backdrop */
+        .overlay-backdrop {
+            background-color: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(2px);
+        }
+        .nav-item[data-level="C1"] { border-left: 3px solid var(--color-c1, #3b82f6); }
+    .nav-item[data-level="C2"] { border-left: 3px solid var(--color-c2, #3b82f6); }
+    .nav-item[data-level="C3"] { border-left: 3px solid var(--color-c3, #3b82f6); }
+    .nav-item[data-level="C4"] { border-left: 3px solid var(--color-c4, #3b82f6); }
+    .nav-item[data-level="C5"] { border-left: 3px solid var(--color-c5, #3b82f6); }
+    .nav-item[data-level="C6"] { border-left: 3px solid var(--color-c6, #3b82f6); }
     </style>
 </head>
 
 <body class="bg-gradient-to-b from-blue-50 to-gray-100 min-h-screen">
-    <nav class="bg-white shadow-md">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="flex justify-between h-16 items-center">
-            
-            <div class="flex items-center">
-                <svg class="w-10 h-10 text-blue-600" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M12 2L4 6V12C4 16.5 7.5 20.5 12 22C16.5 20.5 20 16.5 20 12V6L12 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="currentColor" opacity="0.2"/>
-                    <path d="M12 2L4 6V12C4 16.5 7.5 20.5 12 22C16.5 20.5 20 16.5 20 12V6L12 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-                <span class="text-blue-600 text-3xl font-bold ml-3">BLOOMERS</span>
-            </div>
-            
-            <div class="hidden md:flex items-center space-x-6">
-                <a href="{% url 'soal:home' %}" class="text-gray-600 hover:text-blue-600 font-medium transition-colors">Home</a>
-                <a href="{% url 'klasifikasi:history' %}" class="text-blue-600 hover:text-blue-700 font-semibold transition-colors">History</a>
-                <a href="{% url 'soal:help' %}" class="text-gray-600 hover:text-blue-600 font-medium transition-colors">Help / FAQ</a>
+    <!-- Navigation Bar -->
+    <nav class="bg-white shadow-md sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16 items-center">
                 
-                {% if user.is_authenticated %}
-                    <div class="relative">
-                        <button type="button" id="profile-menu-button" class="flex flex-row items-center space-x-2 text-blue-600 hover:text-blue-700 transition-colors group focus:outline-none">
-                            
-                            <!-- FIXED: Use has_custom_image property -->
-                            {% if user.profile.has_custom_image %}
-                                <img src="{{ user.profile.image.url }}" 
-                                     alt="{{ user.username }}" 
-                                     class="w-10 h-10 rounded-full object-cover border-2 border-blue-200">
-                            {% else %}
-                                <!-- FIXED: Use avatar_letter property -->
-                                <div class="w-10 h-10 rounded-full border-2 border-blue-200 bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
-                                    <span class="text-white text-lg font-bold">{{ user.profile.avatar_letter }}</span>
-                                </div>
-                            {% endif %}
-
-                            <span class="text-gray-900 font-semibold group-hover:text-gray-700">
-                                {{ user.username }}
-                            </span>
-                        </button>
-
-                        <div id="profile-menu-dropdown" 
-                             class="hidden absolute right-0 z-10 mt-2 w-48 origin-top-right rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none">
-                            <div class="py-1" role="menu">
+                <div class="flex items-center">
+                    <svg class="w-10 h-10 text-blue-600" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M12 2L4 6V12C4 16.5 7.5 20.5 12 22C16.5 20.5 20 16.5 20 12V6L12 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="currentColor" opacity="0.2"/>
+                        <path d="M12 2L4 6V12C4 16.5 7.5 20.5 12 22C16.5 20.5 20 16.5 20 12V6L12 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    <span class="text-blue-600 text-3xl font-bold ml-3">BLOOMERS</span>
+                </div>
+                
+                <div class="hidden md:flex items-center space-x-6">
+                    <a href="{% url 'soal:home' %}" class="text-gray-600 hover:text-blue-600 font-medium transition-colors">Home</a>
+                    <a href="{% url 'klasifikasi:history' %}" class="text-blue-600 hover:text-blue-700 font-semibold transition-colors">History</a>
+                    <a href="{% url 'soal:help' %}" class="text-gray-600 hover:text-blue-600 font-medium transition-colors">Help / FAQ</a>
+                    
+                    {% if user.is_authenticated %}
+                        <div class="relative">
+                            <button type="button" id="profile-menu-button" class="flex flex-row items-center space-x-2 text-blue-600 hover:text-blue-700 transition-colors group focus:outline-none">
                                 
-                                <a href="{% url 'users:profile' %}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors" role="menuitem">
-                                    <i class="bi bi-person mr-2"></i> My Profile
-                                </a>
-                                <a href="{% url 'users:settings' %}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors" role="menuitem">
-                                    <i class="bi bi-gear mr-2"></i> Settings
-                                </a>
-                                <hr class="my-1">
-                                <a href="{% url 'users:logout' %}" class="block px-4 py-2 text-sm text-red-600 hover:bg-gray-100 hover:text-red-700 transition-colors" role="menuitem">
-                                    <i class="bi bi-box-arrow-right mr-2"></i> Log Out
-                                </a>
+                                {% if user.profile.has_custom_image %}
+                                    <img src="{{ user.profile.image.url }}" 
+                                         alt="{{ user.username }}" 
+                                         class="w-10 h-10 rounded-full object-cover border-2 border-blue-200">
+                                {% else %}
+                                    <div class="w-10 h-10 rounded-full border-2 border-blue-200 bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
+                                        <span class="text-white text-lg font-bold">{{ user.profile.avatar_letter }}</span>
+                                    </div>
+                                {% endif %}
+
+                                <span class="text-gray-900 font-semibold group-hover:text-gray-700">
+                                    {{ user.username }}
+                                </span>
+                            </button>
+
+                            <div id="profile-menu-dropdown" 
+                                 class="hidden absolute right-0 z-10 mt-2 w-48 origin-top-right rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none">
+                                <div class="py-1" role="menu">
+                                    
+                                    <a href="{% url 'users:profile' %}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors" role="menuitem">
+                                        <i class="bi bi-person mr-2"></i> My Profile
+                                    </a>
+                                    <a href="{% url 'users:settings' %}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors" role="menuitem">
+                                        <i class="bi bi-gear mr-2"></i> Settings
+                                    </a>
+                                    <hr class="my-1">
+                                    <a href="{% url 'users:logout' %}" class="block px-4 py-2 text-sm text-red-600 hover:bg-gray-100 hover:text-red-700 transition-colors" role="menuitem">
+                                        <i class="bi bi-box-arrow-right mr-2"></i> Log Out
+                                    </a>
+                                </div>
                             </div>
                         </div>
-                    </div>
-                {% else %}
-                    <a href="{% url 'users:login' %}" 
-                       class="bg-blue-600 text-white px-6 py-2 rounded-full font-semibold hover:bg-blue-700 transition-all shadow-md hover:shadow-lg text-sm">
-                        Log In
-                    </a>
-                {% endif %}
+                    {% else %}
+                        <a href="{% url 'users:login' %}" 
+                           class="bg-blue-600 text-white px-6 py-2 rounded-full font-semibold hover:bg-blue-700 transition-all shadow-md hover:shadow-lg text-sm">
+                            Log In
+                        </a>
+                    {% endif %}
+                </div>
+                
+                <div class="md:hidden">
+                    <button type="button" id="mobile-menu-button" class="text-gray-600 hover:text-blue-600 focus:outline-none">
+                        <i class="bi bi-list text-3xl"></i>
+                    </button>
+                </div>
             </div>
             
-            <div class="md:hidden">
-                <button type="button" id="mobile-menu-button" class="text-gray-600 hover:text-blue-600 focus:outline-none">
-                    <i class="bi bi-list text-3xl"></i>
-                </button>
+            <div id="mobile-menu" class="hidden md:hidden pb-4">
+                <div class="space-y-2">
+                    <a href="{% url 'soal:home' %}" class="block px-4 py-2 text-gray-600 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-colors">Home</a>
+                    <a href="{% url 'klasifikasi:history' %}" class="block px-4 py-2 text-blue-600 bg-blue-50 rounded-lg font-semibold">History</a>
+                    <a href="{% url 'soal:help' %}" class="block px-4 py-2 text-gray-600 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-colors">Help / FAQ</a>
+                    {% if user.is_authenticated %}
+                        <hr>
+                        <a href="{% url 'users:profile' %}" class="block px-4 py-2 text-gray-600 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-colors">My Profile</a>
+                        <a href="{% url 'users:logout' %}" class="block px-4 py-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors">Log Out</a>
+                    {% else %}
+                         <a href="{% url 'users:login' %}" class="block w-full text-center bg-blue-600 text-white px-6 py-2 rounded-full font-semibold hover:bg-blue-700 transition-all shadow-md text-sm">
+                            Log In
+                        </a>
+                    {% endif %}
+                </div>
             </div>
         </div>
-        
-        <div id="mobile-menu" class="hidden md:hidden pb-4">
-            <div class="space-y-2">
-                <a href="{% url 'soal:home' %}" class="block px-4 py-2 text-gray-600 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-colors">Home</a>
-                <a href="{% url 'klasifikasi:history' %}" class="block px-4 py-2 text-blue-600 bg-blue-50 rounded-lg font-semibold">History</a>
-                <a href="{% url 'soal:help' %}" class="block px-4 py-2 text-gray-600 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-colors">Help / FAQ</a>
-                {% if user.is_authenticated %}
-                    <hr>
-                    <a href="{% url 'users:profile' %}" class="block px-4 py-2 text-gray-600 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-colors">My Profile</a>
-                    <a href="{% url 'users:logout' %}" class="block px-4 py-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors">Log Out</a>
-                {% else %}
-                     <a href="{% url 'users:login' %}" class="block w-full text-center bg-blue-600 text-white px-6 py-2 rounded-full font-semibold hover:bg-blue-700 transition-all shadow-md text-sm">
-                        Log In
-                    </a>
-                {% endif %}
-            </div>
-        </div>
-    </div>
-</nav>
+    </nav>
 
     <!-- Mobile menu toggle button -->
-    <button id="mobile-menu-toggle" class="lg:hidden fixed bottom-6 left-6 z-50 bg-blue-600 text-white p-4 rounded-full shadow-lg hover:bg-blue-700 transition-colors">
+    <button id="mobile-menu-toggle" class="lg:hidden fixed bottom-6 left-6 z-40 bg-blue-600 text-white p-4 rounded-full shadow-lg hover:bg-blue-700 transition-colors">
         <i class="bi bi-list text-2xl"></i>
     </button>
 
@@ -186,18 +264,18 @@
 
             <!-- Sidebar - Mobile responsive -->
             <aside id="sidebar" class="sidebar-mobile fixed lg:static inset-0 lg:inset-auto z-40 lg:z-auto bg-white lg:bg-transparent">
-                <div class="lg:w-72 bg-white rounded-xl shadow-sm p-4 sm:p-6 h-screen lg:h-[80vh] overflow-auto custom-scrollbar">
+                <div class="lg:w-72 bg-white rounded-xl shadow-sm p-4 sm:p-6 h-screen lg:h-auto lg:sticky lg:top-20 overflow-auto custom-scrollbar">
                     <!-- Close button for mobile -->
-                    <button id="close-sidebar" class="lg:hidden absolute top-4 right-4 text-gray-500 hover:text-gray-700">
+                    <button id="close-sidebar" class="lg:hidden absolute top-4 right-4 text-gray-500 hover:text-gray-700 z-50">
                         <i class="bi bi-x-lg text-xl"></i>
                     </button>
 
                     <!-- Classification labels -->
                     <div class="mb-6">
-                        <h3 class="text-sm font-semibold text-gray-600 mb-3">Bloom's Taxonomy Levels</h3>
-                        <div class="flex flex-wrap gap-2">
+                        <h3 class="text-sm font-semibold text-gray-600 mb-3">Taksonomi Bloom Color Guide</h3>
+                        <div class="grid grid-cols-3 gap-2">
                             {% for label in labels %}
-                            <div class="px-3 py-1.5 rounded-lg category-{{ label|lower }} font-semibold text-sm shadow-sm">
+                            <div class="px-3 py-1.5 rounded-lg category-{{ label|lower }} font-semibold text-sm shadow-sm text-center">
                                 {{ label }}
                             </div>
                             {% endfor %}
@@ -214,7 +292,11 @@
                             </div>
                             <div class="flex justify-between">
                                 <span>File:</span>
-                                <span class="font-semibold truncate ml-2" title="{{ filename }}">{{ filename|truncatechars:15 }}</span>
+                                <span class="font-semibold truncate ml-2" title="{{ filename }}">{{ filename|truncatechars:20 }}</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span>Date:</span>
+                                <span class="font-semibold">{{ classification_date|default:'Today' }}</span>
                             </div>
                         </div>
                     </div>
@@ -254,7 +336,7 @@
                         {% endif %}
                         
                         <!-- Export options -->
-                        <button id="export-btn" class="flex items-center justify-center gap-2 w-full bg-green-600 text-white px-4 sm:px-6 py-3 rounded-full font-semibold hover:bg-green-700 transition-colors">
+                        <button id="export-btn" class="flex items-center justify-center gap-2 w-full bg-green-600 text-white px-4 sm:px-6 py-3 rounded-full font-semibold hover:bg-green-700 transition-colors shadow-md hover:shadow-lg">
                             <i class="bi bi-file-earmark-spreadsheet"></i>
                             <span>Export to Excel</span>
                         </button>
@@ -288,11 +370,29 @@
 
                 <!-- Tab content: Question Detail -->
                 <div id="tab-detail" class="tab-content">
+                    <!-- Navigation Controls -->
+                    <div class="flex justify-between items-center bg-white rounded-lg p-4 shadow-sm mb-6">
+                        <button id="prev-question" class="nav-arrow flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-50 text-blue-600 font-semibold hover:bg-blue-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+                            <i class="bi bi-chevron-left"></i>
+                            <span class="hidden sm:inline">Previous</span>
+                        </button>
+                        
+                        <span id="question-counter" class="text-sm font-semibold text-gray-600">
+                            Question 1 of {{ total_questions }}
+                        </span>
+                        
+                        <button id="next-question" class="nav-arrow flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-50 text-blue-600 font-semibold hover:bg-blue-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+                            <span class="hidden sm:inline">Next</span>
+                            <i class="bi bi-chevron-right"></i>
+                        </button>
+                    </div>
+
                     <div id="questions-list" class="space-y-4 sm:space-y-6">
                         {% for q in questions %}
                         <article id="question-{{ forloop.counter0 }}" 
                                  class="question-card bg-white rounded-xl p-4 sm:p-6 shadow-md hover:shadow-lg transition-shadow"
-                                 data-question-id="{{ q.index }}">
+                                 data-question-id="{{ q.index }}"
+                                 data-question-index="{{ forloop.counter0 }}">
                             <div class="flex flex-col lg:flex-row gap-4 lg:gap-6">
                                 <!-- Question content -->
                                 <div class="flex-1 min-w-0">
@@ -328,7 +428,7 @@
 
                                 <!-- Classification controls -->
                                 <div class="w-full lg:w-48 flex-shrink-0">
-                                    <div class="bg-gradient-to-br from-blue-600 to-blue-700 text-white rounded-xl p-4 shadow-lg">
+                                    <div class="classification-box bg-gradient-to-br from-blue-600 to-blue-700 text-white rounded-xl p-4 shadow-lg">
                                         <div class="text-center mb-3">
                                             <div class="text-2xl sm:text-3xl font-bold current-label">
                                                 {{ q.level }}
@@ -340,7 +440,6 @@
                                         <select class="change-select w-full rounded-lg text-gray-700 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300 bg-white"
                                                 data-question-index="{{ forloop.counter0 }}"
                                                 data-original-level="{{ q.level }}">
-                                            <option value="">Select Level</option>
                                             {% for label in labels %}
                                             <option value="{{ label }}" {% if q.level == label %}selected{% endif %}>
                                                 {{ label }}
@@ -367,26 +466,50 @@
 
                 <!-- Tab content: Overview -->
                 <div id="tab-overview" class="tab-content hidden">
-                    <div class="bg-white rounded-xl p-6 shadow-md">
+                    <div class="bg-white rounded-xl p-4 sm:p-6 shadow-md">
                         <h3 class="text-xl font-bold mb-6 text-gray-800">Classification Overview</h3>
                         
-                        <!-- Distribution chart placeholder -->
-                        <div class="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-6">
+                        <!-- Distribution stats -->
+                        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4 mb-8">
                             {% for label in labels %}
-                            <div class="bg-gray-50 rounded-lg p-4 text-center">
-                                <div class="text-2xl font-bold category-{{ label|lower }} inline-block px-3 py-1 rounded-lg mb-2">
+                            <div class="stat-card bg-gray-50 rounded-lg p-4 text-center">
+                                <div class="text-xl sm:text-2xl font-bold category-{{ label|lower }} inline-block px-3 py-1 rounded-lg mb-2">
                                     {{ label }}
                                 </div>
-                                <div class="text-sm text-gray-600">Count</div>
-                                <div class="text-xl font-semibold text-gray-800" id="count-{{ label }}">0</div>
+                                <div class="text-xs sm:text-sm text-gray-600 mb-1" id="percentage-{{ label }}">0%</div>
+                                <div class="text-lg sm:text-xl font-semibold text-gray-800" id="count-{{ label }}">0</div>
                             </div>
                             {% endfor %}
+                        </div>
+
+                        <!-- Charts Section -->
+                        <div class="grid md:grid-cols-2 gap-6 mb-6">
+                            <!-- Bar Chart -->
+                            <div class="bg-gray-50 rounded-lg p-4">
+                                <h4 class="text-base sm:text-lg font-semibold mb-4 text-gray-700">Persebaran Kesulitan</h4>
+                                <div class="chart-container">
+                                    <canvas id="distributionChart"></canvas>
+                                </div>
+                            </div>
+
+                            <!-- Pie Chart -->
+                            <div class="bg-gray-50 rounded-lg p-4">
+                                <h4 class="text-base sm:text-lg font-semibold mb-4 text-gray-700">Persebaran Jenis Soal</h4>
+                                <div class="chart-container">
+                                    <canvas id="typeChart"></canvas>
+                                </div>
+                                
+                                <!-- Chart Legend -->
+                                <div class="mt-4 space-y-2" id="chart-legend">
+                                    <!-- Legend will be populated by JavaScript -->
+                                </div>
+                            </div>
                         </div>
 
                         <div class="border-t pt-4">
                             <p class="text-sm text-gray-600">
                                 <i class="bi bi-info-circle"></i>
-                                This overview shows the distribution of questions across Bloom's Taxonomy levels.
+                                This overview shows the distribution of questions across Bloom's Taxonomy levels and question types.
                             </p>
                         </div>
                     </div>
@@ -396,7 +519,7 @@
     </section>
 
     <!-- Loading overlay -->
-    <div id="loading-overlay" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div id="loading-overlay" class="hidden fixed inset-0 overlay-backdrop flex items-center justify-center z-50">
         <div class="bg-white rounded-lg p-6 shadow-xl">
             <div class="flex items-center gap-3">
                 <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
@@ -404,6 +527,9 @@
             </div>
         </div>
     </div>
+
+    <!-- Hidden CSRF Token for AJAX requests -->
+    {% csrf_token %}
 
     <script src="{% static 'js/hasilKlasifikasi.js' %}"></script>
     <script src="{% static 'js/nav.js' %}"></script>
