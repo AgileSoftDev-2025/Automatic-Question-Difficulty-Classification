@@ -177,7 +177,7 @@ def handle_authenticated_upload(request, uploaded_file):
     except Exception as e:
         logger.error(f"Error saving file: {str(e)}", exc_info=True)
         messages.error(request, "Failed to save the file. Please try again.")
-        return redirect('soal:home')
+        return redirect('klasifikasi:hasil_klasifikasi', pk=history.id)
     
     # Create classification history record
     try:

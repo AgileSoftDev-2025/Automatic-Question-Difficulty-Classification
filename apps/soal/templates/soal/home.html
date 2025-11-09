@@ -285,24 +285,45 @@
                                         </span>
                                     </td>
                                     <td class="px-6 py-4">
-                                        <div class="flex space-x-3">
-                                            <a href="{% url 'soal:download_file' item.id %}" 
-                                               class="text-blue-600 hover:text-blue-800 font-semibold transition-colors"
-                                               title="Download">
-                                                <i class="bi bi-download"></i>
-                                            </a>
-                                            <a href="#" 
-                                               class="text-green-600 hover:text-green-800 font-semibold transition-colors"
-                                               title="View Results">
+                                    <div class="flex space-x-3">
+                                        <!-- Download -->
+                                        <a href="{% url 'soal:download_file' item.id %}" 
+                                        class="text-blue-600 hover:text-blue-800 font-semibold transition-colors"
+                                        title="Download">
+                                            <i class="bi bi-download"></i>
+                                        </a>
+                                        
+                                        <!-- View Results - UPDATED -->
+                                        {% if item.status == 'completed' %}
+                                            <a href="{% url 'klasifikasi:hasil_klasifikasi' item.id %}" 
+                                            class="text-green-600 hover:text-green-800 font-semibold transition-colors"
+                                            title="View Results">
                                                 <i class="bi bi-eye"></i>
                                             </a>
-                                            <a href="{% url 'soal:delete_history' item.id %}" 
-                                               class="text-red-600 hover:text-red-800 font-semibold transition-colors delete-history-btn"
-                                               title="Delete">
-                                                <i class="bi bi-trash"></i>
+                                        {% elif item.status == 'pending' %}
+                                            <a href="{% url 'klasifikasi:hasil_klasifikasi' item.id %}" 
+                                            class="text-blue-600 hover:text-blue-800 font-semibold transition-colors"
+                                            title="Start Classification">
+                                                <i class="bi bi-play-circle"></i>
                                             </a>
-                                        </div>
-                                    </td>
+                                        {% elif item.status == 'processing' %}
+                                            <span class="text-yellow-600" title="Processing">
+                                                <i class="bi bi-hourglass-split"></i>
+                                            </span>
+                                        {% else %}
+                                            <span class="text-gray-400" title="Failed">
+                                                <i class="bi bi-x-circle"></i>
+                                            </span>
+                                        {% endif %}
+                                        
+                                        <!-- Delete -->
+                                        <a href="{% url 'soal:delete_history' item.id %}" 
+                                        class="text-red-600 hover:text-red-800 font-semibold transition-colors delete-history-btn"
+                                        title="Delete">
+                                            <i class="bi bi-trash"></i>
+                                        </a>
+                                    </div>
+                                </td>
                                 </tr>
                                 {% endfor %}
                             </tbody>
