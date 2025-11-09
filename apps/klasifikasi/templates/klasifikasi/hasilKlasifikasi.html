@@ -14,6 +14,7 @@
         /* Custom scrollbar */
         .custom-scrollbar::-webkit-scrollbar {
             width: 8px;
+            height: 8px;
         }
         .custom-scrollbar::-webkit-scrollbar-track {
             background: #f1f5f9;
@@ -28,7 +29,7 @@
         }
 
         /* Smooth transitions */
-        .nav-item, .question-card, .classification-badge {
+        .nav-item, .question-card, .classification-badge, .stat-card {
             transition: all 0.2s ease-in-out;
         }
 
@@ -111,41 +112,9 @@
         }
 
         /* Stat card hover effect */
-        .stat-card {
-            transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
-        }
-
         .stat-card:hover {
             transform: translateY(-4px);
             box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
-        }
-
-        /* Flash effect */
-        @keyframes flash {
-            0%, 100% {
-                box-shadow: 0 0 0 0 rgba(59, 130, 246, 0);
-            }
-            50% {
-                box-shadow: 0 0 0 8px rgba(59, 130, 246, 0.3);
-            }
-        }
-
-        .flash {
-            animation: flash 0.8s ease-in-out;
-        }
-
-        /* Navigation arrow buttons */
-        .nav-arrow {
-            transition: all 0.2s ease-in-out;
-        }
-
-        .nav-arrow:hover:not(:disabled) {
-            transform: scale(1.05);
-        }
-
-        .nav-arrow:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
         }
 
         /* Overlay backdrop */
@@ -153,12 +122,6 @@
             background-color: rgba(0, 0, 0, 0.5);
             backdrop-filter: blur(2px);
         }
-        .nav-item[data-level="C1"] { border-left: 3px solid var(--color-c1, #3b82f6); }
-    .nav-item[data-level="C2"] { border-left: 3px solid var(--color-c2, #3b82f6); }
-    .nav-item[data-level="C3"] { border-left: 3px solid var(--color-c3, #3b82f6); }
-    .nav-item[data-level="C4"] { border-left: 3px solid var(--color-c4, #3b82f6); }
-    .nav-item[data-level="C5"] { border-left: 3px solid var(--color-c5, #3b82f6); }
-    .nav-item[data-level="C6"] { border-left: 3px solid var(--color-c6, #3b82f6); }
     </style>
 </head>
 
@@ -469,47 +432,140 @@
                     <div class="bg-white rounded-xl p-4 sm:p-6 shadow-md">
                         <h3 class="text-xl font-bold mb-6 text-gray-800">Classification Overview</h3>
                         
-                        <!-- Distribution stats -->
+                        <!-- Distribution stats cards -->
                         <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4 mb-8">
                             {% for label in labels %}
-                            <div class="stat-card bg-gray-50 rounded-lg p-4 text-center">
+                            <div class="stat-card bg-gradient-to-br from-gray-50 to-gray-100 rounded-lg p-4 text-center border border-gray-200">
                                 <div class="text-xl sm:text-2xl font-bold category-{{ label|lower }} inline-block px-3 py-1 rounded-lg mb-2">
                                     {{ label }}
                                 </div>
-                                <div class="text-xs sm:text-sm text-gray-600 mb-1" id="percentage-{{ label }}">0%</div>
-                                <div class="text-lg sm:text-xl font-semibold text-gray-800" id="count-{{ label }}">0</div>
+                                <div class="text-xs sm:text-sm text-gray-600 mb-1 font-semibold" id="percentage-{{ label }}">0%</div>
+                                <div class="text-lg sm:text-xl font-bold text-gray-800" id="count-{{ label }}">0</div>
+                                <div class="text-xs text-gray-500 mt-1">questions</div>
                             </div>
                             {% endfor %}
                         </div>
 
                         <!-- Charts Section -->
-                        <div class="grid md:grid-cols-2 gap-6 mb-6">
+                        <div class="grid lg:grid-cols-2 gap-6 mb-6">
                             <!-- Bar Chart -->
-                            <div class="bg-gray-50 rounded-lg p-4">
-                                <h4 class="text-base sm:text-lg font-semibold mb-4 text-gray-700">Persebaran Kesulitan</h4>
-                                <div class="chart-container">
+                            <div class="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg p-5 border border-blue-100">
+                                <div class="flex items-center justify-between mb-4">
+                                    <h4 class="text-base sm:text-lg font-bold text-gray-800">
+                                        <i class="bi bi-bar-chart-fill text-blue-600 mr-2"></i>
+                                        Persebaran Kesulitan
+                                    </h4>
+                                    <span class="text-xs text-gray-500 bg-white px-3 py-1 rounded-full">Bar Chart</span>
+                                </div>
+                                <div class="chart-container bg-white rounded-lg p-3">
                                     <canvas id="distributionChart"></canvas>
+                                </div>
+                                <div class="mt-3 text-xs text-gray-600 text-center">
+                                    Distribution of questions across Bloom's Taxonomy levels
                                 </div>
                             </div>
 
-                            <!-- Pie Chart -->
-                            <div class="bg-gray-50 rounded-lg p-4">
-                                <h4 class="text-base sm:text-lg font-semibold mb-4 text-gray-700">Persebaran Jenis Soal</h4>
-                                <div class="chart-container">
+                            <!-- Doughnut Chart with Legend -->
+                            <div class="bg-gradient-to-br from-purple-50 to-pink-50 rounded-lg p-5 border border-purple-100">
+                                <div class="flex items-center justify-between mb-4">
+                                    <h4 class="text-base sm:text-lg font-bold text-gray-800">
+                                        <i class="bi bi-pie-chart-fill text-purple-600 mr-2"></i>
+                                        Persebaran Jenis Soal
+                                    </h4>
+                                    <span class="text-xs text-gray-500 bg-white px-3 py-1 rounded-full">Doughnut Chart</span>
+                                </div>
+                                <div class="chart-container bg-white rounded-lg p-3">
                                     <canvas id="typeChart"></canvas>
                                 </div>
                                 
                                 <!-- Chart Legend -->
-                                <div class="mt-4 space-y-2" id="chart-legend">
+                                <div class="mt-4 bg-white rounded-lg p-3 space-y-1 max-h-64 overflow-y-auto custom-scrollbar" id="chart-legend">
                                     <!-- Legend will be populated by JavaScript -->
                                 </div>
                             </div>
                         </div>
 
-                        <div class="border-t pt-4">
-                            <p class="text-sm text-gray-600">
-                                <i class="bi bi-info-circle"></i>
-                                This overview shows the distribution of questions across Bloom's Taxonomy levels and question types.
+                        <!-- Summary Statistics -->
+                        <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                            <div class="bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg p-4 text-white shadow-md">
+                                <div class="flex items-center justify-between">
+                                    <div>
+                                        <div class="text-xs opacity-90 mb-1">Total Questions</div>
+                                        <div class="text-2xl font-bold">{{ total_questions }}</div>
+                                    </div>
+                                    <i class="bi bi-question-circle text-3xl opacity-80"></i>
+                                </div>
+                            </div>
+                            
+                            <div class="bg-gradient-to-br from-green-500 to-green-600 rounded-lg p-4 text-white shadow-md">
+                                <div class="flex items-center justify-between">
+                                    <div>
+                                        <div class="text-xs opacity-90 mb-1">Highest Category</div>
+                                        <div class="text-2xl font-bold" id="highest-category">-</div>
+                                    </div>
+                                    <i class="bi bi-trophy text-3xl opacity-80"></i>
+                                </div>
+                            </div>
+                            
+                            <div class="bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg p-4 text-white shadow-md">
+                                <div class="flex items-center justify-between">
+                                    <div>
+                                        <div class="text-xs opacity-90 mb-1">Lower Order (C1-C2)</div>
+                                        <div class="text-2xl font-bold" id="lower-order">0</div>
+                                    </div>
+                                    <i class="bi bi-arrow-down-circle text-3xl opacity-80"></i>
+                                </div>
+                            </div>
+                            
+                            <div class="bg-gradient-to-br from-orange-500 to-orange-600 rounded-lg p-4 text-white shadow-md">
+                                <div class="flex items-center justify-between">
+                                    <div>
+                                        <div class="text-xs opacity-90 mb-1">Higher Order (C3-C6)</div>
+                                        <div class="text-2xl font-bold" id="higher-order">0</div>
+                                    </div>
+                                    <i class="bi bi-arrow-up-circle text-3xl opacity-80"></i>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Bloom's Taxonomy Reference -->
+                        <div class="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-4">
+                            <h5 class="font-bold text-gray-800 mb-3 flex items-center">
+                                <i class="bi bi-book text-blue-600 mr-2"></i>
+                                Bloom's Taxonomy Reference
+                            </h5>
+                            <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-3 text-sm">
+                                <div class="bg-white rounded p-3 border-l-4 border-green-500">
+                                    <div class="font-bold text-green-700">C1 - Remember</div>
+                                    <div class="text-xs text-gray-600 mt-1">Recall facts and basic concepts</div>
+                                </div>
+                                <div class="bg-white rounded p-3 border-l-4 border-blue-500">
+                                    <div class="font-bold text-blue-700">C2 - Understand</div>
+                                    <div class="text-xs text-gray-600 mt-1">Explain ideas or concepts</div>
+                                </div>
+                                <div class="bg-white rounded p-3 border-l-4 border-amber-500">
+                                    <div class="font-bold text-amber-700">C3 - Apply</div>
+                                    <div class="text-xs text-gray-600 mt-1">Use information in new situations</div>
+                                </div>
+                                <div class="bg-white rounded p-3 border-l-4 border-orange-500">
+                                    <div class="font-bold text-orange-700">C4 - Analyze</div>
+                                    <div class="text-xs text-gray-600 mt-1">Draw connections among ideas</div>
+                                </div>
+                                <div class="bg-white rounded p-3 border-l-4 border-red-500">
+                                    <div class="font-bold text-red-700">C5 - Evaluate</div>
+                                    <div class="text-xs text-gray-600 mt-1">Justify a decision or course of action</div>
+                                </div>
+                                <div class="bg-white rounded p-3 border-l-4 border-purple-500">
+                                    <div class="font-bold text-purple-700">C6 - Create</div>
+                                    <div class="text-xs text-gray-600 mt-1">Produce new or original work</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="border-t mt-6 pt-4">
+                            <p class="text-sm text-gray-600 flex items-start gap-2">
+                                <i class="bi bi-info-circle text-blue-500 mt-0.5"></i>
+                                <span>This overview shows the distribution of questions across Bloom's Taxonomy levels. Higher-order thinking skills (C3-C6) promote deeper learning and critical thinking.</span>
                             </p>
                         </div>
                     </div>
