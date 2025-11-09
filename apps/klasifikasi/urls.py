@@ -14,6 +14,7 @@ urlpatterns = [
     path('history/', views.history_view, name='history'),
     
     # Classification operations
+    path('hasil/', views.hasil_klasifikasi, name='hasil'),  # Tambahkan ini
     path('detail/<int:pk>/', views.view_classification_detail, name='view_detail'),
     path('delete/<int:pk>/', views.delete_classification, name='delete'),
     path('bulk-delete/', views.bulk_delete_classifications, name='bulk_delete'),

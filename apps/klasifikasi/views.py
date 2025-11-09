@@ -18,6 +18,73 @@ from datetime import datetime
 
 
 @login_required
+def hasil_klasifikasi(request):
+    """
+    Menampilkan halaman hasil klasifikasi soal
+    """
+    # Data dummy untuk testing
+    questions_data = [
+        {
+            'question': 'Apa yang dimaksud dengan algoritma dalam pemrograman',
+            'level': 'C1',
+            'index': 1
+        },
+        {
+            'question': 'Jelaskan perbedaan antara bahasa pemrograman tingkat tinggi dan tingkat rendah',
+            'level': 'C2',
+            'index': 2
+        },
+        {
+            'question': 'Gunakan struktur percabangan untuk membuat program sederhana menentukan bilangan genap atau ganjil',
+            'level': 'C3',
+            'index': 3
+        },
+        {
+            'question': 'Analisis penyebab program tidak berjalan dengan benar meskipun sintaks sudah benar',
+            'level': 'C4',
+            'index': 4
+        },
+        {
+            'question': 'Evaluasi efektivitas penggunaan bubble sort dibandingkan insertion sort untuk dataset besar',
+            'level': 'C5',
+            'index': 5
+        },
+        {
+            'question': 'Rancang algoritma untuk menghitung total belanja dengan diskon dan pajak menggunakan bahasa pemrograman pilihanmu',
+            'level': 'C6',
+            'index': 6
+        },
+        {
+            'question': 'Sebutkan tiga jenis topologi jaringan komputer',
+            'level': 'C1',
+            'index': 7
+        },
+        {
+            'question': 'Jelaskan fungsi dari IP address dalam jaringan komputer',
+            'level': 'C2',
+            'index': 8
+        },
+        {
+            'question': 'Implementasikan konfigurasi jaringan sederhana menggunakan aplikasi Packet Tracer',
+            'level': 'C3',
+            'index': 9
+        },
+        {
+            'question': 'Buat rancangan sistem absensi mahasiswa berbasis web dengan mempertimbangkan keamanan data pengguna',
+            'level': 'C6',
+            'index': 10
+        }
+    ]
+    
+    context = {
+        'filename': 'Soal Pemrograman dan Jaringan.pdf',
+        'file_url': '#',
+        'questions': questions_data,
+        'labels': ['C1', 'C2', 'C3', 'C4', 'C5', 'C6']
+    }
+    return render(request, 'klasifikasi/hasilKlasifikasi.html', context)
+
+@login_required
 def home(request):
     """
     Menampilkan halaman utama (homepage) dengan form upload
