@@ -31,10 +31,23 @@ def predict_text(text):
     return results
 
 
+from googletrans import Translator
+def translate_text_google(text, src="id", dest="en"):
+    try:
+        translator = Translator()
+        translated = translator.translate(text, src=src, dest=dest)
+        return translated.text
+    except Exception as e:
+        print(f"Gagal menerjemahkan: {e}")
+        return text
+
 if __name__ == "__main__":
-    # Coba prediksi
-    sample = " Assess and synthesise diverse information about information and knowledge management technologies market and how to use implementation strategies to maximise their strengths and minimise their weaknesses."
-    prediction = predict_text(sample)
+
+    sample = input("Masukkan soal untuk diprediksi: ")
+    print("\n🔁 Menerjemahkan teks...")
+    translated = translate_text_google(sample, src="id", dest="en")
+
+    prediction = predict_text(translated)
 
     print("\n=== HASIL PREDIKSI ===")
     for label, info in prediction.items():
