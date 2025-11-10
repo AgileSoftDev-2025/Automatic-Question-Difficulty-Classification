@@ -44,7 +44,7 @@ def translate_text_google(text, src="id", dest="en"):
 if __name__ == "__main__":
 
     sample = input("Masukkan soal untuk diprediksi: ")
-    print("\n🔁 Menerjemahkan teks...")
+    print("\n🔁 Memproses...")
     translated = translate_text_google(sample, src="id", dest="en")
 
     prediction = predict_text(translated)
