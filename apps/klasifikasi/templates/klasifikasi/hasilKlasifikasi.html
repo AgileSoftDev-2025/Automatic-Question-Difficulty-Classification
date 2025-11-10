@@ -278,31 +278,24 @@
                         {% endfor %}
                     </div>
 
-                    <!-- Download button -->
+                    <!-- Download and Export buttons -->
                     <div class="mt-6 space-y-3">
-                        {% if file_url != '#' %}
                         <a id="download-btn" 
-                           href="{{ file_url }}" 
+                           href="{% url 'klasifikasi:download_report' classification_id %}" 
                            class="flex items-center justify-center gap-2 w-full bg-blue-600 text-white px-4 sm:px-6 py-3 rounded-full font-semibold hover:bg-blue-700 transition-colors shadow-md hover:shadow-lg"
-                           download>
+                           target="_blank">
                             <i class="bi bi-download"></i>
-                            <span>Download PDF</span>
+                            <span>Download PDF Report</span>
                         </a>
-                        {% else %}
-                        <button 
-                           id="download-btn" 
-                           class="flex items-center justify-center gap-2 w-full bg-gray-400 text-white px-4 sm:px-6 py-3 rounded-full font-semibold cursor-not-allowed"
-                           disabled>
-                            <i class="bi bi-download"></i>
-                            <span>PDF Not Available</span>
-                        </button>
-                        {% endif %}
                         
                         <!-- Export options -->
-                        <button id="export-btn" class="flex items-center justify-center gap-2 w-full bg-green-600 text-white px-4 sm:px-6 py-3 rounded-full font-semibold hover:bg-green-700 transition-colors shadow-md hover:shadow-lg">
+                        <a id="export-btn" 
+                           href="{% url 'klasifikasi:export_excel' classification_id %}"
+                           class="flex items-center justify-center gap-2 w-full bg-green-600 text-white px-4 sm:px-6 py-3 rounded-full font-semibold hover:bg-green-700 transition-colors shadow-md hover:shadow-lg"
+                           target="_blank">
                             <i class="bi bi-file-earmark-spreadsheet"></i>
                             <span>Export to Excel</span>
-                        </button>
+                        </a>
                     </div>
                 </div>
             </aside>

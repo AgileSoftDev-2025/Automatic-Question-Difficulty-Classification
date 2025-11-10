@@ -17,8 +17,19 @@ from django.conf import settings
 import os
 import json
 from datetime import datetime, timedelta
-import logging
 import mimetypes
+from reportlab.lib import colors
+from reportlab.lib.pagesizes import A4, letter
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.units import inch
+from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
+from reportlab.platypus import (
+    SimpleDocTemplate, Table, TableStyle, Paragraph, 
+    Spacer, PageBreak, Image, KeepTogether
+)
+from reportlab.pdfgen import canvas
+from io import BytesIO
+import logging
 
 logger = logging.getLogger(__name__)
 
@@ -756,15 +767,32 @@ def delete_classification(request, pk):
         return redirect('klasifikasi:history')
 
 
+def add_page_number(canvas_obj, doc):
+    """Add page numbers to PDF"""
+    page_num = canvas_obj.getPageNumber()
+    text = f"Page {page_num}"
+    canvas_obj.saveState()
+    canvas_obj.setFont('Helvetica', 9)
+    canvas_obj.setFillColor(colors.grey)
+    canvas_obj.drawRightString(
+        letter[0] - 0.75 * inch,
+        0.5 * inch,
+        text
+    )
+    canvas_obj.restoreState()
+
+
 @login_required
 @require_http_methods(["GET"])
 def download_report(request, pk):
     """
-    Download classification report with validation and security
+    Download classification report as PDF
+    Currently uses dummy data - will be replaced with model data
     """
     try:
-        # WHEN MODEL IS READY:
+        # DUMMY DATA - Replace with actual model data when ready
         """
+        # WHEN MODEL IS READY - Uncomment this:
         classification = get_object_or_404(
             Classification, 
             pk=pk, 
@@ -780,36 +808,378 @@ def download_report(request, pk):
         if not os.path.exists(file_path):
             messages.error(request, 'Report file not found on server.')
             return redirect('klasifikasi:history')
+        """
         
-        # Determine content type
-        content_type, _ = mimetypes.guess_type(file_path)
-        if not content_type:
-            content_type = 'application/octet-stream'
+        # DUMMY DATA for testing
+        classification_data = {
+            'id': pk,
+            'filename': 'SOAL LATIHAN UTS.pdf',
+            'total_questions': 21,
+            'created_at': timezone.now(),
+            'q1_count': 4,
+            'q2_count': 5,
+            'q3_count': 4,
+            'q4_count': 2,
+            'q5_count': 2,
+            'q6_count': 4,
+            'status': 'completed',
+            'user': request.user,
+        }
         
-        # Create response with file
-        response = FileResponse(
-            open(file_path, 'rb'),
-            content_type=content_type
+        questions_data = [
+            {
+                'question_number': 1,
+                'question_text': 'Apa yang dimaksud dengan algoritma dalam pemrograman?',
+                'category': 'C1',
+                'confidence_score': 0.95,
+            },
+            {
+                'question_number': 2,
+                'question_text': 'Jelaskan perbedaan antara bahasa pemrograman tingkat tinggi dan tingkat rendah',
+                'category': 'C2',
+                'confidence_score': 0.89,
+            },
+            {
+                'question_number': 3,
+                'question_text': 'Gunakan struktur percabangan untuk membuat program sederhana menentukan bilangan genap atau ganjil',
+                'category': 'C3',
+                'confidence_score': 0.92,
+            },
+            {
+                'question_number': 4,
+                'question_text': 'Analisis penyebab program tidak berjalan dengan benar meskipun sintaks sudah benar',
+                'category': 'C4',
+                'confidence_score': 0.87,
+            },
+            {
+                'question_number': 5,
+                'question_text': 'Evaluasi efektivitas penggunaan bubble sort dibandingkan insertion sort untuk dataset besar',
+                'category': 'C5',
+                'confidence_score': 0.91,
+            },
+            {
+                'question_number': 6,
+                'question_text': 'Rancang algoritma untuk menghitung total belanja dengan diskon dan pajak menggunakan bahasa pemrograman pilihanmu',
+                'category': 'C6',
+                'confidence_score': 0.88,
+            },
+            {
+                'question_number': 7,
+                'question_text': 'Sebutkan tiga jenis topologi jaringan komputer',
+                'category': 'C1',
+                'confidence_score': 0.94,
+            },
+            {
+                'question_number': 8,
+                'question_text': 'Jelaskan fungsi dari IP address dalam jaringan komputer',
+                'category': 'C2',
+                'confidence_score': 0.90,
+            },
+            {
+                'question_number': 9,
+                'question_text': 'Implementasikan konfigurasi jaringan sederhana menggunakan aplikasi Packet Tracer',
+                'category': 'C3',
+                'confidence_score': 0.86,
+            },
+            {
+                'question_number': 10,
+                'question_text': 'Buat rancangan sistem absensi mahasiswa berbasis web dengan mempertimbangkan keamanan data pengguna',
+                'category': 'C6',
+                'confidence_score': 0.93,
+            },
+            {
+                'question_number': 11,
+                'question_text': 'Apa itu variabel dalam pemrograman?',
+                'category': 'C1',
+                'confidence_score': 0.96,
+            },
+            {
+                'question_number': 12,
+                'question_text': 'Jelaskan konsep loop dalam pemrograman',
+                'category': 'C2',
+                'confidence_score': 0.88,
+            },
+            {
+                'question_number': 13,
+                'question_text': 'Terapkan konsep array untuk menyimpan data mahasiswa',
+                'category': 'C3',
+                'confidence_score': 0.85,
+            },
+            {
+                'question_number': 14,
+                'question_text': 'Bandingkan efisiensi algoritma sorting berbeda',
+                'category': 'C4',
+                'confidence_score': 0.90,
+            },
+            {
+                'question_number': 15,
+                'question_text': 'Evaluasi keamanan sistem login yang ada',
+                'category': 'C5',
+                'confidence_score': 0.87,
+            },
+            {
+                'question_number': 16,
+                'question_text': 'Desain database untuk sistem perpustakaan',
+                'category': 'C6',
+                'confidence_score': 0.89,
+            },
+            {
+                'question_number': 17,
+                'question_text': 'Sebutkan jenis-jenis operator dalam pemrograman',
+                'category': 'C1',
+                'confidence_score': 0.95,
+            },
+            {
+                'question_number': 18,
+                'question_text': 'Jelaskan perbedaan GET dan POST method',
+                'category': 'C2',
+                'confidence_score': 0.91,
+            },
+            {
+                'question_number': 19,
+                'question_text': 'Implementasikan CRUD operations untuk data siswa',
+                'category': 'C3',
+                'confidence_score': 0.88,
+            },
+            {
+                'question_number': 20,
+                'question_text': 'Analisis performa aplikasi web Anda',
+                'category': 'C4',
+                'confidence_score': 0.86,
+            },
+            {
+                'question_number': 21,
+                'question_text': 'Rancang arsitektur microservices untuk e-commerce',
+                'category': 'C6',
+                'confidence_score': 0.92,
+            },
+        ]
+        
+        # Generate PDF
+        buffer = BytesIO()
+        doc = SimpleDocTemplate(
+            buffer,
+            pagesize=letter,
+            rightMargin=0.75*inch,
+            leftMargin=0.75*inch,
+            topMargin=0.75*inch,
+            bottomMargin=0.75*inch,
         )
         
-        filename = os.path.basename(file_path)
+        # Container for PDF elements
+        elements = []
+        
+        # Styles
+        styles = getSampleStyleSheet()
+        
+        # Custom styles
+        title_style = ParagraphStyle(
+            'CustomTitle',
+            parent=styles['Heading1'],
+            fontSize=24,
+            textColor=colors.HexColor('#2563eb'),
+            spaceAfter=30,
+            alignment=TA_CENTER,
+            fontName='Helvetica-Bold'
+        )
+        
+        heading_style = ParagraphStyle(
+            'CustomHeading',
+            parent=styles['Heading2'],
+            fontSize=16,
+            textColor=colors.HexColor('#1e40af'),
+            spaceAfter=12,
+            spaceBefore=12,
+            fontName='Helvetica-Bold'
+        )
+        
+        subheading_style = ParagraphStyle(
+            'CustomSubHeading',
+            parent=styles['Heading3'],
+            fontSize=12,
+            textColor=colors.HexColor('#374151'),
+            spaceAfter=8,
+            fontName='Helvetica-Bold'
+        )
+        
+        normal_style = ParagraphStyle(
+            'CustomNormal',
+            parent=styles['Normal'],
+            fontSize=10,
+            textColor=colors.HexColor('#374151'),
+            spaceAfter=6,
+        )
+        
+        # Title
+        title = Paragraph("BLOOMERS Classification Report", title_style)
+        elements.append(title)
+        elements.append(Spacer(1, 0.2*inch))
+        
+        # Report Information
+        info_data = [
+            ['File Name:', classification_data['filename']],
+            ['Classification ID:', f"#{classification_data['id']}"],
+            ['Generated On:', classification_data['created_at'].strftime('%d/%m/%Y %H:%M')],
+            ['Total Questions:', str(classification_data['total_questions'])],
+            ['User:', request.user.username],
+        ]
+        
+        info_table = Table(info_data, colWidths=[1.5*inch, 4.5*inch])
+        info_table.setStyle(TableStyle([
+            ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
+            ('FONTNAME', (1, 0), (1, -1), 'Helvetica'),
+            ('FONTSIZE', (0, 0), (-1, -1), 10),
+            ('TEXTCOLOR', (0, 0), (0, -1), colors.HexColor('#374151')),
+            ('TEXTCOLOR', (1, 0), (1, -1), colors.HexColor('#6b7280')),
+            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
+        ]))
+        
+        elements.append(info_table)
+        elements.append(Spacer(1, 0.3*inch))
+        
+        # Distribution Summary
+        elements.append(Paragraph("Classification Distribution", heading_style))
+        
+        # Calculate percentages
+        total = classification_data['total_questions']
+        distribution_data = [
+            ['Category', 'Level', 'Count', 'Percentage'],
+            ['C1', 'Remember', str(classification_data['q1_count']), 
+             f"{(classification_data['q1_count']/total*100):.1f}%"],
+            ['C2', 'Understand', str(classification_data['q2_count']), 
+             f"{(classification_data['q2_count']/total*100):.1f}%"],
+            ['C3', 'Apply', str(classification_data['q3_count']), 
+             f"{(classification_data['q3_count']/total*100):.1f}%"],
+            ['C4', 'Analyze', str(classification_data['q4_count']), 
+             f"{(classification_data['q4_count']/total*100):.1f}%"],
+            ['C5', 'Evaluate', str(classification_data['q5_count']), 
+             f"{(classification_data['q5_count']/total*100):.1f}%"],
+            ['C6', 'Create', str(classification_data['q6_count']), 
+             f"{(classification_data['q6_count']/total*100):.1f}%"],
+        ]
+        
+        dist_table = Table(distribution_data, colWidths=[1*inch, 1.5*inch, 1*inch, 1.5*inch])
+        dist_table.setStyle(TableStyle([
+            # Header row
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#2563eb')),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, 0), 11),
+            ('ALIGN', (0, 0), (-1, 0), 'CENTER'),
+            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+            
+            # Data rows
+            ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
+            ('FONTSIZE', (0, 1), (-1, -1), 10),
+            ('ALIGN', (0, 1), (0, -1), 'CENTER'),
+            ('ALIGN', (1, 1), (1, -1), 'LEFT'),
+            ('ALIGN', (2, 1), (-1, -1), 'CENTER'),
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+            ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#f3f4f6')]),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            ('TOPPADDING', (0, 1), (-1, -1), 8),
+            ('BOTTOMPADDING', (0, 1), (-1, -1), 8),
+        ]))
+        
+        elements.append(dist_table)
+        elements.append(Spacer(1, 0.3*inch))
+        
+        # Questions Detail
+        elements.append(PageBreak())
+        elements.append(Paragraph("Detailed Question Classification", heading_style))
+        elements.append(Spacer(1, 0.1*inch))
+        
+        # Category colors
+        category_colors = {
+            'C1': colors.HexColor('#dcfce7'),
+            'C2': colors.HexColor('#dbeafe'),
+            'C3': colors.HexColor('#fef3c7'),
+            'C4': colors.HexColor('#fed7aa'),
+            'C5': colors.HexColor('#fecaca'),
+            'C6': colors.HexColor('#e9d5ff'),
+        }
+        
+        for question in questions_data:
+            # Question header
+            q_header = Paragraph(
+                f"<b>Question {question['question_number']}</b> - "
+                f"Category: {question['category']} | "
+                f"Confidence: {question['confidence_score']*100:.1f}%",
+                subheading_style
+            )
+            
+            # Question text
+            q_text = Paragraph(question['question_text'], normal_style)
+            
+            # Create a box for each question
+            q_data = [
+                [q_header],
+                [q_text],
+            ]
+            
+            q_table = Table(q_data, colWidths=[6*inch])
+            q_table.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (-1, 0), category_colors.get(question['category'], colors.lightgrey)),
+                ('BACKGROUND', (0, 1), (-1, -1), colors.white),
+                ('BOX', (0, 0), (-1, -1), 1, colors.grey),
+                ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+                ('TOPPADDING', (0, 0), (-1, -1), 10),
+                ('BOTTOMPADDING', (0, 0), (-1, -1), 10),
+                ('LEFTPADDING', (0, 0), (-1, -1), 12),
+                ('RIGHTPADDING', (0, 0), (-1, -1), 12),
+            ]))
+            
+            elements.append(KeepTogether([q_table, Spacer(1, 0.15*inch)]))
+        
+        # Footer information
+        elements.append(PageBreak())
+        elements.append(Spacer(1, 0.5*inch))
+        
+        footer_text = Paragraph(
+            "<b>About Bloom's Taxonomy Levels:</b><br/><br/>"
+            "<b>C1 (Remember):</b> Recall facts and basic concepts<br/>"
+            "<b>C2 (Understand):</b> Explain ideas or concepts<br/>"
+            "<b>C3 (Apply):</b> Use information in new situations<br/>"
+            "<b>C4 (Analyze):</b> Draw connections among ideas<br/>"
+            "<b>C5 (Evaluate):</b> Justify a decision or course of action<br/>"
+            "<b>C6 (Create):</b> Produce new or original work<br/><br/>"
+            "<i>This report was automatically generated by BLOOMERS Classification System.</i>",
+            normal_style
+        )
+        elements.append(footer_text)
+        
+        # Build PDF
+        doc.build(elements, onFirstPage=add_page_number, onLaterPages=add_page_number)
+        
+        # Get PDF from buffer
+        pdf = buffer.getvalue()
+        buffer.close()
+        
+        # Create response
+        response = HttpResponse(pdf, content_type='application/pdf')
+        filename = f"classification_report_{pk}_{timezone.now().strftime('%Y%m%d_%H%M%S')}.pdf"
         response['Content-Disposition'] = f'attachment; filename="{filename}"'
-        response['Content-Length'] = os.path.getsize(file_path)
         
         logger.info(
-            f"Report downloaded: {classification.filename} "
+            f"Report downloaded: Classification {pk} "
             f"by {request.user.username}"
         )
         
         return response
-        """
         
-        messages.info(request, 'Report download functionality will be available soon.')
+    except ImportError as e:
+        logger.error(f"ReportLab not installed: {str(e)}")
+        messages.error(
+            request, 
+            'PDF generation library not available. Please contact administrator.'
+        )
         return redirect('klasifikasi:history')
         
     except Exception as e:
-        logger.error(f"Error downloading report {pk}: {str(e)}", exc_info=True)
-        messages.error(request, 'Error downloading report.')
+        logger.error(f"Error generating report {pk}: {str(e)}", exc_info=True)
+        messages.error(request, 'Error generating report. Please try again.')
         return redirect('klasifikasi:history')
 
 
