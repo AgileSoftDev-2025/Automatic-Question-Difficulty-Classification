@@ -1,8 +1,3 @@
-"""
-Improved views for Classification System
-Enhanced error handling, security, and functionality
-"""
-
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
@@ -18,6 +13,14 @@ import os
 import json
 from datetime import datetime, timedelta
 import mimetypes
+import logging
+
+# Import ML model classifier
+from .ml_model import classify_questions_batch, get_classifier, classify_question
+
+logger = logging.getLogger(__name__)
+
+# Rest of your imports for PDF generation...
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4, letter
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
@@ -29,9 +32,6 @@ from reportlab.platypus import (
 )
 from reportlab.pdfgen import canvas
 from io import BytesIO
-import logging
-
-logger = logging.getLogger(__name__)
 
 # Uncomment when models are ready
 # from .models import Classification, Question
@@ -46,10 +46,10 @@ def redirect_to_main_home(request):
 @require_http_methods(["GET"])
 def hasil_klasifikasi(request, pk=None):
     """
-    Display classification results page with enhanced features
+    Display classification results page with ML model predictions
     """
     try:
-        # WHEN MODEL IS READY - Replace dummy data with:
+        # WHEN MODEL IS READY - Replace with:
         """
         classification = get_object_or_404(
             Classification,
@@ -57,178 +57,86 @@ def hasil_klasifikasi(request, pk=None):
             user=request.user
         )
         
-        # Check if classification is completed
-        if classification.status != 'completed':
-            messages.warning(
-                request, 
-                f'Classification is still {classification.status}. Please wait.'
-            )
-            return redirect('klasifikasi:history')
-        
-        # Get all questions ordered by number
         questions = classification.questions.select_related('classification').order_by('question_number')
-        
-        questions_data = [
-            {
-                'question': q.question_text,
-                'level': q.category,
-                'index': q.question_number,
-                'confidence': q.confidence_score * 100,  # Convert to percentage
-                'choices': q.has_choices,
-                'is_manually_classified': q.is_manually_classified
-            }
-            for q in questions
-        ]
-        
-        filename = classification.filename
-        file_url = classification.result_file.url if classification.result_file else '#'
-        classification_date = classification.formatted_created_at
-        total_questions = classification.total_questions
+        questions_text = [q.question_text for q in questions]
         """
         
-        # DUMMY DATA for testing
-        questions_data = [
-            {
-                'question': 'Apa yang dimaksud dengan algoritma dalam pemrograman?',
-                'level': 'C1',
-                'index': 1,
-                'confidence': 95
-            },
-            {
-                'question': 'Jelaskan perbedaan antara bahasa pemrograman tingkat tinggi dan tingkat rendah',
-                'level': 'C2',
-                'index': 2,
-                'confidence': 89
-            },
-            {
-                'question': 'Gunakan struktur percabangan untuk membuat program sederhana menentukan bilangan genap atau ganjil',
-                'level': 'C3',
-                'index': 3,
-                'confidence': 92
-            },
-            {
-                'question': 'Analisis penyebab program tidak berjalan dengan benar meskipun sintaks sudah benar',
-                'level': 'C4',
-                'index': 4,
-                'confidence': 87
-            },
-            {
-                'question': 'Evaluasi efektivitas penggunaan bubble sort dibandingkan insertion sort untuk dataset besar',
-                'level': 'C5',
-                'index': 5,
-                'confidence': 91
-            },
-            {
-                'question': 'Rancang algoritma untuk menghitung total belanja dengan diskon dan pajak menggunakan bahasa pemrograman pilihanmu',
-                'level': 'C6',
-                'index': 6,
-                'confidence': 88
-            },
-            {
-                'question': 'Sebutkan tiga jenis topologi jaringan komputer',
-                'level': 'C1',
-                'index': 7,
-                'confidence': 94
-            },
-            {
-                'question': 'Jelaskan fungsi dari IP address dalam jaringan komputer',
-                'level': 'C2',
-                'index': 8,
-                'confidence': 90
-            },
-            {
-                'question': 'Implementasikan konfigurasi jaringan sederhana menggunakan aplikasi Packet Tracer',
-                'level': 'C3',
-                'index': 9,
-                'confidence': 86
-            },
-            {
-                'question': 'Buat rancangan sistem absensi mahasiswa berbasis web dengan mempertimbangkan keamanan data pengguna',
-                'level': 'C6',
-                'index': 10,
-                'confidence': 93
-            },
-            {
-                'question': 'Apa itu variabel dalam pemrograman?',
-                'level': 'C1',
-                'index': 11,
-                'confidence': 96
-            },
-            {
-                'question': 'Jelaskan konsep loop dalam pemrograman',
-                'level': 'C2',
-                'index': 12,
-                'confidence': 88
-            },
-            {
-                'question': 'Terapkan konsep array untuk menyimpan data mahasiswa',
-                'level': 'C3',
-                'index': 13,
-                'confidence': 85
-            },
-            {
-                'question': 'Bandingkan efisiensi algoritma sorting berbeda',
-                'level': 'C4',
-                'index': 14,
-                'confidence': 90
-            },
-            {
-                'question': 'Evaluasi keamanan sistem login yang ada',
-                'level': 'C5',
-                'index': 15,
-                'confidence': 87
-            },
-            {
-                'question': 'Desain database untuk sistem perpustakaan',
-                'level': 'C6',
-                'index': 16,
-                'confidence': 89
-            },
-            {
-                'question': 'Sebutkan jenis-jenis operator dalam pemrograman',
-                'level': 'C1',
-                'index': 17,
-                'confidence': 95
-            },
-            {
-                'question': 'Jelaskan perbedaan GET dan POST method',
-                'level': 'C2',
-                'index': 18,
-                'confidence': 91
-            },
-            {
-                'question': 'Implementasikan CRUD operations untuk data siswa',
-                'level': 'C3',
-                'index': 19,
-                'confidence': 88
-            },
-            {
-                'question': 'Analisis performa aplikasi web Anda',
-                'level': 'C4',
-                'index': 20,
-                'confidence': 86
-            },
-            {
-                'question': 'Rancang arsitektur microservices untuk e-commerce',
-                'level': 'C6',
-                'index': 21,
-                'confidence': 92
-            },
+        # DUMMY DATA - Replace this with actual extracted questions
+        questions_text = [
+            'Apa yang dimaksud dengan algoritma dalam pemrograman?',
+            'Jelaskan perbedaan antara bahasa pemrograman tingkat tinggi dan tingkat rendah',
+            'Gunakan struktur percabangan untuk membuat program sederhana menentukan bilangan genap atau ganjil',
+            'Analisis penyebab program tidak berjalan dengan benar meskipun sintaks sudah benar',
+            'Evaluasi efektivitas penggunaan bubble sort dibandingkan insertion sort untuk dataset besar',
+            'Rancang algoritma untuk menghitung total belanja dengan diskon dan pajak menggunakan bahasa pemrograman pilihanmu',
+            'Sebutkan tiga jenis topologi jaringan komputer',
+            'Jelaskan fungsi dari IP address dalam jaringan komputer',
+            'Implementasikan konfigurasi jaringan sederhana menggunakan aplikasi Packet Tracer',
+            'Buat rancangan sistem absensi mahasiswa berbasis web dengan mempertimbangkan keamanan data pengguna',
+            'Apa itu variabel dalam pemrograman?',
+            'Jelaskan konsep loop dalam pemrograman',
+            'Terapkan konsep array untuk menyimpan data mahasiswa',
+            'Bandingkan efisiensi algoritma sorting berbeda',
+            'Evaluasi keamanan sistem login yang ada',
+            'Desain database untuk sistem perpustakaan',
+            'Sebutkan jenis-jenis operator dalam pemrograman',
+            'Jelaskan perbedaan GET dan POST method',
+            'Implementasikan CRUD operations untuk data siswa',
+            'Analisis performa aplikasi web Anda',
+            'Rancang arsitektur microservices untuk e-commerce',
         ]
         
+        try:
+            # Classify all questions using ML model
+            logger.info(f"Starting ML classification for {len(questions_text)} questions")
+            
+            predictions = classify_questions_batch(
+                questions_text,
+                translate=True,  # Translate Indonesian to English
+                batch_size=8
+            )
+            
+            # Build questions data with ML predictions
+            questions_data = []
+            for i, (text, pred) in enumerate(zip(questions_text, predictions), 1):
+                questions_data.append({
+                    'question': text,
+                    'level': pred['category'],  # C1-C6
+                    'index': i,
+                    'confidence': pred['confidence'] * 100  # Convert to percentage
+                })
+            
+            logger.info(f"Successfully classified {len(questions_data)} questions using ML model")
+            
+        except Exception as e:
+            logger.error(f"ML Classification error: {str(e)}", exc_info=True)
+            messages.warning(
+                request, 
+                'Automatic classification encountered an issue. Displaying questions without classification.'
+            )
+            
+            # Fallback: show questions without classification
+            questions_data = [
+                {
+                    'question': text,
+                    'level': 'C2',  # Default
+                    'index': i,
+                    'confidence': 0
+                }
+                for i, text in enumerate(questions_text, 1)
+            ]
+        
         filename = 'SOAL LATIHAN UTS.pdf'
-        file_url = '#'
-        classification_date = timezone.now().strftime('%d/%m/%Y')
         total_questions = len(questions_data)
         
         context = {
             'filename': filename,
-            'file_url': file_url,
+            'file_url': '#',
             'questions': questions_data,
             'labels': ['C1', 'C2', 'C3', 'C4', 'C5', 'C6'],
             'total_questions': total_questions,
             'classification_id': pk or 1,
-            'classification_date': classification_date,
+            'classification_date': timezone.now().strftime('%d/%m/%Y'),
         }
         
         return render(request, 'klasifikasi/hasilKlasifikasi.html', context)
@@ -245,29 +153,18 @@ def hasil_klasifikasi(request, pk=None):
 def update_question_classification(request, pk):
     """
     AJAX endpoint to update individual question classification
-    Enhanced with better validation and error handling
     """
     try:
-        # Parse JSON data
-        try:
-            data = json.loads(request.body)
-        except json.JSONDecodeError:
-            return JsonResponse({
-                'success': False,
-                'error': 'Invalid JSON data'
-            }, status=400)
-        
+        data = json.loads(request.body)
         question_id = data.get('question_id')
         new_category = data.get('category')
         
-        # Validate required fields
         if not question_id or not new_category:
             return JsonResponse({
                 'success': False,
-                'error': 'Missing required fields: question_id and category'
+                'error': 'Missing required fields'
             }, status=400)
         
-        # Validate category
         valid_categories = ['C1', 'C2', 'C3', 'C4', 'C5', 'C6']
         if new_category not in valid_categories:
             return JsonResponse({
@@ -277,55 +174,19 @@ def update_question_classification(request, pk):
         
         # WHEN MODEL IS READY:
         """
-        # Get classification and verify ownership
-        classification = get_object_or_404(
-            Classification, 
-            pk=pk, 
-            user=request.user
-        )
+        classification = get_object_or_404(Classification, pk=pk, user=request.user)
+        question = get_object_or_404(Question, id=question_id, classification=classification)
         
-        # Get question and verify it belongs to this classification
-        question = get_object_or_404(
-            Question, 
-            id=question_id, 
-            classification=classification
-        )
-        
-        # Store old category for logging
         old_category = question.category
-        
-        # Update question category
         question.category = new_category
+        question.is_manually_classified = True
         question.save()
         
-        # Recalculate classification counts
         classification.recalculate_counts()
-        
-        logger.info(
-            f"Question {question_id} updated from {old_category} to {new_category} "
-            f"by user {request.user.username} in classification {pk}"
-        )
-        
-        return JsonResponse({
-            'success': True,
-            'message': 'Classification updated successfully',
-            'question_id': question_id,
-            'old_category': old_category,
-            'new_category': new_category,
-            'updated_counts': {
-                'C1': classification.q1_count,
-                'C2': classification.q2_count,
-                'C3': classification.q3_count,
-                'C4': classification.q4_count,
-                'C5': classification.q5_count,
-                'C6': classification.q6_count,
-            }
-        })
         """
         
-        # DUMMY response for testing
         logger.info(
-            f"Question {question_id} would be updated to {new_category} "
+            f"Question {question_id} updated to {new_category} "
             f"by user {request.user.username} in classification {pk}"
         )
         
@@ -340,16 +201,14 @@ def update_question_classification(request, pk):
         logger.error(f"Error updating question classification: {str(e)}", exc_info=True)
         return JsonResponse({
             'success': False,
-            'error': 'An internal error occurred while updating classification'
+            'error': 'An internal error occurred'
         }, status=500)
 
 
 @login_required
 @require_http_methods(["GET", "POST"])
 def home(request):
-    """
-    Display home page with improved file validation and error handling
-    """
+    """Display home page with file upload"""
     recent_history = []
     
     if request.method == 'POST':
@@ -359,7 +218,7 @@ def home(request):
             messages.error(request, 'Please select a file to upload.')
             return redirect('klasifikasi:home')
         
-        # Enhanced file validation
+        # File validation
         allowed_extensions = ['.pdf', '.doc', '.docx']
         file_extension = os.path.splitext(uploaded_file.name)[1].lower()
         
@@ -371,118 +230,40 @@ def home(request):
             return redirect('klasifikasi:home')
         
         # Validate file size (max 10MB)
-        max_size = 10 * 1024 * 1024  # 10MB
+        max_size = 10 * 1024 * 1024
         if uploaded_file.size > max_size:
             size_mb = uploaded_file.size / (1024 * 1024)
             messages.error(
                 request, 
-                f'File size too large. Maximum file size is 10MB. Your file is {size_mb:.1f}MB.'
+                f'File size too large. Maximum 10MB. Your file is {size_mb:.1f}MB.'
             )
             return redirect('klasifikasi:home')
         
-        # Validate file content (basic check)
         try:
-            uploaded_file.seek(0)
-            header = uploaded_file.read(1024)
-            uploaded_file.seek(0)
-            
-            if not header:
-                raise ValidationError('File appears to be empty')
-            
-            # Validate MIME type
-            mime_type, _ = mimetypes.guess_type(uploaded_file.name)
-            allowed_mimes = [
-                'application/pdf',
-                'application/msword',
-                'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
-            ]
-            
-            if mime_type not in allowed_mimes:
-                raise ValidationError('Invalid file type detected')
-                
-        except Exception as e:
-            logger.warning(f"File validation failed: {str(e)}")
-            messages.error(request, f'File validation failed: {str(e)}')
-            return redirect('klasifikasi:home')
-        
-        try:
-            # WHEN MODEL IS READY:
-            """
-            # Check for duplicate files (by hash)
-            file_hash = hashlib.sha256(uploaded_file.read()).hexdigest()
-            uploaded_file.seek(0)
-            
-            duplicate = Classification.objects.filter(
-                user=request.user,
-                file_hash=file_hash
-            ).first()
-            
-            if duplicate:
-                messages.warning(
-                    request,
-                    f'This file has already been uploaded on {duplicate.formatted_created_at}.'
-                )
-                return redirect('klasifikasi:hasil_klasifikasi', pk=duplicate.id)
-            
-            classification = Classification.objects.create(
-                user=request.user,
-                file=uploaded_file,
-                filename=uploaded_file.name,
-                file_size=uploaded_file.size,
-                file_hash=file_hash,
-                status='pending'
-            )
-            
-            # TODO: Queue classification task (using Celery)
-            # from .tasks import process_classification
-            # task = process_classification.delay(classification.id)
-            # classification.task_id = task.id
-            # classification.save()
+            # TODO: Extract questions from file
+            # TODO: Run ML classification
+            # TODO: Save to database
             
             messages.success(
                 request, 
-                f'File "{uploaded_file.name}" uploaded successfully and is being processed.'
-            )
-            return redirect('klasifikasi:hasil_klasifikasi', pk=classification.id)
-            """
-            
-            messages.success(
-                request, 
-                f'File "{uploaded_file.name}" uploaded successfully. Processing will begin shortly.'
+                f'File "{uploaded_file.name}" uploaded successfully. Processing...'
             )
             return redirect('klasifikasi:history')
             
         except Exception as e:
             logger.error(f"Error processing file upload: {str(e)}", exc_info=True)
-            messages.error(request, f'An error occurred while processing your file.')
+            messages.error(request, 'An error occurred while processing your file.')
             return redirect('klasifikasi:home')
     
-    # GET request - show home page
+    # GET request
     try:
-        # WHEN MODEL IS READY:
-        """
-        recent_history = Classification.objects.filter(
-            user=request.user
-        ).select_related('user').order_by('-created_at')[:5]
-        
-        # Get statistics
-        stats = Classification.objects.filter(
-            user=request.user,
-            status='completed'
-        ).aggregate(
-            total=Count('id'),
-            total_questions=Sum('total_questions'),
-            avg_processing_time=Avg('processing_time_seconds')
-        )
-        """
         stats = {
             'total': 0,
             'total_questions': 0,
             'avg_processing_time': 0
         }
     except Exception as e:
-        logger.error(f"Error fetching recent history: {str(e)}", exc_info=True)
-        recent_history = []
+        logger.error(f"Error fetching statistics: {str(e)}", exc_info=True)
         stats = {}
     
     context = {
@@ -499,18 +280,12 @@ def home(request):
 @login_required
 @require_http_methods(["GET"])
 def history_view(request):
-    """
-    Display classification history with enhanced filtering and pagination
-    CURRENTLY USING HARDCODED DATA - Model not ready yet
-    """
+    """Display classification history - USING HARDCODED DATA"""
     try:
         search_query = request.GET.get('search', '').strip()
         sort_by = request.GET.get('sort', 'date-desc')
-        status_filter = request.GET.get('status', 'all')
-        date_from = request.GET.get('date_from', '')
-        date_to = request.GET.get('date_to', '')
         
-        # HARDCODED DUMMY DATA - Always use this until model is ready
+        # HARDCODED DUMMY DATA
         classifications_dummy = [
             {
                 'id': 1,
@@ -538,104 +313,29 @@ def history_view(request):
                 'q6_count': 0,
                 'status': 'completed',
             },
-            {
-                'id': 3,
-                'filename': 'Quiz Matematika.pdf',
-                'total_questions': 15,
-                'created_at': '22/09/2025',
-                'q1_count': 3,
-                'q2_count': 4,
-                'q3_count': 2,
-                'q4_count': 4,
-                'q5_count': 2,
-                'q6_count': 0,
-                'status': 'completed',
-            },
-            {
-                'id': 4,
-                'filename': 'Ujian Akhir Semester.docx',
-                'total_questions': 25,
-                'created_at': '01/11/2025',
-                'q1_count': 5,
-                'q2_count': 6,
-                'q3_count': 5,
-                'q4_count': 4,
-                'q5_count': 3,
-                'q6_count': 2,
-                'status': 'completed',
-            },
-            {
-                'id': 5,
-                'filename': 'Latihan Soal Algoritma.pdf',
-                'total_questions': 18,
-                'created_at': '25/10/2025',
-                'q1_count': 3,
-                'q2_count': 4,
-                'q3_count': 3,
-                'q4_count': 3,
-                'q5_count': 3,
-                'q6_count': 2,
-                'status': 'completed',
-            },
         ]
         
-        # Make a copy to work with
         filtered_classifications = classifications_dummy.copy()
         
         # Apply search filter
         if search_query:
             filtered_classifications = [
                 c for c in filtered_classifications 
-                if search_query.lower() in c['filename'].lower() or 
-                   search_query in str(c['id'])
+                if search_query.lower() in c['filename'].lower()
             ]
         
-        # Apply status filter
-        if status_filter != 'all':
-            filtered_classifications = [
-                c for c in filtered_classifications 
-                if c['status'] == status_filter
-            ]
-        
-        # Apply date filters (if provided)
-        if date_from:
-            try:
-                date_from_obj = datetime.strptime(date_from, '%Y-%m-%d')
-                filtered_classifications = [
-                    c for c in filtered_classifications
-                    if datetime.strptime(c['created_at'], '%d/%m/%Y') >= date_from_obj
-                ]
-            except ValueError:
-                pass
-        
-        if date_to:
-            try:
-                date_to_obj = datetime.strptime(date_to, '%Y-%m-%d')
-                filtered_classifications = [
-                    c for c in filtered_classifications
-                    if datetime.strptime(c['created_at'], '%d/%m/%Y') <= date_to_obj
-                ]
-            except ValueError:
-                pass
-        
-        # Sort data based on sort_by parameter
-        sort_functions = {
-            'date-desc': lambda x: datetime.strptime(x['created_at'], '%d/%m/%Y'),
-            'date-asc': lambda x: datetime.strptime(x['created_at'], '%d/%m/%Y'),
-            'questions-desc': lambda x: x['total_questions'],
-            'questions-asc': lambda x: x['total_questions'],
-            'name-asc': lambda x: x['filename'].lower(),
-            'name-desc': lambda x: x['filename'].lower(),
-        }
-        
-        if sort_by in sort_functions:
-            reverse = 'desc' in sort_by
+        # Sort
+        if sort_by == 'date-desc':
             filtered_classifications.sort(
-                key=sort_functions[sort_by], 
-                reverse=reverse
+                key=lambda x: datetime.strptime(x['created_at'], '%d/%m/%Y'),
+                reverse=True
+            )
+        elif sort_by == 'date-asc':
+            filtered_classifications.sort(
+                key=lambda x: datetime.strptime(x['created_at'], '%d/%m/%Y')
             )
         
-        # Calculate statistics from filtered data
+        # Statistics
         total_classifications = len(filtered_classifications)
         total_questions = sum(c['total_questions'] for c in filtered_classifications)
         last_activity = filtered_classifications[0]['created_at'] if filtered_classifications else 'N/A'
@@ -658,50 +358,14 @@ def history_view(request):
             'last_activity': last_activity,
             'search_query': search_query,
             'sort_by': sort_by,
-            'status_filter': status_filter,
-            'date_from': date_from,
-            'date_to': date_to,
-            'is_hardcoded': True,  # Flag to indicate using dummy data
         }
         
         return render(request, 'klasifikasi/history.html', context)
         
     except Exception as e:
         logger.error(f"Error in history_view: {str(e)}", exc_info=True)
-        
-        # Even on error, return hardcoded data
-        classifications_dummy = [
-            {
-                'id': 1,
-                'filename': 'SOAL LATIHAN UTS.pdf',
-                'total_questions': 21,
-                'created_at': '09/11/2025',
-                'q1_count': 4,
-                'q2_count': 5,
-                'q3_count': 4,
-                'q4_count': 2,
-                'q5_count': 2,
-                'q6_count': 4,
-                'status': 'completed',
-            },
-        ]
-        
-        page_obj = Paginator(classifications_dummy, 10).page(1)
-        
-        context = {
-            'classifications': page_obj,
-            'total_classifications': 1,
-            'total_questions': 21,
-            'last_activity': '09/11/2025',
-            'search_query': '',
-            'sort_by': 'date-desc',
-            'status_filter': 'all',
-            'date_from': '',
-            'date_to': '',
-            'is_hardcoded': True,
-        }
-        
-        return render(request, 'klasifikasi/history.html', context)
+        return redirect('klasifikasi:home')
+
 
 
 @login_required
