@@ -1,3 +1,5 @@
+# apps/klasifikasi/views.py
+
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
@@ -18,9 +20,15 @@ import logging
 # Import ML model classifier
 from .ml_model import classify_questions_batch, get_classifier, classify_question
 
+# Import file extractor
+from .file_extractor import QuestionExtractor, extract_questions_from_file
+
+# Import ClassificationHistory model
+from apps.soal.models import ClassificationHistory
+
 logger = logging.getLogger(__name__)
 
-# Rest of your imports for PDF generation...
+# Imports for PDF generation
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4, letter
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
@@ -33,15 +41,12 @@ from reportlab.platypus import (
 from reportlab.pdfgen import canvas
 from io import BytesIO
 
-# Uncomment when models are ready
-# from .models import Classification, Question
 
 def redirect_to_main_home(request):
-    """
-    Redirect /klasifikasi/ to main home page
-    Since home functionality is in the 'soal' app
-    """
+    """Redirect /klasifikasi/ to main home page"""
     return redirect('soal:home')
+
+
 @login_required
 @require_http_methods(["GET"])
 def hasil_klasifikasi(request, pk=None):
@@ -49,94 +54,52 @@ def hasil_klasifikasi(request, pk=None):
     Display classification results page with ML model predictions
     """
     try:
-        # WHEN MODEL IS READY - Replace with:
-        """
+        # Get classification from database
         classification = get_object_or_404(
-            Classification,
+            ClassificationHistory,
             pk=pk,
             user=request.user
         )
         
-        questions = classification.questions.select_related('classification').order_by('question_number')
-        questions_text = [q.question_text for q in questions]
-        """
+        # Check if classification is completed
+        if classification.status == 'pending':
+            messages.info(request, 'Classification is pending. Processing will start shortly.')
+            return redirect('soal:home')
+        elif classification.status == 'processing':
+            messages.info(request, 'Classification is in progress. Please wait...')
+            return redirect('soal:home')
+        elif classification.status == 'failed':
+            messages.error(request, 'Classification failed. Please try uploading the file again.')
+            return redirect('soal:home')
         
-        # DUMMY DATA - Replace this with actual extracted questions
-        questions_text = [
-            'Apa yang dimaksud dengan algoritma dalam pemrograman?',
-            'Jelaskan perbedaan antara bahasa pemrograman tingkat tinggi dan tingkat rendah',
-            'Gunakan struktur percabangan untuk membuat program sederhana menentukan bilangan genap atau ganjil',
-            'Analisis penyebab program tidak berjalan dengan benar meskipun sintaks sudah benar',
-            'Evaluasi efektivitas penggunaan bubble sort dibandingkan insertion sort untuk dataset besar',
-            'Rancang algoritma untuk menghitung total belanja dengan diskon dan pajak menggunakan bahasa pemrograman pilihanmu',
-            'Sebutkan tiga jenis topologi jaringan komputer',
-            'Jelaskan fungsi dari IP address dalam jaringan komputer',
-            'Implementasikan konfigurasi jaringan sederhana menggunakan aplikasi Packet Tracer',
-            'Buat rancangan sistem absensi mahasiswa berbasis web dengan mempertimbangkan keamanan data pengguna',
-            'Apa itu variabel dalam pemrograman?',
-            'Jelaskan konsep loop dalam pemrograman',
-            'Terapkan konsep array untuk menyimpan data mahasiswa',
-            'Bandingkan efisiensi algoritma sorting berbeda',
-            'Evaluasi keamanan sistem login yang ada',
-            'Desain database untuk sistem perpustakaan',
-            'Sebutkan jenis-jenis operator dalam pemrograman',
-            'Jelaskan perbedaan GET dan POST method',
-            'Implementasikan CRUD operations untuk data siswa',
-            'Analisis performa aplikasi web Anda',
-            'Rancang arsitektur microservices untuk e-commerce',
-        ]
+        # Get classification results from JSON field
+        if not classification.classification_results:
+            messages.error(request, 'No classification results available.')
+            return redirect('soal:home')
         
-        try:
-            # Classify all questions using ML model
-            logger.info(f"Starting ML classification for {len(questions_text)} questions")
-            
-            predictions = classify_questions_batch(
-                questions_text,
-                translate=True,  # Translate Indonesian to English
-                batch_size=8
-            )
-            
-            # Build questions data with ML predictions
-            questions_data = []
-            for i, (text, pred) in enumerate(zip(questions_text, predictions), 1):
-                questions_data.append({
-                    'question': text,
-                    'level': pred['category'],  # C1-C6
-                    'index': i,
-                    'confidence': pred['confidence'] * 100  # Convert to percentage
-                })
-            
-            logger.info(f"Successfully classified {len(questions_data)} questions using ML model")
-            
-        except Exception as e:
-            logger.error(f"ML Classification error: {str(e)}", exc_info=True)
-            messages.warning(
-                request, 
-                'Automatic classification encountered an issue. Displaying questions without classification.'
-            )
-            
-            # Fallback: show questions without classification
-            questions_data = [
-                {
-                    'question': text,
-                    'level': 'C2',  # Default
-                    'index': i,
-                    'confidence': 0
-                }
-                for i, text in enumerate(questions_text, 1)
-            ]
+        results = classification.classification_results
+        questions_data = results.get('questions', [])
+        category_counts = results.get('category_counts', {})
         
-        filename = 'SOAL LATIHAN UTS.pdf'
-        total_questions = len(questions_data)
+        # Build questions data for template
+        formatted_questions = []
+        for q in questions_data:
+            formatted_questions.append({
+                'question': q['question_text'],
+                'level': q['category'],
+                'index': q['question_number'],
+                'confidence': q['confidence'] * 100  # Convert to percentage
+            })
         
         context = {
-            'filename': filename,
-            'file_url': '#',
-            'questions': questions_data,
+            'filename': classification.filename,
+            'file_url': classification.file_url or '#',
+            'questions': formatted_questions,
             'labels': ['C1', 'C2', 'C3', 'C4', 'C5', 'C6'],
-            'total_questions': total_questions,
-            'classification_id': pk or 1,
-            'classification_date': timezone.now().strftime('%d/%m/%Y'),
+            'total_questions': classification.total_questions,
+            'classification_id': pk,
+            'classification_date': classification.created_at.strftime('%d/%m/%Y'),
+            'category_counts': category_counts,
         }
         
         return render(request, 'klasifikasi/hasilKlasifikasi.html', context)
@@ -156,10 +119,10 @@ def update_question_classification(request, pk):
     """
     try:
         data = json.loads(request.body)
-        question_id = data.get('question_id')
+        question_number = data.get('question_number')
         new_category = data.get('category')
         
-        if not question_id or not new_category:
+        if not question_number or not new_category:
             return JsonResponse({
                 'success': False,
                 'error': 'Missing required fields'
@@ -172,29 +135,60 @@ def update_question_classification(request, pk):
                 'error': f'Invalid category. Must be one of: {", ".join(valid_categories)}'
             }, status=400)
         
-        # WHEN MODEL IS READY:
-        """
-        classification = get_object_or_404(Classification, pk=pk, user=request.user)
-        question = get_object_or_404(Question, id=question_id, classification=classification)
+        # Get classification
+        classification = get_object_or_404(ClassificationHistory, pk=pk, user=request.user)
         
-        old_category = question.category
-        question.category = new_category
-        question.is_manually_classified = True
-        question.save()
+        if not classification.classification_results:
+            return JsonResponse({
+                'success': False,
+                'error': 'No classification results found'
+            }, status=404)
         
-        classification.recalculate_counts()
-        """
+        # Update the specific question
+        results = classification.classification_results
+        questions = results.get('questions', [])
+        
+        # Find and update the question
+        question_found = False
+        old_category = None
+        
+        for q in questions:
+            if q['question_number'] == question_number:
+                old_category = q['category']
+                q['category'] = new_category
+                q['manually_modified'] = True
+                question_found = True
+                break
+        
+        if not question_found:
+            return JsonResponse({
+                'success': False,
+                'error': 'Question not found'
+            }, status=404)
+        
+        # Update category counts
+        category_counts = results.get('category_counts', {})
+        if old_category in category_counts:
+            category_counts[old_category] -= 1
+        category_counts[new_category] = category_counts.get(new_category, 0) + 1
+        
+        # Save updated results
+        results['questions'] = questions
+        results['category_counts'] = category_counts
+        classification.classification_results = results
+        classification.save()
         
         logger.info(
-            f"Question {question_id} updated to {new_category} "
+            f"Question {question_number} updated from {old_category} to {new_category} "
             f"by user {request.user.username} in classification {pk}"
         )
         
         return JsonResponse({
             'success': True,
             'message': 'Classification updated successfully',
-            'question_id': question_id,
-            'new_category': new_category
+            'question_number': question_number,
+            'new_category': new_category,
+            'old_category': old_category
         })
         
     except Exception as e:
@@ -206,143 +200,46 @@ def update_question_classification(request, pk):
 
 
 @login_required
-@require_http_methods(["GET", "POST"])
-def home(request):
-    """Display home page with file upload"""
-    recent_history = []
-    
-    if request.method == 'POST':
-        uploaded_file = request.FILES.get('file')
-        
-        if not uploaded_file:
-            messages.error(request, 'Please select a file to upload.')
-            return redirect('klasifikasi:home')
-        
-        # File validation
-        allowed_extensions = ['.pdf', '.doc', '.docx']
-        file_extension = os.path.splitext(uploaded_file.name)[1].lower()
-        
-        if file_extension not in allowed_extensions:
-            messages.error(
-                request, 
-                f'File format not supported. Only {", ".join(allowed_extensions)} files are allowed.'
-            )
-            return redirect('klasifikasi:home')
-        
-        # Validate file size (max 10MB)
-        max_size = 10 * 1024 * 1024
-        if uploaded_file.size > max_size:
-            size_mb = uploaded_file.size / (1024 * 1024)
-            messages.error(
-                request, 
-                f'File size too large. Maximum 10MB. Your file is {size_mb:.1f}MB.'
-            )
-            return redirect('klasifikasi:home')
-        
-        try:
-            # TODO: Extract questions from file
-            # TODO: Run ML classification
-            # TODO: Save to database
-            
-            messages.success(
-                request, 
-                f'File "{uploaded_file.name}" uploaded successfully. Processing...'
-            )
-            return redirect('klasifikasi:history')
-            
-        except Exception as e:
-            logger.error(f"Error processing file upload: {str(e)}", exc_info=True)
-            messages.error(request, 'An error occurred while processing your file.')
-            return redirect('klasifikasi:home')
-    
-    # GET request
-    try:
-        stats = {
-            'total': 0,
-            'total_questions': 0,
-            'avg_processing_time': 0
-        }
-    except Exception as e:
-        logger.error(f"Error fetching statistics: {str(e)}", exc_info=True)
-        stats = {}
-    
-    context = {
-        'recent_history': recent_history,
-        'stats': stats,
-        'is_authenticated': request.user.is_authenticated,
-        'max_file_size_mb': 10,
-        'allowed_formats': ['PDF', 'DOC', 'DOCX']
-    }
-    
-    return render(request, 'klasifikasi/home.html', context)
-
-
-@login_required
 @require_http_methods(["GET"])
 def history_view(request):
-    """Display classification history - USING HARDCODED DATA"""
+    """Display classification history using real database data"""
     try:
         search_query = request.GET.get('search', '').strip()
         sort_by = request.GET.get('sort', 'date-desc')
         
-        # HARDCODED DUMMY DATA
-        classifications_dummy = [
-            {
-                'id': 1,
-                'filename': 'SOAL LATIHAN UTS.pdf',
-                'total_questions': 21,
-                'created_at': '09/11/2025',
-                'q1_count': 4,
-                'q2_count': 5,
-                'q3_count': 4,
-                'q4_count': 2,
-                'q5_count': 2,
-                'q6_count': 4,
-                'status': 'completed',
-            },
-            {
-                'id': 2,
-                'filename': 'Soal UTS Semester Ganjil.pdf',
-                'total_questions': 10,
-                'created_at': '15/10/2025',
-                'q1_count': 2,
-                'q2_count': 2,
-                'q3_count': 1,
-                'q4_count': 3,
-                'q5_count': 2,
-                'q6_count': 0,
-                'status': 'completed',
-            },
-        ]
-        
-        filtered_classifications = classifications_dummy.copy()
+        # Query classifications from database
+        classifications = ClassificationHistory.objects.filter(
+            user=request.user
+        ).select_related('user')
         
         # Apply search filter
         if search_query:
-            filtered_classifications = [
-                c for c in filtered_classifications 
-                if search_query.lower() in c['filename'].lower()
-            ]
+            classifications = classifications.filter(
+                Q(filename__icontains=search_query)
+            )
         
-        # Sort
+        # Apply sorting
         if sort_by == 'date-desc':
-            filtered_classifications.sort(
-                key=lambda x: datetime.strptime(x['created_at'], '%d/%m/%Y'),
-                reverse=True
-            )
+            classifications = classifications.order_by('-created_at')
         elif sort_by == 'date-asc':
-            filtered_classifications.sort(
-                key=lambda x: datetime.strptime(x['created_at'], '%d/%m/%Y')
-            )
+            classifications = classifications.order_by('created_at')
+        elif sort_by == 'name-asc':
+            classifications = classifications.order_by('filename')
+        elif sort_by == 'name-desc':
+            classifications = classifications.order_by('-filename')
         
-        # Statistics
-        total_classifications = len(filtered_classifications)
-        total_questions = sum(c['total_questions'] for c in filtered_classifications)
-        last_activity = filtered_classifications[0]['created_at'] if filtered_classifications else 'N/A'
+        # Calculate statistics
+        total_classifications = classifications.count()
+        total_questions = classifications.filter(
+            status='completed'
+        ).aggregate(Sum('total_questions'))['total_questions__sum'] or 0
+        
+        last_classification = classifications.order_by('-created_at').first()
+        last_activity = last_classification.created_at.strftime('%d/%m/%Y') if last_classification else 'N/A'
         
         # Pagination
         page = request.GET.get('page', 1)
-        paginator = Paginator(filtered_classifications, 10)
+        paginator = Paginator(classifications, 10)
         
         try:
             page_obj = paginator.page(page)
@@ -351,8 +248,31 @@ def history_view(request):
         except EmptyPage:
             page_obj = paginator.page(paginator.num_pages)
         
+        # Format data for template
+        formatted_classifications = []
+        for c in page_obj:
+            # Get category counts from classification results
+            category_counts = {}
+            if c.classification_results:
+                category_counts = c.classification_results.get('category_counts', {})
+            
+            formatted_classifications.append({
+                'id': c.id,
+                'filename': c.filename,
+                'total_questions': c.total_questions,
+                'created_at': c.created_at.strftime('%d/%m/%Y'),
+                'q1_count': category_counts.get('C1', 0),
+                'q2_count': category_counts.get('C2', 0),
+                'q3_count': category_counts.get('C3', 0),
+                'q4_count': category_counts.get('C4', 0),
+                'q5_count': category_counts.get('C5', 0),
+                'q6_count': category_counts.get('C6', 0),
+                'status': c.status,
+            })
+        
         context = {
-            'classifications': page_obj,
+            'classifications': formatted_classifications,
+            'page_obj': page_obj,
             'total_classifications': total_classifications,
             'total_questions': total_questions,
             'last_activity': last_activity,
@@ -364,34 +284,40 @@ def history_view(request):
         
     except Exception as e:
         logger.error(f"Error in history_view: {str(e)}", exc_info=True)
-        return redirect('klasifikasi:home')
-
+        messages.error(request, 'Error loading history.')
+        return redirect('soal:home')
 
 
 @login_required
 @csrf_protect
 @require_POST
 def delete_classification(request, pk):
-    """
-    Delete classification with proper error handling and security
-    """
+    """Delete classification with proper error handling"""
     try:
-        # WHEN MODEL IS READY:
-        """
         classification = get_object_or_404(
-            Classification, 
+            ClassificationHistory, 
             pk=pk, 
             user=request.user
         )
         
         filename = classification.filename
         
-        # Delete the classification (files will be deleted by signal)
+        # Delete physical file
+        if classification.file_path:
+            file_path = os.path.join(settings.MEDIA_ROOT, 'uploads', classification.file_path)
+            if os.path.exists(file_path):
+                try:
+                    os.remove(file_path)
+                    logger.info(f"Deleted file: {file_path}")
+                except OSError as e:
+                    logger.warning(f"Could not delete file {file_path}: {str(e)}")
+        
+        # Delete database record
         classification.delete()
         
         logger.info(f"Classification {pk} ({filename}) deleted by user {request.user.username}")
         
-        # Return JSON response for AJAX requests
+        # Return JSON for AJAX requests
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             return JsonResponse({
                 'success': True, 
@@ -399,18 +325,6 @@ def delete_classification(request, pk):
             })
         
         messages.success(request, f'Classification "{filename}" deleted successfully.')
-        """
-        
-        # DUMMY response
-        logger.info(f"Classification {pk} would be deleted by user {request.user.username}")
-        
-        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-            return JsonResponse({
-                'success': True, 
-                'message': 'Classification deleted successfully'
-            })
-        
-        messages.success(request, 'Classification deleted successfully.')
         return redirect('klasifikasi:history')
         
     except Http404:
@@ -449,175 +363,25 @@ def add_page_number(canvas_obj, doc):
 @login_required
 @require_http_methods(["GET"])
 def download_report(request, pk):
-    """
-    Download classification report as PDF
-    Currently uses dummy data - will be replaced with model data
-    """
+    """Download classification report as PDF using real data"""
     try:
-        # DUMMY DATA - Replace with actual model data when ready
-        """
-        # WHEN MODEL IS READY - Uncomment this:
         classification = get_object_or_404(
-            Classification, 
+            ClassificationHistory, 
             pk=pk, 
             user=request.user
         )
         
-        if not classification.result_file:
-            messages.error(request, 'Report file not available.')
+        if classification.status != 'completed':
+            messages.error(request, 'Classification is not yet completed.')
             return redirect('klasifikasi:history')
         
-        file_path = classification.result_file.path
-        
-        if not os.path.exists(file_path):
-            messages.error(request, 'Report file not found on server.')
+        if not classification.classification_results:
+            messages.error(request, 'No classification results available.')
             return redirect('klasifikasi:history')
-        """
         
-        # DUMMY DATA for testing
-        classification_data = {
-            'id': pk,
-            'filename': 'SOAL LATIHAN UTS.pdf',
-            'total_questions': 21,
-            'created_at': timezone.now(),
-            'q1_count': 4,
-            'q2_count': 5,
-            'q3_count': 4,
-            'q4_count': 2,
-            'q5_count': 2,
-            'q6_count': 4,
-            'status': 'completed',
-            'user': request.user,
-        }
-        
-        questions_data = [
-            {
-                'question_number': 1,
-                'question_text': 'Apa yang dimaksud dengan algoritma dalam pemrograman?',
-                'category': 'C1',
-                'confidence_score': 0.95,
-            },
-            {
-                'question_number': 2,
-                'question_text': 'Jelaskan perbedaan antara bahasa pemrograman tingkat tinggi dan tingkat rendah',
-                'category': 'C2',
-                'confidence_score': 0.89,
-            },
-            {
-                'question_number': 3,
-                'question_text': 'Gunakan struktur percabangan untuk membuat program sederhana menentukan bilangan genap atau ganjil',
-                'category': 'C3',
-                'confidence_score': 0.92,
-            },
-            {
-                'question_number': 4,
-                'question_text': 'Analisis penyebab program tidak berjalan dengan benar meskipun sintaks sudah benar',
-                'category': 'C4',
-                'confidence_score': 0.87,
-            },
-            {
-                'question_number': 5,
-                'question_text': 'Evaluasi efektivitas penggunaan bubble sort dibandingkan insertion sort untuk dataset besar',
-                'category': 'C5',
-                'confidence_score': 0.91,
-            },
-            {
-                'question_number': 6,
-                'question_text': 'Rancang algoritma untuk menghitung total belanja dengan diskon dan pajak menggunakan bahasa pemrograman pilihanmu',
-                'category': 'C6',
-                'confidence_score': 0.88,
-            },
-            {
-                'question_number': 7,
-                'question_text': 'Sebutkan tiga jenis topologi jaringan komputer',
-                'category': 'C1',
-                'confidence_score': 0.94,
-            },
-            {
-                'question_number': 8,
-                'question_text': 'Jelaskan fungsi dari IP address dalam jaringan komputer',
-                'category': 'C2',
-                'confidence_score': 0.90,
-            },
-            {
-                'question_number': 9,
-                'question_text': 'Implementasikan konfigurasi jaringan sederhana menggunakan aplikasi Packet Tracer',
-                'category': 'C3',
-                'confidence_score': 0.86,
-            },
-            {
-                'question_number': 10,
-                'question_text': 'Buat rancangan sistem absensi mahasiswa berbasis web dengan mempertimbangkan keamanan data pengguna',
-                'category': 'C6',
-                'confidence_score': 0.93,
-            },
-            {
-                'question_number': 11,
-                'question_text': 'Apa itu variabel dalam pemrograman?',
-                'category': 'C1',
-                'confidence_score': 0.96,
-            },
-            {
-                'question_number': 12,
-                'question_text': 'Jelaskan konsep loop dalam pemrograman',
-                'category': 'C2',
-                'confidence_score': 0.88,
-            },
-            {
-                'question_number': 13,
-                'question_text': 'Terapkan konsep array untuk menyimpan data mahasiswa',
-                'category': 'C3',
-                'confidence_score': 0.85,
-            },
-            {
-                'question_number': 14,
-                'question_text': 'Bandingkan efisiensi algoritma sorting berbeda',
-                'category': 'C4',
-                'confidence_score': 0.90,
-            },
-            {
-                'question_number': 15,
-                'question_text': 'Evaluasi keamanan sistem login yang ada',
-                'category': 'C5',
-                'confidence_score': 0.87,
-            },
-            {
-                'question_number': 16,
-                'question_text': 'Desain database untuk sistem perpustakaan',
-                'category': 'C6',
-                'confidence_score': 0.89,
-            },
-            {
-                'question_number': 17,
-                'question_text': 'Sebutkan jenis-jenis operator dalam pemrograman',
-                'category': 'C1',
-                'confidence_score': 0.95,
-            },
-            {
-                'question_number': 18,
-                'question_text': 'Jelaskan perbedaan GET dan POST method',
-                'category': 'C2',
-                'confidence_score': 0.91,
-            },
-            {
-                'question_number': 19,
-                'question_text': 'Implementasikan CRUD operations untuk data siswa',
-                'category': 'C3',
-                'confidence_score': 0.88,
-            },
-            {
-                'question_number': 20,
-                'question_text': 'Analisis performa aplikasi web Anda',
-                'category': 'C4',
-                'confidence_score': 0.86,
-            },
-            {
-                'question_number': 21,
-                'question_text': 'Rancang arsitektur microservices untuk e-commerce',
-                'category': 'C6',
-                'confidence_score': 0.92,
-            },
-        ]
+        results = classification.classification_results
+        questions_data = results.get('questions', [])
+        category_counts = results.get('category_counts', {})
         
         # Generate PDF
         buffer = BytesIO()
@@ -630,10 +394,7 @@ def download_report(request, pk):
             bottomMargin=0.75*inch,
         )
         
-        # Container for PDF elements
         elements = []
-        
-        # Styles
         styles = getSampleStyleSheet()
         
         # Custom styles
@@ -681,10 +442,10 @@ def download_report(request, pk):
         
         # Report Information
         info_data = [
-            ['File Name:', classification_data['filename']],
-            ['Classification ID:', f"#{classification_data['id']}"],
-            ['Generated On:', classification_data['created_at'].strftime('%d/%m/%Y %H:%M')],
-            ['Total Questions:', str(classification_data['total_questions'])],
+            ['File Name:', classification.filename],
+            ['Classification ID:', f"#{classification.id}"],
+            ['Generated On:', classification.created_at.strftime('%d/%m/%Y %H:%M')],
+            ['Total Questions:', str(classification.total_questions)],
             ['User:', request.user.username],
         ]
         
@@ -706,35 +467,31 @@ def download_report(request, pk):
         # Distribution Summary
         elements.append(Paragraph("Classification Distribution", heading_style))
         
-        # Calculate percentages
-        total = classification_data['total_questions']
+        total = classification.total_questions
         distribution_data = [
             ['Category', 'Level', 'Count', 'Percentage'],
-            ['C1', 'Remember', str(classification_data['q1_count']), 
-             f"{(classification_data['q1_count']/total*100):.1f}%"],
-            ['C2', 'Understand', str(classification_data['q2_count']), 
-             f"{(classification_data['q2_count']/total*100):.1f}%"],
-            ['C3', 'Apply', str(classification_data['q3_count']), 
-             f"{(classification_data['q3_count']/total*100):.1f}%"],
-            ['C4', 'Analyze', str(classification_data['q4_count']), 
-             f"{(classification_data['q4_count']/total*100):.1f}%"],
-            ['C5', 'Evaluate', str(classification_data['q5_count']), 
-             f"{(classification_data['q5_count']/total*100):.1f}%"],
-            ['C6', 'Create', str(classification_data['q6_count']), 
-             f"{(classification_data['q6_count']/total*100):.1f}%"],
+            ['C1', 'Remember', str(category_counts.get('C1', 0)), 
+             f"{(category_counts.get('C1', 0)/total*100):.1f}%" if total > 0 else "0%"],
+            ['C2', 'Understand', str(category_counts.get('C2', 0)), 
+             f"{(category_counts.get('C2', 0)/total*100):.1f}%" if total > 0 else "0%"],
+            ['C3', 'Apply', str(category_counts.get('C3', 0)), 
+             f"{(category_counts.get('C3', 0)/total*100):.1f}%" if total > 0 else "0%"],
+            ['C4', 'Analyze', str(category_counts.get('C4', 0)), 
+             f"{(category_counts.get('C4', 0)/total*100):.1f}%" if total > 0 else "0%"],
+            ['C5', 'Evaluate', str(category_counts.get('C5', 0)), 
+             f"{(category_counts.get('C5', 0)/total*100):.1f}%" if total > 0 else "0%"],
+            ['C6', 'Create', str(category_counts.get('C6', 0)), 
+             f"{(category_counts.get('C6', 0)/total*100):.1f}%" if total > 0 else "0%"],
         ]
         
         dist_table = Table(distribution_data, colWidths=[1*inch, 1.5*inch, 1*inch, 1.5*inch])
         dist_table.setStyle(TableStyle([
-            # Header row
             ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#2563eb')),
             ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
             ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
             ('FONTSIZE', (0, 0), (-1, 0), 11),
             ('ALIGN', (0, 0), (-1, 0), 'CENTER'),
             ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
-            
-            # Data rows
             ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
             ('FONTSIZE', (0, 1), (-1, -1), 10),
             ('ALIGN', (0, 1), (0, -1), 'CENTER'),
@@ -755,7 +512,6 @@ def download_report(request, pk):
         elements.append(Paragraph("Detailed Question Classification", heading_style))
         elements.append(Spacer(1, 0.1*inch))
         
-        # Category colors
         category_colors = {
             'C1': colors.HexColor('#dcfce7'),
             'C2': colors.HexColor('#dbeafe'),
@@ -766,23 +522,16 @@ def download_report(request, pk):
         }
         
         for question in questions_data:
-            # Question header
             q_header = Paragraph(
                 f"<b>Question {question['question_number']}</b> - "
                 f"Category: {question['category']} | "
-                f"Confidence: {question['confidence_score']*100:.1f}%",
+                f"Confidence: {question['confidence']*100:.1f}%",
                 subheading_style
             )
             
-            # Question text
             q_text = Paragraph(question['question_text'], normal_style)
             
-            # Create a box for each question
-            q_data = [
-                [q_header],
-                [q_text],
-            ]
-            
+            q_data = [[q_header], [q_text]]
             q_table = Table(q_data, colWidths=[6*inch])
             q_table.setStyle(TableStyle([
                 ('BACKGROUND', (0, 0), (-1, 0), category_colors.get(question['category'], colors.lightgrey)),
@@ -797,7 +546,7 @@ def download_report(request, pk):
             
             elements.append(KeepTogether([q_table, Spacer(1, 0.15*inch)]))
         
-        # Footer information
+        # Footer
         elements.append(PageBreak())
         elements.append(Spacer(1, 0.5*inch))
         
@@ -817,29 +566,16 @@ def download_report(request, pk):
         # Build PDF
         doc.build(elements, onFirstPage=add_page_number, onLaterPages=add_page_number)
         
-        # Get PDF from buffer
         pdf = buffer.getvalue()
         buffer.close()
         
-        # Create response
         response = HttpResponse(pdf, content_type='application/pdf')
         filename = f"classification_report_{pk}_{timezone.now().strftime('%Y%m%d_%H%M%S')}.pdf"
         response['Content-Disposition'] = f'attachment; filename="{filename}"'
         
-        logger.info(
-            f"Report downloaded: Classification {pk} "
-            f"by {request.user.username}"
-        )
+        logger.info(f"Report downloaded: Classification {pk} by {request.user.username}")
         
         return response
-        
-    except ImportError as e:
-        logger.error(f"ReportLab not installed: {str(e)}")
-        messages.error(
-            request, 
-            'PDF generation library not available. Please contact administrator.'
-        )
-        return redirect('klasifikasi:history')
         
     except Exception as e:
         logger.error(f"Error generating report {pk}: {str(e)}", exc_info=True)
@@ -850,71 +586,38 @@ def download_report(request, pk):
 @login_required
 @require_http_methods(["GET"])
 def get_classification_stats(request):
-    """
-    API endpoint for classification statistics (AJAX)
-    Returns comprehensive statistics about user's classifications
-    """
+    """API endpoint for classification statistics (AJAX)"""
     try:
-        # DUMMY data
-        stats = {
-            'total_classifications': 3,
-            'total_questions': 46,
-            'completed': 3,
-            'processing': 0,
-            'failed': 0,
-            'categories': {
-                'C1': 9,
-                'C2': 11,
-                'C3': 7,
-                'C4': 9,
-                'C5': 6,
-                'C6': 4,
-            },
-            'recent_activity': [
-                {
-                    'id': 1,
-                    'filename': 'SOAL LATIHAN UTS.pdf',
-                    'date': '09/11/2025',
-                    'questions': 21,
-                    'status': 'completed'
-                },
-                {
-                    'id': 2,
-                    'filename': 'Soal UTS Semester Ganjil.pdf',
-                    'date': '15/10/2025',
-                    'questions': 10,
-                    'status': 'completed'
-                },
-                {
-                    'id': 3,
-                    'filename': 'Quiz Matematika.pdf',
-                    'date': '22/09/2025',
-                    'questions': 15,
-                    'status': 'completed'
-                }
-            ]
-        }
+        classifications = ClassificationHistory.objects.filter(user=request.user)
         
-        # WHEN MODEL IS READY:
-        """
-        from django.db.models import Sum, Count, Q
-        
-        classifications = Classification.objects.filter(user=request.user)
-        
-        # Aggregate statistics
         aggregates = classifications.aggregate(
             total=Count('id'),
             total_questions=Sum('total_questions'),
             completed=Count('id', filter=Q(status='completed')),
             processing=Count('id', filter=Q(status='processing')),
             failed=Count('id', filter=Q(status='failed')),
-            total_c1=Sum('q1_count'),
-            total_c2=Sum('q2_count'),
-            total_c3=Sum('q3_count'),
-            total_c4=Sum('q4_count'),
-            total_c5=Sum('q5_count'),
-            total_c6=Sum('q6_count'),
         )
+        
+        # Calculate category totals
+        category_totals = {'C1': 0, 'C2': 0, 'C3': 0, 'C4': 0, 'C5': 0, 'C6': 0}
+        for c in classifications.filter(status='completed'):
+            if c.classification_results:
+                counts = c.classification_results.get('category_counts', {})
+                for cat in category_totals.keys():
+                    category_totals[cat] += counts.get(cat, 0)
+        
+        # Recent activity
+        recent = classifications.order_by('-created_at')[:5]
+        recent_activity = [
+            {
+                'id': c.id,
+                'filename': c.filename,
+                'date': c.created_at.strftime('%d/%m/%Y'),
+                'questions': c.total_questions,
+                'status': c.status
+            }
+            for c in recent
+        ]
         
         stats = {
             'total_classifications': aggregates['total'] or 0,
@@ -922,26 +625,9 @@ def get_classification_stats(request):
             'completed': aggregates['completed'] or 0,
             'processing': aggregates['processing'] or 0,
             'failed': aggregates['failed'] or 0,
-            'categories': {
-                'C1': aggregates['total_c1'] or 0,
-                'C2': aggregates['total_c2'] or 0,
-                'C3': aggregates['total_c3'] or 0,
-                'C4': aggregates['total_c4'] or 0,
-                'C5': aggregates['total_c5'] or 0,
-                'C6': aggregates['total_c6'] or 0,
-            },
-            'recent_activity': [
-                {
-                    'id': c.id,
-                    'filename': c.filename,
-                    'date': c.formatted_created_at,
-                    'questions': c.total_questions,
-                    'status': c.status
-                }
-                for c in classifications.order_by('-created_at')[:5]
-            ]
+            'categories': category_totals,
+            'recent_activity': recent_activity
         }
-        """
         
         return JsonResponse(stats)
         
@@ -957,27 +643,17 @@ def get_classification_stats(request):
 @csrf_protect
 @require_POST
 def bulk_delete_classifications(request):
-    """
-    Delete multiple classifications at once
-    Enhanced with transaction support and better error handling
-    """
+    """Delete multiple classifications at once"""
     try:
         data = json.loads(request.body)
         ids = data.get('ids', [])
         
-        if not ids:
+        if not ids or not isinstance(ids, list):
             return JsonResponse({
                 'success': False,
-                'error': 'No classification IDs provided'
+                'error': 'Invalid or missing IDs'
             }, status=400)
         
-        if not isinstance(ids, list):
-            return JsonResponse({
-                'success': False,
-                'error': 'IDs must be provided as a list'
-            }, status=400)
-        
-        # Validate all IDs are integers
         try:
             ids = [int(id_val) for id_val in ids]
         except (ValueError, TypeError):
@@ -986,45 +662,31 @@ def bulk_delete_classifications(request):
                 'error': 'All IDs must be valid integers'
             }, status=400)
         
-        # WHEN MODEL IS READY:
-        """
-        from django.db import transaction
+        classifications = ClassificationHistory.objects.filter(
+            pk__in=ids,
+            user=request.user
+        )
         
-        with transaction.atomic():
-            classifications = Classification.objects.filter(
-                pk__in=ids,
-                user=request.user
-            ).select_for_update()
+        deleted_count = 0
+        for classification in classifications:
+            # Delete file
+            if classification.file_path:
+                file_path = os.path.join(settings.MEDIA_ROOT, 'uploads', classification.file_path)
+                if os.path.exists(file_path):
+                    try:
+                        os.remove(file_path)
+                    except OSError as e:
+                        logger.warning(f"Could not delete file {file_path}: {str(e)}")
             
-            deleted_count = 0
-            filenames = []
-            
-            for classification in classifications:
-                filenames.append(classification.filename)
-                classification.delete()  # Files deleted by signal
-                deleted_count += 1
-            
-            logger.info(
-                f"Bulk deleted {deleted_count} classifications by user {request.user.username}: "
-                f"{', '.join(filenames[:5])}{'...' if len(filenames) > 5 else ''}"
-            )
+            classification.delete()
+            deleted_count += 1
+        
+        logger.info(f"Bulk deleted {deleted_count} classifications by user {request.user.username}")
         
         return JsonResponse({
             'success': True,
             'deleted_count': deleted_count,
             'message': f'{deleted_count} classification(s) deleted successfully'
-        })
-        """
-        
-        # DUMMY response
-        logger.info(
-            f"Would bulk delete {len(ids)} classifications by user {request.user.username}"
-        )
-        
-        return JsonResponse({
-            'success': True,
-            'deleted_count': len(ids),
-            'message': f'{len(ids)} classification(s) deleted successfully'
         })
         
     except json.JSONDecodeError:

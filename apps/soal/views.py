@@ -18,6 +18,10 @@ from pathlib import Path
 
 from .models import ClassificationHistory
 
+# Import ML and extraction functionality
+from apps.klasifikasi.ml_model import classify_questions_batch, get_classifier
+from apps.klasifikasi.file_extractor import QuestionExtractor
+
 # Configure logging
 logger = logging.getLogger(__name__)
 
@@ -156,10 +160,8 @@ def handle_authenticated_upload(request, uploaded_file):
     Handle file upload for authenticated users.
     Saves file permanently and creates database record.
     """
-    # Setup file storage - use os.path for better compatibility
+    # Setup file storage
     upload_path = os.path.join(settings.MEDIA_ROOT, 'uploads')
-    
-    # Create directory if it doesn't exist
     os.makedirs(upload_path, exist_ok=True)
     
     fs = FileSystemStorage(location=upload_path)
@@ -177,14 +179,14 @@ def handle_authenticated_upload(request, uploaded_file):
     except Exception as e:
         logger.error(f"Error saving file: {str(e)}", exc_info=True)
         messages.error(request, "Failed to save the file. Please try again.")
-        return redirect('klasifikasi:hasil_klasifikasi', pk=history.id)
+        return redirect('soal:home')
     
     # Create classification history record
     try:
         history = ClassificationHistory.objects.create(
             user=request.user,
-            filename=uploaded_file.name,  # Original filename
-            file_path=saved_filename,     # Stored filename
+            filename=uploaded_file.name,
+            file_path=saved_filename,
             file_url=file_url,
             file_size=uploaded_file.size,
             status='pending'
@@ -193,12 +195,12 @@ def handle_authenticated_upload(request, uploaded_file):
         logger.info(f"File uploaded successfully: {uploaded_file.name} by user {request.user.username}")
         messages.success(
             request, 
-            f'✓ File "{uploaded_file.name}" uploaded successfully! Your classification will begin shortly.'
+            f'✓ File "{uploaded_file.name}" uploaded successfully! Click "Start Classification" to begin.'
         )
         
-        # TODO: Trigger async classification task
-        # from .tasks import process_classification
-        # process_classification.delay(history.id)
+        # Process the file immediately in synchronous mode
+        # In production, you would use Celery/background task
+        process_classification_sync(history.id)
         
     except Exception as e:
         # Cleanup file if database record creation fails
@@ -214,6 +216,87 @@ def handle_authenticated_upload(request, uploaded_file):
         messages.error(request, "Failed to create classification record. Please try again.")
     
     return redirect('soal:home')
+
+
+def process_classification_sync(history_id):
+    """
+    Process classification synchronously.
+    In production, this should be a Celery task.
+    """
+    try:
+        history = ClassificationHistory.objects.get(id=history_id)
+        history.mark_as_processing()
+        
+        # Get file path
+        file_path = os.path.join(settings.MEDIA_ROOT, 'uploads', history.file_path)
+        
+        # Extract questions
+        logger.info(f"Extracting questions from: {file_path}")
+        extractor = QuestionExtractor()
+        questions = extractor.extract_questions(file_path)
+        
+        # Validate questions
+        validation = extractor.validate_questions(questions)
+        if not validation['valid']:
+            logger.error(f"Question validation failed: {validation['error']}")
+            history.mark_as_failed()
+            return
+        
+        logger.info(f"Extracted {len(questions)} questions")
+        
+        # Classify questions using ML model
+        logger.info("Starting ML classification...")
+        predictions = classify_questions_batch(
+            questions,
+            translate=True,
+            batch_size=8
+        )
+        
+        # Build classification results
+        results = []
+        category_counts = {'C1': 0, 'C2': 0, 'C3': 0, 'C4': 0, 'C5': 0, 'C6': 0}
+        
+        for i, (question, pred) in enumerate(zip(questions, predictions), 1):
+            # Convert all_probabilities to JSON-serializable format
+            serializable_probs = {}
+            for label, prob_data in pred['all_probabilities'].items():
+                serializable_probs[label] = {
+                    'probability': float(prob_data['probability']),
+                    'predicted': bool(prob_data['predicted'])  # Ensure it's a Python bool
+                }
+            
+            result = {
+                'question_number': i,
+                'question_text': question,
+                'category': pred['category'],
+                'category_name': pred['category_name'],
+                'confidence': float(pred['confidence']),  # Ensure it's a Python float
+                'all_probabilities': serializable_probs
+            }
+            results.append(result)
+            category_counts[pred['category']] += 1
+        
+        # Save results
+        classification_data = {
+            'questions': results,
+            'category_counts': category_counts,
+            'total_questions': len(questions)
+        }
+        
+        history.mark_as_completed(
+            results=classification_data,
+            total_questions=len(questions)
+        )
+        
+        logger.info(f"Classification completed for history {history_id}")
+        
+    except Exception as e:
+        logger.error(f"Error processing classification {history_id}: {str(e)}", exc_info=True)
+        try:
+            history = ClassificationHistory.objects.get(id=history_id)
+            history.mark_as_failed()
+        except:
+            pass
 
 
 def handle_anonymous_upload(request, uploaded_file):
