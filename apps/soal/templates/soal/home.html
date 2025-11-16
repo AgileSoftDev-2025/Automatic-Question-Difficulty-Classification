@@ -7,99 +7,103 @@
     <title>Bloomers - Smart Question Classification</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <style>
+        @keyframes pulse-success {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7); }
+            50% { box-shadow: 0 0 0 20px rgba(34, 197, 94, 0); }
+        }
+        .pulse-success {
+            animation: pulse-success 2s infinite;
+        }
+    </style>
 </head>
 <body class="bg-gradient-to-br from-blue-50 via-purple-50 to-blue-100 min-h-screen">
     
-    <!-- Only showing the fixed navigation section -->
-<nav class="bg-white shadow-md">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="flex justify-between h-16 items-center">
-            
-            <div class="flex items-center">
-                <svg class="w-10 h-10 text-blue-600" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M12 2L4 6V12C4 16.5 7.5 20.5 12 22C16.5 20.5 20 16.5 20 12V6L12 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="currentColor" opacity="0.2"/>
-                    <path d="M12 2L4 6V12C4 16.5 7.5 20.5 12 22C16.5 20.5 20 16.5 20 12V6L12 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-                <span class="text-blue-600 text-3xl font-bold ml-3">BLOOMERS</span>
-            </div>
-            
-            <div class="hidden md:flex items-center space-x-6">
-                <a href="{% url 'soal:home' %}" class="text-blue-600 hover:text-blue-700 font-semibold transition-colors">Home</a>
-                <a href="{% url 'klasifikasi:history' %}" class="text-gray-600 hover:text-blue-600 font-medium transition-colors">History</a>
-                <a href="{% url 'soal:help' %}" class="text-gray-600 hover:text-blue-600 font-medium transition-colors">Help / FAQ</a>
+    <!-- Navigation -->
+    <nav class="bg-white shadow-md">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16 items-center">
+                <div class="flex items-center">
+                    <svg class="w-10 h-10 text-blue-600" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M12 2L4 6V12C4 16.5 7.5 20.5 12 22C16.5 20.5 20 16.5 20 12V6L12 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="currentColor" opacity="0.2"/>
+                        <path d="M12 2L4 6V12C4 16.5 7.5 20.5 12 22C16.5 20.5 20 16.5 20 12V6L12 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    <span class="text-blue-600 text-3xl font-bold ml-3">BLOOMERS</span>
+                </div>
                 
-                {% if user.is_authenticated %}
-                    <div class="relative">
-                        <button type="button" id="profile-menu-button" class="flex flex-row items-center space-x-2 text-blue-600 hover:text-blue-700 transition-colors group focus:outline-none">
-                            
-                            <!-- FIXED: Use has_custom_image property -->
-                            {% if user.profile.has_custom_image %}
-                                <img src="{{ user.profile.image.url }}" 
-                                     alt="{{ user.username }}" 
-                                     class="w-10 h-10 rounded-full object-cover border-2 border-blue-200">
-                            {% else %}
-                                <!-- FIXED: Use avatar_letter property -->
-                                <div class="w-10 h-10 rounded-full border-2 border-blue-200 bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
-                                    <span class="text-white text-lg font-bold">{{ user.profile.avatar_letter }}</span>
+                <div class="hidden md:flex items-center space-x-6">
+                    <a href="{% url 'soal:home' %}" class="text-blue-600 hover:text-blue-700 font-semibold transition-colors">Home</a>
+                    <a href="{% url 'klasifikasi:history' %}" class="text-gray-600 hover:text-blue-600 font-medium transition-colors">History</a>
+                    <a href="{% url 'soal:help' %}" class="text-gray-600 hover:text-blue-600 font-medium transition-colors">Help / FAQ</a>
+                    
+                    {% if user.is_authenticated %}
+                        <div class="relative">
+                            <button type="button" id="profile-menu-button" class="flex flex-row items-center space-x-2 text-blue-600 hover:text-blue-700 transition-colors group focus:outline-none">
+                                {% if user.profile.has_custom_image %}
+                                    <img src="{{ user.profile.image.url }}" 
+                                         alt="{{ user.username }}" 
+                                         class="w-10 h-10 rounded-full object-cover border-2 border-blue-200">
+                                {% else %}
+                                    <div class="w-10 h-10 rounded-full border-2 border-blue-200 bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
+                                        <span class="text-white text-lg font-bold">{{ user.profile.avatar_letter }}</span>
+                                    </div>
+                                {% endif %}
+                                <span class="text-gray-900 font-semibold group-hover:text-gray-700">
+                                    {{ user.username }}
+                                </span>
+                            </button>
+
+                            <div id="profile-menu-dropdown" 
+                                 class="hidden absolute right-0 z-10 mt-2 w-48 origin-top-right rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none">
+                                <div class="py-1" role="menu">
+                                    <a href="{% url 'users:profile' %}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors" role="menuitem">
+                                        <i class="bi bi-person mr-2"></i> My Profile
+                                    </a>
+                                    <a href="{% url 'users:settings' %}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors" role="menuitem">
+                                        <i class="bi bi-gear mr-2"></i> Settings
+                                    </a>
+                                    <hr class="my-1">
+                                    <a href="{% url 'users:logout' %}" class="block px-4 py-2 text-sm text-red-600 hover:bg-gray-100 hover:text-red-700 transition-colors" role="menuitem">
+                                        <i class="bi bi-box-arrow-right mr-2"></i> Log Out
+                                    </a>
                                 </div>
-                            {% endif %}
-
-                            <span class="text-gray-900 font-semibold group-hover:text-gray-700">
-                                {{ user.username }}
-                            </span>
-                        </button>
-
-                        <div id="profile-menu-dropdown" 
-                             class="hidden absolute right-0 z-10 mt-2 w-48 origin-top-right rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none">
-                            <div class="py-1" role="menu">
-                                
-                                <a href="{% url 'users:profile' %}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors" role="menuitem">
-                                    <i class="bi bi-person mr-2"></i> My Profile
-                                </a>
-                                <a href="{% url 'users:settings' %}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors" role="menuitem">
-                                    <i class="bi bi-gear mr-2"></i> Settings
-                                </a>
-                                <hr class="my-1">
-                                <a href="{% url 'users:logout' %}" class="block px-4 py-2 text-sm text-red-600 hover:bg-gray-100 hover:text-red-700 transition-colors" role="menuitem">
-                                    <i class="bi bi-box-arrow-right mr-2"></i> Log Out
-                                </a>
                             </div>
                         </div>
-                    </div>
-                {% else %}
-                    <a href="{% url 'users:login' %}" 
-                       class="bg-blue-600 text-white px-6 py-2 rounded-full font-semibold hover:bg-blue-700 transition-all shadow-md hover:shadow-lg text-sm">
-                        Log In
-                    </a>
-                {% endif %}
+                    {% else %}
+                        <a href="{% url 'users:login' %}" 
+                           class="bg-blue-600 text-white px-6 py-2 rounded-full font-semibold hover:bg-blue-700 transition-all shadow-md hover:shadow-lg text-sm">
+                            Log In
+                        </a>
+                    {% endif %}
+                </div>
+                
+                <div class="md:hidden">
+                    <button type="button" id="mobile-menu-button" class="text-gray-600 hover:text-blue-600 focus:outline-none">
+                        <i class="bi bi-list text-3xl"></i>
+                    </button>
+                </div>
             </div>
             
-            <div class="md:hidden">
-                <button type="button" id="mobile-menu-button" class="text-gray-600 hover:text-blue-600 focus:outline-none">
-                    <i class="bi bi-list text-3xl"></i>
-                </button>
+            <div id="mobile-menu" class="hidden md:hidden pb-4">
+                <div class="space-y-2">
+                    <a href="{% url 'soal:home' %}" class="block px-4 py-2 text-blue-600 bg-blue-50 rounded-lg font-semibold">Home</a>
+                    <a href="{% url 'klasifikasi:history' %}" class="block px-4 py-2 text-gray-600 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-colors">History</a>
+                    <a href="{% url 'soal:help' %}" class="block px-4 py-2 text-gray-600 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-colors">Help / FAQ</a>
+                    {% if user.is_authenticated %}
+                        <hr>
+                        <a href="{% url 'users:profile' %}" class="block px-4 py-2 text-gray-600 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-colors">My Profile</a>
+                        <a href="{% url 'users:logout' %}" class="block px-4 py-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors">Log Out</a>
+                    {% else %}
+                         <a href="{% url 'users:login' %}" class="block w-full text-center bg-blue-600 text-white px-6 py-2 rounded-full font-semibold hover:bg-blue-700 transition-all shadow-md text-sm">
+                            Log In
+                        </a>
+                    {% endif %}
+                </div>
             </div>
         </div>
-        
-        <div id="mobile-menu" class="hidden md:hidden pb-4">
-            <div class="space-y-2">
-                <a href="{% url 'soal:home' %}" class="block px-4 py-2 text-blue-600 bg-blue-50 rounded-lg font-semibold">Home</a>
-                <a href="{% url 'klasifikasi:history' %}" class="block px-4 py-2 text-gray-600 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-colors">History</a>
-                <a href="{% url 'soal:help' %}" class="block px-4 py-2 text-gray-600 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-colors">Help / FAQ</a>
-                {% if user.is_authenticated %}
-                    <hr>
-                    <a href="{% url 'users:profile' %}" class="block px-4 py-2 text-gray-600 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-colors">My Profile</a>
-                    <a href="{% url 'users:logout' %}" class="block px-4 py-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors">Log Out</a>
-                {% else %}
-                     <a href="{% url 'users:login' %}" class="block w-full text-center bg-blue-600 text-white px-6 py-2 rounded-full font-semibold hover:bg-blue-700 transition-all shadow-md text-sm">
-                        Log In
-                    </a>
-                {% endif %}
-            </div>
-        </div>
-    </div>
-</nav>
+    </nav>
 
+    <!-- Hero Section -->
     <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div class="max-w-3xl">
             <h1 class="text-5xl font-bold text-gray-900 leading-tight mb-4">
@@ -112,13 +116,16 @@
         </div>
     </section>
 
+    <!-- Main Content -->
     <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-16">
         <div class="flex flex-col lg:flex-row gap-8">
             
+            <!-- Upload Section -->
             <div class="flex-1">
                 <div class="bg-white rounded-2xl shadow-lg p-8">
                     <h2 class="text-2xl font-bold mb-6 text-gray-900">Upload Your File</h2>
                     
+                    <!-- Messages -->
                     {% if messages %}
                     <div class="space-y-3 mb-6">
                         {% for message in messages %}
@@ -147,9 +154,11 @@
                     </div>
                     {% endif %}
                     
-                    <form method="POST" enctype="multipart/form-data" class="space-y-6">
+                    <!-- Upload Form -->
+                    <form method="POST" enctype="multipart/form-data" class="space-y-6" id="upload-form">
                         {% csrf_token %}
                         
+                        <!-- Drop Zone -->
                         <div id="drop-zone" class="border-2 border-dashed border-gray-300 rounded-xl p-12 text-center hover:border-blue-500 hover:bg-blue-50 transition-all cursor-pointer">
                             <input type="file" id="file-input" name="file" accept=".csv,.pdf,.txt,.docx" class="hidden" required>
                             <label for="file-input" class="cursor-pointer">
@@ -163,12 +172,13 @@
                             </label>
                         </div>
 
+                        <!-- File Preview -->
                         <div id="file-preview" class="hidden items-center justify-between p-5 border-2 border-blue-200 rounded-xl bg-blue-50">
                             <div class="flex items-center space-x-4 overflow-hidden">
                                 <i class="bi bi-file-earmark-check-fill text-3xl text-blue-600 flex-shrink-0"></i>
                                 <div class="overflow-hidden">
                                     <span id="file-name" class="font-semibold text-gray-900 block truncate"></span>
-                                    <span class="text-sm text-gray-600">Ready to classify</span>
+                                    <span id="file-size" class="text-sm text-gray-600">Ready to classify</span>
                                 </div>
                             </div>
                             <button type="button" id="remove-file-btn" class="text-red-600 hover:text-red-700 font-semibold ml-4 flex-shrink-0 transition-colors">
@@ -176,18 +186,20 @@
                             </button>
                         </div>
 
+                        <!-- Action Button -->
                         <button type="submit" 
                                 id="classify-btn"
                                 class="w-full bg-gray-400 text-white py-4 rounded-full font-bold text-lg transition-all duration-300 shadow-lg
                                        disabled:cursor-not-allowed disabled:opacity-70"
                                 disabled> 
                             <i class="bi bi-lightning-charge-fill mr-2"></i>
-                            CLASSIFY NOW
+                            <span id="btn-text">CLASSIFY NOW</span>
                         </button>
                     </form>
                 </div>
             </div>
 
+            <!-- Info Panel -->
             <div class="w-full lg:w-80 bg-gradient-to-br from-gray-900 to-gray-800 rounded-2xl p-8 text-white shadow-xl flex-shrink-0">
                 <h3 class="text-blue-400 font-bold text-lg mb-2">BLOOMERS</h3>
                 <p class="font-bold mb-6 text-xl">What can you do with Bloomers?</p>
@@ -221,6 +233,7 @@
         </div>
     </main>
 
+    <!-- History Section -->
     <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-16">
         {% if user.is_authenticated %}
             <div class="bg-white rounded-2xl shadow-lg p-8">
@@ -285,45 +298,44 @@
                                         </span>
                                     </td>
                                     <td class="px-6 py-4">
-                                    <div class="flex space-x-3">
-                                        <!-- Download -->
-                                        <a href="{% url 'soal:download_file' item.id %}" 
-                                        class="text-blue-600 hover:text-blue-800 font-semibold transition-colors"
-                                        title="Download">
-                                            <i class="bi bi-download"></i>
-                                        </a>
-                                        
-                                        <!-- View Results - UPDATED -->
-                                        {% if item.status == 'completed' %}
-                                            <a href="{% url 'klasifikasi:hasil_klasifikasi' item.id %}" 
-                                            class="text-green-600 hover:text-green-800 font-semibold transition-colors"
-                                            title="View Results">
-                                                <i class="bi bi-eye"></i>
+                                        <div class="flex items-center space-x-2">
+                                            {% if item.status == 'completed' %}
+                                                <a href="{% url 'klasifikasi:hasil_klasifikasi' item.id %}" 
+                                                   class="inline-flex items-center px-4 py-2 bg-green-600 text-white text-sm font-semibold rounded-lg hover:bg-green-700 transition-colors shadow-sm pulse-success"
+                                                   title="View Results">
+                                                    <i class="bi bi-eye-fill mr-2"></i>
+                                                    View Results
+                                                </a>
+                                            {% elif item.status == 'pending' %}
+                                                <span class="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg">
+                                                    <i class="bi bi-hourglass-split mr-2"></i>
+                                                    Processing...
+                                                </span>
+                                            {% elif item.status == 'processing' %}
+                                                <span class="inline-flex items-center px-4 py-2 bg-yellow-600 text-white text-sm font-semibold rounded-lg">
+                                                    <i class="bi bi-arrow-repeat mr-2 animate-spin"></i>
+                                                    Processing...
+                                                </span>
+                                            {% else %}
+                                                <span class="inline-flex items-center px-4 py-2 bg-red-600 text-white text-sm font-semibold rounded-lg">
+                                                    <i class="bi bi-x-circle mr-2"></i>
+                                                    Failed
+                                                </span>
+                                            {% endif %}
+                                            
+                                            <a href="{% url 'soal:download_file' item.id %}" 
+                                               class="text-blue-600 hover:text-blue-800 p-2 hover:bg-blue-50 rounded transition-colors"
+                                               title="Download">
+                                                <i class="bi bi-download text-xl"></i>
                                             </a>
-                                        {% elif item.status == 'pending' %}
-                                            <a href="{% url 'klasifikasi:hasil_klasifikasi' item.id %}" 
-                                            class="text-blue-600 hover:text-blue-800 font-semibold transition-colors"
-                                            title="Start Classification">
-                                                <i class="bi bi-play-circle"></i>
+                                            
+                                            <a href="{% url 'soal:delete_history' item.id %}" 
+                                               class="text-red-600 hover:text-red-800 p-2 hover:bg-red-50 rounded transition-colors delete-history-btn"
+                                               title="Delete">
+                                                <i class="bi bi-trash text-xl"></i>
                                             </a>
-                                        {% elif item.status == 'processing' %}
-                                            <span class="text-yellow-600" title="Processing">
-                                                <i class="bi bi-hourglass-split"></i>
-                                            </span>
-                                        {% else %}
-                                            <span class="text-gray-400" title="Failed">
-                                                <i class="bi bi-x-circle"></i>
-                                            </span>
-                                        {% endif %}
-                                        
-                                        <!-- Delete -->
-                                        <a href="{% url 'soal:delete_history' item.id %}" 
-                                        class="text-red-600 hover:text-red-800 font-semibold transition-colors delete-history-btn"
-                                        title="Delete">
-                                            <i class="bi bi-trash"></i>
-                                        </a>
-                                    </div>
-                                </td>
+                                        </div>
+                                    </td>
                                 </tr>
                                 {% endfor %}
                             </tbody>

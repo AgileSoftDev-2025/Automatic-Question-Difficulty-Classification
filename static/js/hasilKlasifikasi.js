@@ -1,389 +1,602 @@
 /**
- * Enhanced Classification Results Page JavaScript
- * Handles navigation, classification changes, charts, and user interactions
+ * Enhanced Classification Results JavaScript - Fully Functional & Responsive
+ * Handles navigation, classification updates, charts, and mobile interactions
  */
 
 (function() {
   'use strict';
 
-  // Configuration
+  // ==================== CONFIGURATION ====================
   const CONFIG = {
     animationDuration: 300,
     toastDuration: 3000,
     scrollOffset: 100,
-    debounceDelay: 300
-  };
-
-  // Category color mapping for charts and UI
-  const CATEGORY_COLORS = {
-    'C1': { 
-      bg: '#10b981', // green-500
-      light: '#d1fae5',
-      border: '#059669'
-    },
-    'C2': { 
-      bg: '#3b82f6', // blue-500
-      light: '#dbeafe',
-      border: '#2563eb'
-    },
-    'C3': { 
-      bg: '#f59e0b', // amber-500
-      light: '#fef3c7',
-      border: '#d97706'
-    },
-    'C4': { 
-      bg: '#f97316', // orange-500
-      light: '#fed7aa',
-      border: '#ea580c'
-    },
-    'C5': { 
-      bg: '#ef4444', // red-500
-      light: '#fecaca',
-      border: '#dc2626'
-    },
-    'C6': { 
-      bg: '#a855f7', // purple-500
-      light: '#e9d5ff',
-      border: '#9333ea'
+    debounceDelay: 300,
+    apiEndpoints: {
+      update: '/klasifikasi/update/{id}/',
+      details: '/klasifikasi/question/{classificationId}/{questionId}/',
+      stats: '/klasifikasi/api/stats/'
     }
   };
 
-  // DOM elements
-  let elements = {};
-  
-  // Chart instances
-  let distributionChart = null;
-  let typeChart = null;
+  // Category colors
+  const CATEGORY_COLORS = {
+    'C1': { bg: '#10b981', light: '#d1fae5', border: '#059669' },
+    'C2': { bg: '#3b82f6', light: '#dbeafe', border: '#2563eb' },
+    'C3': { bg: '#f59e0b', light: '#fef3c7', border: '#d97706' },
+    'C4': { bg: '#f97316', light: '#fed7aa', border: '#ea580c' },
+    'C5': { bg: '#ef4444', light: '#fecaca', border: '#dc2626' },
+    'C6': { bg: '#a855f7', light: '#e9d5ff', border: '#9333ea' }
+  };
 
-  /**
-   * Initialize the application
-   */
+  // ==================== STATE MANAGEMENT ====================
+  const state = {
+    currentQuestionIndex: 0,
+    totalQuestions: 0,
+    classificationId: null,
+    pendingChanges: new Map(),
+    charts: {
+      distribution: null,
+      type: null
+    }
+  };
+
+  // ==================== DOM ELEMENTS ====================
+  let elements = {};
+
+  // ==================== INITIALIZATION ====================
   function init() {
     cacheElements();
-    setupEventListeners();
-    initializeCharts();
-    updateOverviewCounts();
-    updateCharts();
-    highlightNavigationByLevel();
     
-    // Set first question as active by default
-    if (elements.navItems.length > 0) {
-      setActiveQuestion(0);
+    if (elements.questions.length === 0) {
+      console.warn('No questions found on page');
+      return;
     }
 
-    console.log('Classification page initialized');
+    state.totalQuestions = elements.questions.length;
+    state.classificationId = getClassificationId();
+
+    setupEventListeners();
+    initializeCharts();
+    updateOverviewData();
+    highlightNavigationByLevel();
+    setActiveQuestion(0);
+    setupResponsiveFeatures();
+
+    console.log('✓ Classification page initialized');
   }
 
-  /**
-   * Cache frequently accessed DOM elements
-   */
+  // ==================== CACHE DOM ELEMENTS ====================
   function cacheElements() {
     elements = {
+      // Navigation
       navItems: document.querySelectorAll('#question-nav .nav-item'),
-      questions: document.querySelectorAll('#questions-list article'),
-      selects: document.querySelectorAll('.change-select'),
       prevBtn: document.getElementById('prev-question'),
       nextBtn: document.getElementById('next-question'),
       questionCounter: document.getElementById('question-counter'),
-      downloadBtn: document.getElementById('download-btn'),
-      exportBtn: document.getElementById('export-btn'),
+      
+      // Questions
+      questions: document.querySelectorAll('#questions-list article'),
+      selects: document.querySelectorAll('.change-select'),
+      
+      // Tabs
       tabLinks: document.querySelectorAll('.tab-link'),
-      tabContents: document.querySelectorAll('.tab-content'),
+      tabDetail: document.getElementById('tab-detail'),
+      tabOverview: document.getElementById('tab-overview'),
+      
+      // Mobile
       mobileMenuToggle: document.getElementById('mobile-menu-toggle'),
       closeSidebar: document.getElementById('close-sidebar'),
       sidebar: document.getElementById('sidebar'),
-      toastContainer: document.getElementById('toast-container'),
-      loadingOverlay: document.getElementById('loading-overlay'),
+      
+      // Charts
       distributionCanvas: document.getElementById('distributionChart'),
       typeCanvas: document.getElementById('typeChart'),
-      chartLegend: document.getElementById('chart-legend')
+      chartLegend: document.getElementById('chart-legend'),
+      
+      // UI
+      toastContainer: document.getElementById('toast-container'),
+      loadingOverlay: document.getElementById('loading-overlay'),
+      downloadBtn: document.getElementById('download-btn'),
+      exportBtn: document.getElementById('export-btn')
     };
   }
 
-  /**
-   * Setup all event listeners
-   */
+  // ==================== EVENT LISTENERS ====================
   function setupEventListeners() {
     // Navigation buttons
     elements.navItems.forEach(btn => {
       btn.addEventListener('click', handleNavClick);
     });
 
-    // Previous/Next buttons
-    if (elements.prevBtn) {
-      elements.prevBtn.addEventListener('click', () => navigateQuestion(-1));
-    }
-    
-    if (elements.nextBtn) {
-      elements.nextBtn.addEventListener('click', () => navigateQuestion(1));
-    }
+    // Previous/Next
+    elements.prevBtn?.addEventListener('click', () => navigateQuestion(-1));
+    elements.nextBtn?.addEventListener('click', () => navigateQuestion(1));
 
-    // Classification select dropdowns
+    // Classification changes
     elements.selects.forEach(select => {
       select.addEventListener('change', handleClassificationChange);
     });
 
-    // Download button
-    if (elements.downloadBtn) {
-      elements.downloadBtn.addEventListener('click', handleDownload);
-    }
+    // Save buttons (delegated)
+    document.addEventListener('click', (e) => {
+      if (e.target.closest('.save-change-btn')) {
+        handleSaveChange(e.target.closest('.save-change-btn'));
+      }
+    });
 
-    // Export button
-    if (elements.exportBtn) {
-      elements.exportBtn.addEventListener('click', handleExport);
-    }
-
-    // Tab navigation
+    // Tabs
     elements.tabLinks.forEach(link => {
       link.addEventListener('click', handleTabClick);
     });
 
     // Mobile menu
-    if (elements.mobileMenuToggle) {
-      elements.mobileMenuToggle.addEventListener('click', toggleMobileSidebar);
-    }
-
-    if (elements.closeSidebar) {
-      elements.closeSidebar.addEventListener('click', closeMobileSidebar);
-    }
-
-    // Close sidebar when clicking outside on mobile
-    document.addEventListener('click', (e) => {
-      if (window.innerWidth < 1024) {
-        if (elements.sidebar && 
-            !elements.sidebar.contains(e.target) && 
-            elements.mobileMenuToggle &&
-            !elements.mobileMenuToggle.contains(e.target) &&
-            elements.sidebar.classList.contains('show')) {
-          closeMobileSidebar();
-        }
-      }
-    });
+    elements.mobileMenuToggle?.addEventListener('click', toggleMobileSidebar);
+    elements.closeSidebar?.addEventListener('click', closeMobileSidebar);
 
     // Keyboard navigation
     document.addEventListener('keydown', handleKeyboardNav);
 
-    // Scroll to update active nav
+    // Scroll tracking
     let scrollTimeout;
     window.addEventListener('scroll', () => {
       clearTimeout(scrollTimeout);
       scrollTimeout = setTimeout(updateActiveNavOnScroll, 100);
     });
 
-    // Responsive chart resize
+    // Responsive resize
     let resizeTimeout;
     window.addEventListener('resize', () => {
       clearTimeout(resizeTimeout);
-      resizeTimeout = setTimeout(() => {
-        if (distributionChart) distributionChart.resize();
-        if (typeChart) typeChart.resize();
-      }, 250);
+      resizeTimeout = setTimeout(handleResize, 250);
+    });
+
+    // Click outside sidebar (mobile)
+    document.addEventListener('click', handleClickOutside);
+  }
+
+  // ==================== RESPONSIVE FEATURES ====================
+  function setupResponsiveFeatures() {
+    // Touch swipe for mobile navigation
+    let touchStartX = 0;
+    let touchEndX = 0;
+
+    document.addEventListener('touchstart', (e) => {
+      touchStartX = e.changedTouches[0].screenX;
+    });
+
+    document.addEventListener('touchend', (e) => {
+      touchEndX = e.changedTouches[0].screenX;
+      handleSwipe();
+    });
+
+    function handleSwipe() {
+      const swipeThreshold = 100;
+      if (touchEndX < touchStartX - swipeThreshold) {
+        // Swipe left - next question
+        navigateQuestion(1);
+      } else if (touchEndX > touchStartX + swipeThreshold) {
+        // Swipe right - previous question
+        navigateQuestion(-1);
+      }
+    }
+
+    // Smooth scroll behavior
+    document.documentElement.style.scrollBehavior = 'smooth';
+  }
+
+  function handleResize() {
+    // Redraw charts on resize
+    if (state.charts.distribution) state.charts.distribution.resize();
+    if (state.charts.type) state.charts.type.resize();
+
+    // Close mobile sidebar on desktop
+    if (window.innerWidth >= 1024 && elements.sidebar) {
+      elements.sidebar.classList.remove('show');
+    }
+  }
+
+  function handleClickOutside(e) {
+    if (window.innerWidth < 1024 && elements.sidebar && elements.sidebar.classList.contains('show')) {
+      if (!elements.sidebar.contains(e.target) && 
+          !elements.mobileMenuToggle?.contains(e.target)) {
+        closeMobileSidebar();
+      }
+    }
+  }
+
+  // ==================== NAVIGATION ====================
+  function handleNavClick(e) {
+    const btn = e.currentTarget;
+    const index = parseInt(btn.getAttribute('data-index'));
+    setActiveQuestion(index);
+    closeMobileSidebar();
+  }
+
+  function navigateQuestion(direction) {
+    const newIndex = state.currentQuestionIndex + direction;
+    if (newIndex >= 0 && newIndex < state.totalQuestions) {
+      setActiveQuestion(newIndex);
+    }
+  }
+
+  function setActiveQuestion(index) {
+    if (index < 0 || index >= state.totalQuestions) return;
+
+    state.currentQuestionIndex = index;
+
+    // Update navigation buttons
+    elements.navItems.forEach((btn, i) => {
+      if (i === index) {
+        btn.classList.remove('bg-blue-50', 'text-blue-700');
+        btn.classList.add('bg-blue-600', 'text-white', 'active', 'ring-2', 'ring-blue-300');
+      } else {
+        btn.classList.remove('bg-blue-600', 'text-white', 'active', 'ring-2', 'ring-blue-300');
+        btn.classList.add('bg-blue-50', 'text-blue-700');
+      }
+    });
+
+    // Update prev/next buttons
+    updateNavigationButtons(index);
+
+    // Update counter
+    updateQuestionCounter(index);
+
+    // Scroll to question
+    scrollToQuestion(index);
+  }
+
+  function scrollToQuestion(index) {
+    const targetQuestion = elements.questions[index];
+    if (!targetQuestion) return;
+
+    const isMobile = window.innerWidth < 768;
+    const offset = isMobile ? 80 : CONFIG.scrollOffset;
+    const elementPosition = targetQuestion.getBoundingClientRect().top + window.pageYOffset;
+    const offsetPosition = elementPosition - offset;
+
+    window.scrollTo({
+      top: offsetPosition,
+      behavior: 'smooth'
+    });
+
+    // Flash effect
+    targetQuestion.classList.add('ring-4', 'ring-blue-200', 'shadow-xl');
+    setTimeout(() => {
+      targetQuestion.classList.remove('ring-4', 'ring-blue-200', 'shadow-xl');
+    }, 800);
+  }
+
+  function updateNavigationButtons(index) {
+    if (elements.prevBtn) {
+      elements.prevBtn.disabled = index === 0;
+      elements.prevBtn.classList.toggle('opacity-50', index === 0);
+      elements.prevBtn.classList.toggle('cursor-not-allowed', index === 0);
+    }
+    
+    if (elements.nextBtn) {
+      const isLast = index === state.totalQuestions - 1;
+      elements.nextBtn.disabled = isLast;
+      elements.nextBtn.classList.toggle('opacity-50', isLast);
+      elements.nextBtn.classList.toggle('cursor-not-allowed', isLast);
+    }
+  }
+
+  function updateQuestionCounter(index) {
+    if (elements.questionCounter) {
+      elements.questionCounter.textContent = `Question ${index + 1} of ${state.totalQuestions}`;
+    }
+  }
+
+  function updateActiveNavOnScroll() {
+    const scrollPosition = window.scrollY + window.innerHeight / 3;
+    
+    let currentIndex = 0;
+    elements.questions.forEach((question, index) => {
+      const rect = question.getBoundingClientRect();
+      const top = rect.top + window.pageYOffset;
+      
+      if (scrollPosition >= top) {
+        currentIndex = index;
+      }
+    });
+
+    if (currentIndex !== state.currentQuestionIndex) {
+      state.currentQuestionIndex = currentIndex;
+      
+      elements.navItems.forEach((btn, i) => {
+        if (i === currentIndex) {
+          btn.classList.remove('bg-blue-50', 'text-blue-700');
+          btn.classList.add('bg-blue-600', 'text-white', 'active');
+        } else {
+          btn.classList.remove('bg-blue-600', 'text-white', 'active');
+          btn.classList.add('bg-blue-50', 'text-blue-700');
+        }
+      });
+
+      updateNavigationButtons(currentIndex);
+      updateQuestionCounter(currentIndex);
+    }
+  }
+
+  function highlightNavigationByLevel() {
+    elements.navItems.forEach(btn => {
+      const level = btn.getAttribute('data-level');
+      if (level && CATEGORY_COLORS[level]) {
+        btn.style.borderLeft = `3px solid ${CATEGORY_COLORS[level].bg}`;
+      }
     });
   }
 
-  /**
-   * Initialize Chart.js charts
-   */
-  function initializeCharts() {
-    // Bar Chart - Distribution
-    if (elements.distributionCanvas) {
-      const ctx = elements.distributionCanvas.getContext('2d');
-      distributionChart = new Chart(ctx, {
-        type: 'bar',
-        data: {
-          labels: ['C1', 'C2', 'C3', 'C4', 'C5', 'C6'],
-          datasets: [{
-            label: 'Number of Questions',
-            data: [0, 0, 0, 0, 0, 0],
-            backgroundColor: [
-              CATEGORY_COLORS.C1.bg,
-              CATEGORY_COLORS.C2.bg,
-              CATEGORY_COLORS.C3.bg,
-              CATEGORY_COLORS.C4.bg,
-              CATEGORY_COLORS.C5.bg,
-              CATEGORY_COLORS.C6.bg
-            ],
-            borderColor: [
-              CATEGORY_COLORS.C1.border,
-              CATEGORY_COLORS.C2.border,
-              CATEGORY_COLORS.C3.border,
-              CATEGORY_COLORS.C4.border,
-              CATEGORY_COLORS.C5.border,
-              CATEGORY_COLORS.C6.border
-            ],
-            borderWidth: 2,
-            borderRadius: 8,
-            borderSkipped: false
-          }]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-            legend: {
-              display: false
-            },
-            tooltip: {
-              backgroundColor: 'rgba(0, 0, 0, 0.8)',
-              padding: 12,
-              titleFont: {
-                size: 14,
-                weight: 'bold'
-              },
-              bodyFont: {
-                size: 13
-              },
-              callbacks: {
-                title: function(context) {
-                  return context[0].label + ' - ' + getCategoryName(context[0].label);
-                },
-                label: function(context) {
-                  return 'Questions: ' + context.parsed.y;
-                }
-              }
-            }
-          },
-          scales: {
-            y: {
-              beginAtZero: true,
-              ticks: {
-                stepSize: 1,
-                font: {
-                  size: 12
-                }
-              },
-              grid: {
-                color: 'rgba(0, 0, 0, 0.05)'
-              }
-            },
-            x: {
-              grid: {
-                display: false
-              },
-              ticks: {
-                font: {
-                  size: 12,
-                  weight: 'bold'
-                }
-              }
-            }
-          }
-        }
-      });
+  // ==================== CLASSIFICATION CHANGES ====================
+  function handleClassificationChange(e) {
+    const select = e.target;
+    const newLevel = select.value;
+    const questionIndex = select.getAttribute('data-question-index');
+    const originalLevel = select.getAttribute('data-original-level');
+    const article = select.closest('article');
+    
+    if (!newLevel || newLevel === originalLevel) {
+      hideSaveButton(article);
+      state.pendingChanges.delete(questionIndex);
+      return;
     }
 
-    // Doughnut Chart - Type Distribution
-    if (elements.typeCanvas) {
-      const ctx = elements.typeCanvas.getContext('2d');
-      typeChart = new Chart(ctx, {
-        type: 'doughnut',
-        data: {
-          labels: ['C1', 'C2', 'C3', 'C4', 'C5', 'C6'],
-          datasets: [{
-            data: [0, 0, 0, 0, 0, 0],
-            backgroundColor: [
-              CATEGORY_COLORS.C1.bg,
-              CATEGORY_COLORS.C2.bg,
-              CATEGORY_COLORS.C3.bg,
-              CATEGORY_COLORS.C4.bg,
-              CATEGORY_COLORS.C5.bg,
-              CATEGORY_COLORS.C6.bg
-            ],
-            borderColor: '#ffffff',
-            borderWidth: 3,
-            hoverOffset: 8
-          }]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          cutout: '65%',
-          plugins: {
-            legend: {
-              display: false
-            },
-            tooltip: {
-              backgroundColor: 'rgba(0, 0, 0, 0.8)',
-              padding: 12,
-              titleFont: {
-                size: 14,
-                weight: 'bold'
-              },
-              bodyFont: {
-                size: 13
-              },
-              callbacks: {
-                title: function(context) {
-                  return context[0].label + ' - ' + getCategoryName(context[0].label);
-                },
-                label: function(context) {
-                  const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                  const percentage = total > 0 ? ((context.parsed / total) * 100).toFixed(1) : 0;
-                  return [
-                    'Questions: ' + context.parsed,
-                    'Percentage: ' + percentage + '%'
-                  ];
-                }
-              }
-            }
-          }
-        }
-      });
+    // Store pending change
+    state.pendingChanges.set(questionIndex, {
+      newLevel,
+      originalLevel,
+      article
+    });
+
+    // Show save button
+    showSaveButton(article, questionIndex);
+
+    // Visual feedback
+    updateVisualFeedback(article, newLevel);
+  }
+
+  function showSaveButton(article, questionIndex) {
+    const saveBtn = article.querySelector('.save-change-btn');
+    if (saveBtn) {
+      saveBtn.classList.remove('hidden');
+      saveBtn.setAttribute('data-question-index', questionIndex);
     }
   }
 
-  /**
-   * Get category full name
-   */
-  function getCategoryName(code) {
-    const names = {
-      'C1': 'Remember',
-      'C2': 'Understand',
-      'C3': 'Apply',
-      'C4': 'Analyze',
-      'C5': 'Evaluate',
-      'C6': 'Create'
+  function hideSaveButton(article) {
+    const saveBtn = article.querySelector('.save-change-btn');
+    if (saveBtn) {
+      saveBtn.classList.add('hidden');
+    }
+  }
+
+  function handleSaveChange(button) {
+    const questionIndex = button.getAttribute('data-question-index');
+    const change = state.pendingChanges.get(questionIndex);
+    
+    if (!change) return;
+
+    saveClassificationChange(
+      parseInt(questionIndex) + 1, // question_number (1-indexed)
+      change.newLevel,
+      change.originalLevel,
+      change.article
+    );
+  }
+
+  async function saveClassificationChange(questionNumber, newLevel, originalLevel, article) {
+    showLoading(true);
+
+    try {
+      const csrfToken = getCookie('csrftoken') || document.querySelector('[name=csrfmiddlewaretoken]')?.value;
+
+      const response = await fetch(`/klasifikasi/update/${state.classificationId}/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': csrfToken,
+          'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: JSON.stringify({
+          question_number: questionNumber,
+          category: newLevel
+        })
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        // Update UI
+        updateQuestionLevel(article, newLevel);
+        updateNavigationLevel(questionNumber - 1, newLevel);
+        
+        // Update original level
+        const select = article.querySelector('.change-select');
+        if (select) {
+          select.setAttribute('data-original-level', newLevel);
+        }
+        
+        // Clear pending change
+        const questionIndex = (questionNumber - 1).toString();
+        state.pendingChanges.delete(questionIndex);
+        hideSaveButton(article);
+        
+        // Refresh overview
+        updateOverviewData();
+        updateCharts();
+        
+        showToast('✓ Classification updated successfully!', 'success');
+      } else {
+        throw new Error(data.error || 'Failed to update');
+      }
+    } catch (error) {
+      console.error('Error updating:', error);
+      showToast('✗ ' + (error.message || 'Failed to update classification'), 'error');
+      
+      // Revert select
+      const select = article.querySelector('.change-select');
+      if (select) {
+        select.value = originalLevel;
+      }
+    } finally {
+      showLoading(false);
+    }
+  }
+
+  function updateQuestionLevel(article, newLevel) {
+    const labelEl = article.querySelector('.current-label');
+    const badgeEl = article.querySelector('.classification-badge');
+    
+    if (labelEl) {
+      labelEl.textContent = newLevel;
+    }
+    
+    if (badgeEl) {
+      badgeEl.className = 'classification-badge px-3 py-1 rounded-full text-xs sm:text-sm font-semibold category-' + newLevel.toLowerCase();
+      badgeEl.textContent = newLevel;
+    }
+  }
+
+  function updateNavigationLevel(questionIndex, newLevel) {
+    const navBtn = elements.navItems[questionIndex];
+    if (navBtn) {
+      navBtn.setAttribute('data-level', newLevel);
+      navBtn.style.borderLeft = `3px solid ${CATEGORY_COLORS[newLevel].bg}`;
+    }
+  }
+
+  function updateVisualFeedback(article, newLevel) {
+    const box = article.querySelector('.classification-box');
+    if (!box) return;
+
+    const colorClasses = [
+      'from-blue-600', 'to-blue-700', 'from-green-600', 'to-green-700',
+      'from-amber-600', 'to-amber-700', 'from-orange-600', 'to-orange-700',
+      'from-red-600', 'to-red-700', 'from-purple-600', 'to-purple-700'
+    ];
+    
+    colorClasses.forEach(cls => box.classList.remove(cls));
+
+    const colorMap = {
+      'C1': ['from-green-600', 'to-green-700'],
+      'C2': ['from-blue-600', 'to-blue-700'],
+      'C3': ['from-amber-600', 'to-amber-700'],
+      'C4': ['from-orange-600', 'to-orange-700'],
+      'C5': ['from-red-600', 'to-red-700'],
+      'C6': ['from-purple-600', 'to-purple-700']
     };
-    return names[code] || code;
+
+    if (colorMap[newLevel]) {
+      box.classList.add(...colorMap[newLevel]);
+    }
   }
 
-  /**
-   * Update charts with current data
-   */
+  // ==================== CHARTS ====================
+  function initializeCharts() {
+    if (!elements.distributionCanvas || !elements.typeCanvas) return;
+
+    // Bar Chart
+    const ctxBar = elements.distributionCanvas.getContext('2d');
+    state.charts.distribution = new Chart(ctxBar, {
+      type: 'bar',
+      data: {
+        labels: ['C1', 'C2', 'C3', 'C4', 'C5', 'C6'],
+        datasets: [{
+          label: 'Questions',
+          data: [0, 0, 0, 0, 0, 0],
+          backgroundColor: Object.values(CATEGORY_COLORS).map(c => c.bg),
+          borderColor: Object.values(CATEGORY_COLORS).map(c => c.border),
+          borderWidth: 2,
+          borderRadius: 8
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+            padding: 12,
+            callbacks: {
+              title: (ctx) => ctx[0].label + ' - ' + getCategoryName(ctx[0].label),
+              label: (ctx) => 'Questions: ' + ctx.parsed.y
+            }
+          }
+        },
+        scales: {
+          y: { beginAtZero: true, ticks: { stepSize: 1 } },
+          x: { grid: { display: false } }
+        }
+      }
+    });
+
+    // Doughnut Chart
+    const ctxDoughnut = elements.typeCanvas.getContext('2d');
+    state.charts.type = new Chart(ctxDoughnut, {
+      type: 'doughnut',
+      data: {
+        labels: ['C1', 'C2', 'C3', 'C4', 'C5', 'C6'],
+        datasets: [{
+          data: [0, 0, 0, 0, 0, 0],
+          backgroundColor: Object.values(CATEGORY_COLORS).map(c => c.bg),
+          borderColor: '#ffffff',
+          borderWidth: 3,
+          hoverOffset: 8
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        cutout: '65%',
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+            padding: 12,
+            callbacks: {
+              title: (ctx) => ctx[0].label + ' - ' + getCategoryName(ctx[0].label),
+              label: (ctx) => {
+                const total = ctx.dataset.data.reduce((a, b) => a + b, 0);
+                const pct = total > 0 ? ((ctx.parsed / total) * 100).toFixed(1) : 0;
+                return ['Questions: ' + ctx.parsed, 'Percentage: ' + pct + '%'];
+              }
+            }
+          }
+        }
+      }
+    });
+  }
+
   function updateCharts() {
     const counts = getCategoryCounts();
     const total = Object.values(counts).reduce((a, b) => a + b, 0);
 
-    // Update bar chart
-    if (distributionChart) {
-      distributionChart.data.datasets[0].data = [
+    if (state.charts.distribution) {
+      state.charts.distribution.data.datasets[0].data = [
         counts.C1, counts.C2, counts.C3, counts.C4, counts.C5, counts.C6
       ];
-      distributionChart.update('none'); // Update without animation
+      state.charts.distribution.update('none');
     }
 
-    // Update doughnut chart
-    if (typeChart) {
-      typeChart.data.datasets[0].data = [
+    if (state.charts.type) {
+      state.charts.type.data.datasets[0].data = [
         counts.C1, counts.C2, counts.C3, counts.C4, counts.C5, counts.C6
       ];
-      typeChart.update('none');
+      state.charts.type.update('none');
     }
 
-    // Update custom legend
     updateChartLegend(counts, total);
   }
 
-  /**
-   * Update custom chart legend
-   */
   function updateChartLegend(counts, total) {
     if (!elements.chartLegend) return;
 
     const categories = ['C1', 'C2', 'C3', 'C4', 'C5', 'C6'];
-    const legendHTML = categories.map(cat => {
+    const html = categories.map(cat => {
       const count = counts[cat] || 0;
-      const percentage = total > 0 ? ((count / total) * 100).toFixed(1) : 0;
+      const pct = total > 0 ? ((count / total) * 100).toFixed(1) : 0;
       
       return `
         <div class="flex items-center justify-between py-2 px-3 rounded-lg hover:bg-gray-100 transition-colors">
@@ -393,18 +606,15 @@
           </div>
           <div class="text-right">
             <div class="text-sm font-bold text-gray-800">${count}</div>
-            <div class="text-xs text-gray-500">${percentage}%</div>
+            <div class="text-xs text-gray-500">${pct}%</div>
           </div>
         </div>
       `;
     }).join('');
 
-    elements.chartLegend.innerHTML = legendHTML;
+    elements.chartLegend.innerHTML = html;
   }
 
-  /**
-   * Get category counts from questions
-   */
   function getCategoryCounts() {
     const counts = { C1: 0, C2: 0, C3: 0, C4: 0, C5: 0, C6: 0 };
     
@@ -421,578 +631,107 @@
     return counts;
   }
 
-  /**
-   * Navigate to previous/next question
-   */
-  function navigateQuestion(direction) {
-    const activeIndex = getActiveQuestionIndex();
-    const newIndex = activeIndex + direction;
-    
-    if (newIndex >= 0 && newIndex < elements.questions.length) {
-      setActiveQuestion(newIndex);
-    }
-  }
-
-  /**
-   * Get current active question index
-   */
-  function getActiveQuestionIndex() {
-    return Array.from(elements.navItems).findIndex(btn => 
-      btn.classList.contains('bg-blue-600') || btn.classList.contains('active')
-    );
-  }
-
-  /**
-   * Handle navigation button click
-   */
-  function handleNavClick(e) {
-    const btn = e.currentTarget;
-    const index = parseInt(btn.getAttribute('data-index'));
-    setActiveQuestion(index);
-    closeMobileSidebar();
-  }
-
-  /**
-   * Set active question and scroll to it
-   */
-  function setActiveQuestion(index) {
-    if (index < 0 || index >= elements.questions.length) return;
-
-    // Clear all active states
-    elements.navItems.forEach(btn => {
-      btn.classList.remove('bg-blue-600', 'text-white', 'active');
-      btn.classList.add('bg-blue-50', 'text-blue-700');
-    });
-
-    // Set active state
-    const activeBtn = elements.navItems[index];
-    if (activeBtn) {
-      activeBtn.classList.remove('bg-blue-50', 'text-blue-700');
-      activeBtn.classList.add('bg-blue-600', 'text-white', 'active');
-    }
-
-    // Update navigation buttons
-    updateNavigationButtons(index);
-
-    // Update counter
-    updateQuestionCounter(index);
-
-    // Scroll to question
-    const targetQuestion = elements.questions[index];
-    if (targetQuestion) {
-      const offset = window.innerWidth < 768 ? 80 : CONFIG.scrollOffset;
-      const elementPosition = targetQuestion.getBoundingClientRect().top + window.pageYOffset;
-      const offsetPosition = elementPosition - offset;
-
-      window.scrollTo({
-        top: offsetPosition,
-        behavior: 'smooth'
-      });
-
-      // Flash effect
-      targetQuestion.classList.add('ring-4', 'ring-blue-200');
-      setTimeout(() => {
-        targetQuestion.classList.remove('ring-4', 'ring-blue-200');
-      }, 800);
-    }
-  }
-
-  /**
-   * Update navigation button states
-   */
-  function updateNavigationButtons(index) {
-    if (elements.prevBtn) {
-      elements.prevBtn.disabled = index === 0;
-    }
-    
-    if (elements.nextBtn) {
-      elements.nextBtn.disabled = index === elements.questions.length - 1;
-    }
-  }
-
-  /**
-   * Update question counter display
-   */
-  function updateQuestionCounter(index) {
-    if (elements.questionCounter) {
-      elements.questionCounter.textContent = `Question ${index + 1} of ${elements.questions.length}`;
-    }
-  }
-
-  /**
-   * Update active navigation based on scroll position
-   */
-  function updateActiveNavOnScroll() {
-    const scrollPosition = window.scrollY + window.innerHeight / 3;
-    
-    let currentIndex = 0;
-    elements.questions.forEach((question, index) => {
-      const rect = question.getBoundingClientRect();
-      const offset = window.pageYOffset;
-      const top = rect.top + offset;
-      
-      if (scrollPosition >= top) {
-        currentIndex = index;
-      }
-    });
-
-    // Update nav without scrolling
-    elements.navItems.forEach((btn, index) => {
-      if (index === currentIndex) {
-        btn.classList.remove('bg-blue-50', 'text-blue-700');
-        btn.classList.add('bg-blue-600', 'text-white', 'active');
-      } else {
-        btn.classList.remove('bg-blue-600', 'text-white', 'active');
-        btn.classList.add('bg-blue-50', 'text-blue-700');
-      }
-    });
-
-    // Update navigation buttons and counter
-    updateNavigationButtons(currentIndex);
-    updateQuestionCounter(currentIndex);
-  }
-
-  /**
-   * Handle classification level change
-   */
-  function handleClassificationChange(e) {
-    const select = e.target;
-    const newLevel = select.value;
-    const questionIndex = select.getAttribute('data-question-index');
-    const originalLevel = select.getAttribute('data-original-level');
-    const article = select.closest('article');
-    
-    if (!newLevel || newLevel === originalLevel) {
-      hideSaveButton(article);
-      return;
-    }
-
-    // Show save button
-    showSaveButton(article, () => {
-      saveClassificationChange(questionIndex, newLevel, originalLevel, article);
-    });
-
-    // Visual feedback
-    updateVisualFeedback(article, newLevel);
-  }
-
-  /**
-   * Show save button for pending changes
-   */
-  function showSaveButton(article, callback) {
-    const saveBtn = article.querySelector('.save-change-btn');
-    if (saveBtn) {
-      saveBtn.classList.remove('hidden');
-      saveBtn.onclick = callback;
-    }
-  }
-
-  /**
-   * Hide save button
-   */
-  function hideSaveButton(article) {
-    const saveBtn = article.querySelector('.save-change-btn');
-    if (saveBtn) {
-      saveBtn.classList.add('hidden');
-      saveBtn.onclick = null;
-    }
-  }
-
-  /**
-   * Save classification change to server
-   */
-  async function saveClassificationChange(questionIndex, newLevel, originalLevel, article) {
-    const questionId = article.getAttribute('data-question-id');
-    const classificationId = getClassificationId();
-    
-    showLoading(true);
-
-    try {
-      const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value || 
-                       getCookie('csrftoken');
-
-      const response = await fetch(`/klasifikasi/update/${classificationId}/`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-CSRFToken': csrfToken,
-          'X-Requested-With': 'XMLHttpRequest'
-        },
-        body: JSON.stringify({
-          question_id: questionId,
-          category: newLevel
-        })
-      });
-
-      const data = await response.json();
-
-      if (response.ok && data.success) {
-        // Update UI
-        updateQuestionLevel(article, newLevel);
-        updateNavigationLevel(questionIndex, newLevel);
-        updateOverviewCounts();
-        updateCharts();
-        
-        // Update original level
-        const select = article.querySelector('.change-select');
-        if (select) {
-          select.setAttribute('data-original-level', newLevel);
-        }
-        
-        hideSaveButton(article);
-        showToast('Classification updated successfully!', 'success');
-      } else {
-        throw new Error(data.error || 'Failed to update classification');
-      }
-    } catch (error) {
-      console.error('Error updating classification:', error);
-      showToast(error.message || 'Failed to update classification', 'error');
-      
-      // Revert select to original value
-      const select = article.querySelector('.change-select');
-      if (select) {
-        select.value = originalLevel;
-      }
-    } finally {
-      showLoading(false);
-    }
-  }
-
-  /**
-   * Get classification ID from URL or page
-   */
-  function getClassificationId() {
-    const pathParts = window.location.pathname.split('/');
-    return pathParts[pathParts.length - 2] || '1';
-  }
-
-  /**
-   * Update question level in UI
-   */
-  function updateQuestionLevel(article, newLevel) {
-    const labelEl = article.querySelector('.current-label');
-    const badgeEl = article.querySelector('.classification-badge');
-    
-    if (labelEl) {
-      labelEl.textContent = newLevel;
-    }
-    
-    if (badgeEl) {
-      // Remove old category classes
-      badgeEl.className = badgeEl.className.replace(/category-c\d/gi, '');
-      badgeEl.classList.add(`category-${newLevel.toLowerCase()}`);
-      badgeEl.textContent = newLevel;
-    }
-  }
-
-  /**
-   * Update navigation button level indicator
-   */
-  function updateNavigationLevel(questionIndex, newLevel) {
-    const navBtn = elements.navItems[questionIndex];
-    if (navBtn) {
-      navBtn.setAttribute('data-level', newLevel);
-    }
-  }
-
-  /**
-   * Update visual feedback for classification box
-   */
-  function updateVisualFeedback(article, newLevel) {
-    const box = article.querySelector('.classification-box');
-    if (!box) return;
-
-    // Remove all color classes
-    const colorClasses = ['from-blue-600', 'to-blue-700', 'from-green-600', 'to-green-700',
-                         'from-amber-600', 'to-amber-700', 'from-orange-600', 'to-orange-700',
-                         'from-red-600', 'to-red-700', 'from-purple-600', 'to-purple-700'];
-    
-    colorClasses.forEach(cls => box.classList.remove(cls));
-
-    // Add new color based on level
-    const colorMap = {
-      'C1': ['from-green-600', 'to-green-700'],
-      'C2': ['from-blue-600', 'to-blue-700'],
-      'C3': ['from-amber-600', 'to-amber-700'],
-      'C4': ['from-orange-600', 'to-orange-700'],
-      'C5': ['from-red-600', 'to-red-700'],
-      'C6': ['from-purple-600', 'to-purple-700']
+  function getCategoryName(code) {
+    const names = {
+      'C1': 'Remember', 'C2': 'Understand', 'C3': 'Apply',
+      'C4': 'Analyze', 'C5': 'Evaluate', 'C6': 'Create'
     };
-
-    if (colorMap[newLevel]) {
-      box.classList.add(...colorMap[newLevel]);
-    }
+    return names[code] || code;
   }
 
-  /**
-   * Update overview tab counts
-   */
-  function updateOverviewCounts() {
+  // ==================== OVERVIEW DATA ====================
+  function updateOverviewData() {
     const counts = getCategoryCounts();
     const total = Object.values(counts).reduce((a, b) => a + b, 0);
 
-    // Update count displays
     Object.keys(counts).forEach(level => {
       const countEl = document.getElementById(`count-${level}`);
-      const percentageEl = document.getElementById(`percentage-${level}`);
+      const pctEl = document.getElementById(`percentage-${level}`);
       
-      if (countEl) {
-        countEl.textContent = counts[level];
-      }
-      
-      if (percentageEl) {
-        const percentage = total > 0 ? ((counts[level] / total) * 100).toFixed(1) : 0;
-        percentageEl.textContent = percentage + '%';
+      if (countEl) countEl.textContent = counts[level];
+      if (pctEl) {
+        const pct = total > 0 ? ((counts[level] / total) * 100).toFixed(1) : 0;
+        pctEl.textContent = pct + '%';
       }
     });
 
-    // Update summary statistics
     updateSummaryStats(counts);
   }
 
-  /**
-   * Update summary statistics in overview
-   */
   function updateSummaryStats(counts) {
-    // Find highest category
     const entries = Object.entries(counts);
     const highest = entries.reduce((a, b) => b[1] > a[1] ? b : a, ['', 0]);
+    
     const highestEl = document.getElementById('highest-category');
     if (highestEl) {
       highestEl.textContent = highest[1] > 0 ? `${highest[0]} (${highest[1]})` : '-';
     }
 
-    // Calculate lower order (C1-C2)
     const lowerOrder = (counts.C1 || 0) + (counts.C2 || 0);
-    const lowerOrderEl = document.getElementById('lower-order');
-    if (lowerOrderEl) {
-      lowerOrderEl.textContent = lowerOrder;
-    }
-
-    // Calculate higher order (C3-C6)
     const higherOrder = (counts.C3 || 0) + (counts.C4 || 0) + (counts.C5 || 0) + (counts.C6 || 0);
-    const higherOrderEl = document.getElementById('higher-order');
-    if (higherOrderEl) {
-      higherOrderEl.textContent = higherOrder;
-    }
-  }
 
-  /**
-   * Highlight navigation buttons by level
-   */
-  function highlightNavigationByLevel() {
-    elements.navItems.forEach(btn => {
-      const level = btn.getAttribute('data-level');
-      if (level && CATEGORY_COLORS[level]) {
-        btn.style.borderLeft = `3px solid ${CATEGORY_COLORS[level].bg}`;
-      }
-    });
-  }
-
-  /**
-   * Handle download button click
-   */
-  function handleDownload(e) {
-    const href = elements.downloadBtn.getAttribute('href');
+    const lowerEl = document.getElementById('lower-order');
+    const higherEl = document.getElementById('higher-order');
     
-    if (href === '#' || !href) {
-      e.preventDefault();
-      showToast('PDF file is not available for download', 'info');
-      return;
-    }
-
-    showToast('Download started...', 'info');
+    if (lowerEl) lowerEl.textContent = lowerOrder;
+    if (higherEl) higherEl.textContent = higherOrder;
   }
 
-  /**
-   * Handle export to Excel
-   */
-  async function handleExport(e) {
-    e.preventDefault();
-    
-    const classificationId = getClassificationId();
-    showLoading(true);
-    
-    try {
-      // Try to use server endpoint if available
-      const response = await fetch(`/klasifikasi/export/${classificationId}/`);
-      
-      if (response.ok) {
-        const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `classification_${classificationId}_${Date.now()}.xlsx`;
-        document.body.appendChild(a);
-        a.click();
-        window.URL.revokeObjectURL(url);
-        document.body.removeChild(a);
-        showToast('Export successful!', 'success');
-      } else {
-        // Fallback to CSV export
-        await exportToCSV();
-      }
-    } catch (error) {
-      console.error('Export error:', error);
-      // Fallback to CSV export
-      await exportToCSV();
-    } finally {
-      showLoading(false);
-    }
-  }
-
-  /**
-   * Export to CSV as fallback
-   */
-  async function exportToCSV() {
-    try {
-      const exportData = [];
-      
-      elements.questions.forEach((article, index) => {
-        const questionId = article.getAttribute('data-question-id');
-        const questionText = article.querySelector('p')?.textContent || '';
-        const level = article.querySelector('.classification-badge')?.textContent.trim() || '';
-        const confidenceEl = article.querySelector('[class*="confidence"]');
-        const confidence = confidenceEl ? confidenceEl.textContent : 'N/A';
-        
-        exportData.push({
-          number: index + 1,
-          id: questionId,
-          question: questionText,
-          level: level,
-          levelName: getCategoryName(level),
-          confidence: confidence
-        });
-      });
-
-      const csvContent = createCSV(exportData);
-      downloadCSV(csvContent, `classification_results_${Date.now()}.csv`);
-      
-      showToast('Exported as CSV successfully!', 'success');
-    } catch (error) {
-      console.error('CSV export error:', error);
-      showToast('Export failed. Please try again.', 'error');
-    }
-  }
-
-  /**
-   * Create CSV from data
-   */
-  function createCSV(data) {
-    const headers = ['No', 'Question ID', 'Question Text', 'Level', 'Level Name', 'Confidence'];
-    const rows = data.map(item => [
-      item.number,
-      item.id,
-      `"${item.question.replace(/"/g, '""')}"`,
-      item.level,
-      item.levelName,
-      item.confidence
-    ]);
-
-    const csvRows = [headers, ...rows];
-    return csvRows.map(row => row.join(',')).join('\n');
-  }
-
-  /**
-   * Download CSV file
-   */
-  function downloadCSV(content, filename) {
-    const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    
-    link.setAttribute('href', url);
-    link.setAttribute('download', filename);
-    link.style.visibility = 'hidden';
-    
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-  }
-
-  /**
-   * Handle tab switching
-   */
+  // ==================== TABS ====================
   function handleTabClick(e) {
     e.preventDefault();
-    const clickedTab = e.currentTarget;
-    const targetTab = clickedTab.getAttribute('data-tab');
+    const tab = e.currentTarget.getAttribute('data-tab');
 
-    // Update tab links
     elements.tabLinks.forEach(link => {
       link.classList.remove('text-blue-600', 'font-semibold', 'bg-blue-50', 'active');
       link.classList.add('text-gray-600');
     });
 
-    clickedTab.classList.remove('text-gray-600');
-    clickedTab.classList.add('text-blue-600', 'font-semibold', 'bg-blue-50', 'active');
+    e.currentTarget.classList.remove('text-gray-600');
+    e.currentTarget.classList.add('text-blue-600', 'font-semibold', 'bg-blue-50', 'active');
 
-    // Show/hide tab content
-    if (targetTab === 'detail') {
-      document.getElementById('tab-detail')?.classList.remove('hidden');
-      document.getElementById('tab-overview')?.classList.add('hidden');
-    } else if (targetTab === 'overview') {
-      document.getElementById('tab-detail')?.classList.add('hidden');
-      document.getElementById('tab-overview')?.classList.remove('hidden');
-      
-      // Refresh data when switching to overview
-      updateOverviewCounts();
+    if (tab === 'detail') {
+      elements.tabDetail?.classList.remove('hidden');
+      elements.tabOverview?.classList.add('hidden');
+    } else {
+      elements.tabDetail?.classList.add('hidden');
+      elements.tabOverview?.classList.remove('hidden');
+      updateOverviewData();
       updateCharts();
-      
-      // Trigger chart animation
       setTimeout(() => {
-        if (distributionChart) distributionChart.update();
-        if (typeChart) typeChart.update();
+        if (state.charts.distribution) state.charts.distribution.update();
+        if (state.charts.type) state.charts.type.update();
       }, 100);
     }
   }
 
-  /**
-   * Toggle mobile sidebar
-   */
+  // ==================== MOBILE SIDEBAR ====================
   function toggleMobileSidebar() {
-    if (elements.sidebar) {
-      elements.sidebar.classList.toggle('show');
-    }
+    elements.sidebar?.classList.toggle('show');
   }
 
-  /**
-   * Close mobile sidebar
-   */
   function closeMobileSidebar() {
-    if (elements.sidebar) {
-      elements.sidebar.classList.remove('show');
-    }
+    elements.sidebar?.classList.remove('show');
   }
 
-  /**
-   * Handle keyboard navigation
-   */
+  // ==================== KEYBOARD NAVIGATION ====================
   function handleKeyboardNav(e) {
-    // Don't interfere if user is typing
     if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || e.target.tagName === 'TEXTAREA') {
       return;
     }
 
-    // Arrow keys for navigation
     if (e.key === 'ArrowDown' || e.key === 'ArrowRight') {
       e.preventDefault();
       navigateQuestion(1);
     } else if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') {
       e.preventDefault();
       navigateQuestion(-1);
-    }
-
-    // Escape key to close mobile sidebar
-    if (e.key === 'Escape' && window.innerWidth < 1024) {
+    } else if (e.key === 'Escape' && window.innerWidth < 1024) {
       closeMobileSidebar();
     }
   }
 
-  /**
-   * Show toast notification
-   */
+  // ==================== UI HELPERS ====================
   function showToast(message, type = 'info') {
     const toast = document.createElement('div');
     toast.className = `toast px-6 py-4 rounded-lg shadow-lg text-white ${
@@ -1002,10 +741,12 @@
       'bg-blue-500'
     }`;
     
-    const icon = type === 'success' ? 'check-circle' :
-                 type === 'error' ? 'x-circle' :
-                 type === 'warning' ? 'exclamation-circle' :
-                 'info-circle';
+    const icon = {
+      success: 'check-circle',
+      error: 'x-circle',
+      warning: 'exclamation-circle',
+      info: 'info-circle'
+    }[type] || 'info-circle';
     
     toast.innerHTML = `
       <div class="flex items-center gap-3">
@@ -1016,29 +757,18 @@
 
     elements.toastContainer.appendChild(toast);
 
-    // Auto remove after duration
     setTimeout(() => {
       toast.classList.add('fade-out');
       setTimeout(() => toast.remove(), 300);
     }, CONFIG.toastDuration);
   }
 
-  /**
-   * Show/hide loading overlay
-   */
   function showLoading(show) {
     if (elements.loadingOverlay) {
-      if (show) {
-        elements.loadingOverlay.classList.remove('hidden');
-      } else {
-        elements.loadingOverlay.classList.add('hidden');
-      }
+      elements.loadingOverlay.classList.toggle('hidden', !show);
     }
   }
 
-  /**
-   * Get cookie value by name
-   */
   function getCookie(name) {
     let cookieValue = null;
     if (document.cookie && document.cookie !== '') {
@@ -1054,7 +784,12 @@
     return cookieValue;
   }
 
-  // Initialize when DOM is ready
+  function getClassificationId() {
+    const pathParts = window.location.pathname.split('/');
+    return pathParts[pathParts.length - 2] || '1';
+  }
+
+  // ==================== INITIALIZE ON DOM READY ====================
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);
   } else {
