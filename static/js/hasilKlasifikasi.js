@@ -1,6 +1,6 @@
 /**
- * Enhanced Classification Results JavaScript - Fully Functional & Responsive
- * Handles navigation, classification updates, charts, and mobile interactions
+ * Enhanced Classification Results JavaScript - Complete with All Features
+ * Handles navigation, classification updates, charts, mobile interactions, and animations
  */
 
 (function() {
@@ -19,7 +19,7 @@
     }
   };
 
-  // Category colors
+  // Category colors - matching HTML styles
   const CATEGORY_COLORS = {
     'C1': { bg: '#10b981', light: '#d1fae5', border: '#059669' },
     'C2': { bg: '#3b82f6', light: '#dbeafe', border: '#2563eb' },
@@ -27,6 +27,16 @@
     'C4': { bg: '#f97316', light: '#fed7aa', border: '#ea580c' },
     'C5': { bg: '#ef4444', light: '#fecaca', border: '#dc2626' },
     'C6': { bg: '#a855f7', light: '#e9d5ff', border: '#9333ea' }
+  };
+
+  // Category gradient classes for visual feedback
+  const GRADIENT_CLASSES = {
+    'C1': ['from-green-600', 'to-green-700'],
+    'C2': ['from-blue-600', 'to-blue-700'],
+    'C3': ['from-amber-600', 'to-amber-700'],
+    'C4': ['from-orange-600', 'to-orange-700'],
+    'C5': ['from-red-600', 'to-red-700'],
+    'C6': ['from-purple-600', 'to-purple-700']
   };
 
   // ==================== STATE MANAGEMENT ====================
@@ -38,7 +48,8 @@
     charts: {
       distribution: null,
       type: null
-    }
+    },
+    isProcessing: false
   };
 
   // ==================== DOM ELEMENTS ====================
@@ -62,8 +73,9 @@
     highlightNavigationByLevel();
     setActiveQuestion(0);
     setupResponsiveFeatures();
+    addSmoothScrolling();
 
-    console.log('✓ Classification page initialized');
+    console.log('✓ Classification page initialized with', state.totalQuestions, 'questions');
   }
 
   // ==================== CACHE DOM ELEMENTS ====================
@@ -137,12 +149,12 @@
     // Keyboard navigation
     document.addEventListener('keydown', handleKeyboardNav);
 
-    // Scroll tracking
+    // Scroll tracking with throttling
     let scrollTimeout;
     window.addEventListener('scroll', () => {
       clearTimeout(scrollTimeout);
       scrollTimeout = setTimeout(updateActiveNavOnScroll, 100);
-    });
+    }, { passive: true });
 
     // Responsive resize
     let resizeTimeout;
@@ -155,6 +167,11 @@
     document.addEventListener('click', handleClickOutside);
   }
 
+  // ==================== SMOOTH SCROLLING ====================
+  function addSmoothScrolling() {
+    document.documentElement.style.scrollBehavior = 'smooth';
+  }
+
   // ==================== RESPONSIVE FEATURES ====================
   function setupResponsiveFeatures() {
     // Touch swipe for mobile navigation
@@ -163,32 +180,31 @@
 
     document.addEventListener('touchstart', (e) => {
       touchStartX = e.changedTouches[0].screenX;
-    });
+    }, { passive: true });
 
     document.addEventListener('touchend', (e) => {
       touchEndX = e.changedTouches[0].screenX;
       handleSwipe();
-    });
+    }, { passive: true });
 
     function handleSwipe() {
       const swipeThreshold = 100;
       if (touchEndX < touchStartX - swipeThreshold) {
-        // Swipe left - next question
         navigateQuestion(1);
       } else if (touchEndX > touchStartX + swipeThreshold) {
-        // Swipe right - previous question
         navigateQuestion(-1);
       }
     }
-
-    // Smooth scroll behavior
-    document.documentElement.style.scrollBehavior = 'smooth';
   }
 
   function handleResize() {
     // Redraw charts on resize
-    if (state.charts.distribution) state.charts.distribution.resize();
-    if (state.charts.type) state.charts.type.resize();
+    if (state.charts.distribution) {
+      state.charts.distribution.resize();
+    }
+    if (state.charts.type) {
+      state.charts.type.resize();
+    }
 
     // Close mobile sidebar on desktop
     if (window.innerWidth >= 1024 && elements.sidebar) {
@@ -225,24 +241,19 @@
 
     state.currentQuestionIndex = index;
 
-    // Update navigation buttons
+    // Update navigation buttons with animation
     elements.navItems.forEach((btn, i) => {
       if (i === index) {
         btn.classList.remove('bg-blue-50', 'text-blue-700');
-        btn.classList.add('bg-blue-600', 'text-white', 'active', 'ring-2', 'ring-blue-300');
+        btn.classList.add('bg-blue-600', 'text-white', 'active', 'ring-2', 'ring-blue-300', 'scale-105');
       } else {
-        btn.classList.remove('bg-blue-600', 'text-white', 'active', 'ring-2', 'ring-blue-300');
+        btn.classList.remove('bg-blue-600', 'text-white', 'active', 'ring-2', 'ring-blue-300', 'scale-105');
         btn.classList.add('bg-blue-50', 'text-blue-700');
       }
     });
 
-    // Update prev/next buttons
     updateNavigationButtons(index);
-
-    // Update counter
     updateQuestionCounter(index);
-
-    // Scroll to question
     scrollToQuestion(index);
   }
 
@@ -260,11 +271,11 @@
       behavior: 'smooth'
     });
 
-    // Flash effect
-    targetQuestion.classList.add('ring-4', 'ring-blue-200', 'shadow-xl');
+    // Flash effect with animation
+    targetQuestion.classList.add('ring-4', 'ring-blue-300', 'shadow-2xl');
     setTimeout(() => {
-      targetQuestion.classList.remove('ring-4', 'ring-blue-200', 'shadow-xl');
-    }, 800);
+      targetQuestion.classList.remove('ring-4', 'ring-blue-300', 'shadow-2xl');
+    }, 1000);
   }
 
   function updateNavigationButtons(index) {
@@ -323,7 +334,7 @@
     elements.navItems.forEach(btn => {
       const level = btn.getAttribute('data-level');
       if (level && CATEGORY_COLORS[level]) {
-        btn.style.borderLeft = `3px solid ${CATEGORY_COLORS[level].bg}`;
+        btn.style.borderLeft = `4px solid ${CATEGORY_COLORS[level].bg}`;
       }
     });
   }
@@ -349,7 +360,7 @@
       article
     });
 
-    // Show save button
+    // Show save button with animation
     showSaveButton(article, questionIndex);
 
     // Visual feedback
@@ -361,6 +372,10 @@
     if (saveBtn) {
       saveBtn.classList.remove('hidden');
       saveBtn.setAttribute('data-question-index', questionIndex);
+      
+      // Add pulse animation
+      saveBtn.classList.add('animate-pulse');
+      setTimeout(() => saveBtn.classList.remove('animate-pulse'), 1000);
     }
   }
 
@@ -372,13 +387,18 @@
   }
 
   function handleSaveChange(button) {
+    if (state.isProcessing) {
+      showToast('⏳ Please wait for the current operation to complete', 'warning');
+      return;
+    }
+
     const questionIndex = button.getAttribute('data-question-index');
     const change = state.pendingChanges.get(questionIndex);
     
     if (!change) return;
 
     saveClassificationChange(
-      parseInt(questionIndex) + 1, // question_number (1-indexed)
+      parseInt(questionIndex) + 1,
       change.newLevel,
       change.originalLevel,
       change.article
@@ -386,6 +406,7 @@
   }
 
   async function saveClassificationChange(questionNumber, newLevel, originalLevel, article) {
+    state.isProcessing = true;
     showLoading(true);
 
     try {
@@ -407,7 +428,7 @@
       const data = await response.json();
 
       if (response.ok && data.success) {
-        // Update UI
+        // Update UI with animation
         updateQuestionLevel(article, newLevel);
         updateNavigationLevel(questionNumber - 1, newLevel);
         
@@ -440,6 +461,7 @@
         select.value = originalLevel;
       }
     } finally {
+      state.isProcessing = false;
       showLoading(false);
     }
   }
@@ -450,6 +472,9 @@
     
     if (labelEl) {
       labelEl.textContent = newLevel;
+      // Add flash animation
+      labelEl.classList.add('animate-pulse');
+      setTimeout(() => labelEl.classList.remove('animate-pulse'), 500);
     }
     
     if (badgeEl) {
@@ -462,7 +487,7 @@
     const navBtn = elements.navItems[questionIndex];
     if (navBtn) {
       navBtn.setAttribute('data-level', newLevel);
-      navBtn.style.borderLeft = `3px solid ${CATEGORY_COLORS[newLevel].bg}`;
+      navBtn.style.borderLeft = `4px solid ${CATEGORY_COLORS[newLevel].bg}`;
     }
   }
 
@@ -470,25 +495,13 @@
     const box = article.querySelector('.classification-box');
     if (!box) return;
 
-    const colorClasses = [
-      'from-blue-600', 'to-blue-700', 'from-green-600', 'to-green-700',
-      'from-amber-600', 'to-amber-700', 'from-orange-600', 'to-orange-700',
-      'from-red-600', 'to-red-700', 'from-purple-600', 'to-purple-700'
-    ];
-    
-    colorClasses.forEach(cls => box.classList.remove(cls));
+    // Remove all gradient classes
+    const allGradients = Object.values(GRADIENT_CLASSES).flat();
+    allGradients.forEach(cls => box.classList.remove(cls));
 
-    const colorMap = {
-      'C1': ['from-green-600', 'to-green-700'],
-      'C2': ['from-blue-600', 'to-blue-700'],
-      'C3': ['from-amber-600', 'to-amber-700'],
-      'C4': ['from-orange-600', 'to-orange-700'],
-      'C5': ['from-red-600', 'to-red-700'],
-      'C6': ['from-purple-600', 'to-purple-700']
-    };
-
-    if (colorMap[newLevel]) {
-      box.classList.add(...colorMap[newLevel]);
+    // Add new gradient classes
+    if (GRADIENT_CLASSES[newLevel]) {
+      box.classList.add(...GRADIENT_CLASSES[newLevel]);
     }
   }
 
@@ -508,7 +521,8 @@
           backgroundColor: Object.values(CATEGORY_COLORS).map(c => c.bg),
           borderColor: Object.values(CATEGORY_COLORS).map(c => c.border),
           borderWidth: 2,
-          borderRadius: 8
+          borderRadius: 8,
+          hoverBackgroundColor: Object.values(CATEGORY_COLORS).map(c => c.border)
         }]
       },
       options: {
@@ -517,8 +531,10 @@
         plugins: {
           legend: { display: false },
           tooltip: {
-            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+            backgroundColor: 'rgba(0, 0, 0, 0.9)',
             padding: 12,
+            titleFont: { size: 14, weight: 'bold' },
+            bodyFont: { size: 13 },
             callbacks: {
               title: (ctx) => ctx[0].label + ' - ' + getCategoryName(ctx[0].label),
               label: (ctx) => 'Questions: ' + ctx.parsed.y
@@ -526,8 +542,19 @@
           }
         },
         scales: {
-          y: { beginAtZero: true, ticks: { stepSize: 1 } },
-          x: { grid: { display: false } }
+          y: { 
+            beginAtZero: true, 
+            ticks: { stepSize: 1 },
+            grid: { color: 'rgba(0, 0, 0, 0.05)' }
+          },
+          x: { 
+            grid: { display: false },
+            ticks: { font: { weight: 'bold' } }
+          }
+        },
+        animation: {
+          duration: 1000,
+          easing: 'easeInOutQuart'
         }
       }
     });
@@ -543,7 +570,8 @@
           backgroundColor: Object.values(CATEGORY_COLORS).map(c => c.bg),
           borderColor: '#ffffff',
           borderWidth: 3,
-          hoverOffset: 8
+          hoverOffset: 12,
+          hoverBorderWidth: 4
         }]
       },
       options: {
@@ -553,8 +581,10 @@
         plugins: {
           legend: { display: false },
           tooltip: {
-            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+            backgroundColor: 'rgba(0, 0, 0, 0.9)',
             padding: 12,
+            titleFont: { size: 14, weight: 'bold' },
+            bodyFont: { size: 13 },
             callbacks: {
               title: (ctx) => ctx[0].label + ' - ' + getCategoryName(ctx[0].label),
               label: (ctx) => {
@@ -564,6 +594,10 @@
               }
             }
           }
+        },
+        animation: {
+          duration: 1000,
+          easing: 'easeInOutQuart'
         }
       }
     });
@@ -577,14 +611,14 @@
       state.charts.distribution.data.datasets[0].data = [
         counts.C1, counts.C2, counts.C3, counts.C4, counts.C5, counts.C6
       ];
-      state.charts.distribution.update('none');
+      state.charts.distribution.update('active');
     }
 
     if (state.charts.type) {
       state.charts.type.data.datasets[0].data = [
         counts.C1, counts.C2, counts.C3, counts.C4, counts.C5, counts.C6
       ];
-      state.charts.type.update('none');
+      state.charts.type.update('active');
     }
 
     updateChartLegend(counts, total);
@@ -599,9 +633,9 @@
       const pct = total > 0 ? ((count / total) * 100).toFixed(1) : 0;
       
       return `
-        <div class="flex items-center justify-between py-2 px-3 rounded-lg hover:bg-gray-100 transition-colors">
+        <div class="flex items-center justify-between py-2 px-3 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer">
           <div class="flex items-center gap-3">
-            <div class="w-4 h-4 rounded-full" style="background-color: ${CATEGORY_COLORS[cat].bg}"></div>
+            <div class="w-4 h-4 rounded-full shadow-sm" style="background-color: ${CATEGORY_COLORS[cat].bg}"></div>
             <span class="text-sm font-medium text-gray-700">${cat} - ${getCategoryName(cat)}</span>
           </div>
           <div class="text-right">
@@ -699,8 +733,8 @@
       updateOverviewData();
       updateCharts();
       setTimeout(() => {
-        if (state.charts.distribution) state.charts.distribution.update();
-        if (state.charts.type) state.charts.type.update();
+        if (state.charts.distribution) state.charts.distribution.resize();
+        if (state.charts.type) state.charts.type.resize();
       }, 100);
     }
   }
@@ -734,7 +768,7 @@
   // ==================== UI HELPERS ====================
   function showToast(message, type = 'info') {
     const toast = document.createElement('div');
-    toast.className = `toast px-6 py-4 rounded-lg shadow-lg text-white ${
+    toast.className = `toast px-6 py-4 rounded-lg shadow-lg text-white flex items-center gap-3 ${
       type === 'success' ? 'bg-green-500' :
       type === 'error' ? 'bg-red-500' :
       type === 'warning' ? 'bg-yellow-500' :
@@ -742,17 +776,15 @@
     }`;
     
     const icon = {
-      success: 'check-circle',
-      error: 'x-circle',
-      warning: 'exclamation-circle',
-      info: 'info-circle'
-    }[type] || 'info-circle';
+      success: 'check-circle-fill',
+      error: 'x-circle-fill',
+      warning: 'exclamation-triangle-fill',
+      info: 'info-circle-fill'
+    }[type] || 'info-circle-fill';
     
     toast.innerHTML = `
-      <div class="flex items-center gap-3">
-        <i class="bi bi-${icon} text-xl"></i>
-        <span>${message}</span>
-      </div>
+      <i class="bi bi-${icon} text-xl"></i>
+      <span>${message}</span>
     `;
 
     elements.toastContainer.appendChild(toast);
