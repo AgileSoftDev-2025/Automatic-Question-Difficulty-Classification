@@ -252,11 +252,20 @@ def process_classification_sync(history_id):
             batch_size=8
         )
         
+        # Apply Indonesian pattern-based adjustments
+        logger.info("Applying Indonesian pattern adjustments...")
+        from apps.klasifikasi.indonesian_rules import adjust_classification_with_patterns
+        
+        adjusted_predictions = []
+        for question, pred in zip(questions, predictions):
+            adjusted = adjust_classification_with_patterns(question, pred)
+            adjusted_predictions.append(adjusted)
+        
         # Build classification results
         results = []
         category_counts = {'C1': 0, 'C2': 0, 'C3': 0, 'C4': 0, 'C5': 0, 'C6': 0}
         
-        for i, (question, pred) in enumerate(zip(questions, predictions), 1):
+        for i, (question, pred) in enumerate(zip(questions, adjusted_predictions), 1):
             # Convert all_probabilities to JSON-serializable format
             serializable_probs = {}
             for label, prob_data in pred['all_probabilities'].items():
@@ -271,7 +280,8 @@ def process_classification_sync(history_id):
                 'category': pred['category'],
                 'category_name': pred['category_name'],
                 'confidence': float(pred['confidence']),  # Ensure it's a Python float
-                'all_probabilities': serializable_probs
+                'all_probabilities': serializable_probs,
+                'was_adjusted': pred.get('adjustment_reason', 'none') != 'ml_prediction_kept'
             }
             results.append(result)
             category_counts[pred['category']] += 1
