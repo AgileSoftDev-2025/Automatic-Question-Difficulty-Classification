@@ -15,6 +15,13 @@
         .pulse-success {
             animation: pulse-success 2s infinite;
         }
+        @keyframes bounce-slow {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+        .animate-bounce-slow {
+            animation: bounce-slow 2s ease-in-out infinite;
+        }
     </style>
 </head>
 <body class="bg-gradient-to-br from-blue-50 via-purple-50 to-blue-100 min-h-screen">
@@ -130,7 +137,7 @@
                     <div class="space-y-3 mb-6">
                         {% for message in messages %}
                         <div id="message-alert-{{ forloop.counter }}" 
-                             class="flex justify-between items-center p-4 rounded-xl shadow-md animate-fade-in
+                             class="flex justify-between items-center p-4 rounded-xl shadow-md transition-all duration-300
                                     {% if message.tags == 'success' %} bg-green-100 border border-green-300 text-green-800
                                     {% elif message.tags == 'error' %} bg-red-100 border border-red-300 text-red-800
                                     {% else %} bg-blue-100 border border-blue-300 text-blue-800 {% endif %}"
@@ -234,7 +241,7 @@
     </main>
 
     <!-- History Section -->
-    <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-16">
+    <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-16" id="history">
         {% if user.is_authenticated %}
             <div class="bg-white rounded-2xl shadow-lg p-8">
                 <div class="flex justify-between items-center mb-6">
@@ -300,11 +307,12 @@
                                     <td class="px-6 py-4">
                                         <div class="flex items-center space-x-2">
                                             {% if item.status == 'completed' %}
+                                                <!-- PROMINENT VIEW RESULTS BUTTON -->
                                                 <a href="{% url 'klasifikasi:hasil_klasifikasi' item.id %}" 
-                                                   class="inline-flex items-center px-4 py-2 bg-green-600 text-white text-sm font-semibold rounded-lg hover:bg-green-700 transition-colors shadow-sm pulse-success"
-                                                   title="View Results">
-                                                    <i class="bi bi-eye-fill mr-2"></i>
-                                                    View Results
+                                                   class="inline-flex items-center px-6 py-3 bg-gradient-to-r from-green-500 to-green-600 text-white text-sm font-bold rounded-xl hover:from-green-600 hover:to-green-700 transition-all shadow-lg hover:shadow-xl pulse-success animate-bounce-slow transform hover:scale-105"
+                                                   title="View Classification Results">
+                                                    <i class="bi bi-eye-fill mr-2 text-lg"></i>
+                                                    VIEW RESULTS
                                                 </a>
                                             {% elif item.status == 'pending' %}
                                                 <span class="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg">

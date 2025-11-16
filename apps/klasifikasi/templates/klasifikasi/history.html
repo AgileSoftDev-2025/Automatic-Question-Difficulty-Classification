@@ -7,128 +7,164 @@
     <title>History - Bloomers</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <style>
+        @keyframes pulse-success {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7); }
+            50% { box-shadow: 0 0 0 20px rgba(34, 197, 94, 0); }
+        }
+        .pulse-success {
+            animation: pulse-success 2s infinite;
+        }
+        @keyframes bounce-slow {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-5px); }
+        }
+        .animate-bounce-slow {
+            animation: bounce-slow 2s ease-in-out infinite;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .fade-in {
+            animation: fadeIn 0.3s ease-out;
+        }
+        /* Smooth transitions for all interactive elements */
+        .transition-all-smooth {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+    </style>
 </head>
 <body class="bg-gradient-to-b from-blue-50 to-gray-100 min-h-screen">
     
-    <!-- Updated Navbar for History Page -->
-<nav class="bg-white shadow-md">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="flex justify-between h-16 items-center">
-            
-            <div class="flex items-center">
-                <svg class="w-10 h-10 text-blue-600" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M12 2L4 6V12C4 16.5 7.5 20.5 12 22C16.5 20.5 20 16.5 20 12V6L12 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="currentColor" opacity="0.2"/>
-                    <path d="M12 2L4 6V12C4 16.5 7.5 20.5 12 22C16.5 20.5 20 16.5 20 12V6L12 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-                <span class="text-blue-600 text-3xl font-bold ml-3">BLOOMERS</span>
-            </div>
-            
-            <div class="hidden md:flex items-center space-x-6">
-                <a href="{% url 'soal:home' %}" class="text-gray-600 hover:text-blue-600 font-medium transition-colors">Home</a>
-                <a href="{% url 'klasifikasi:history' %}" class="text-blue-600 hover:text-blue-700 font-semibold transition-colors">History</a>
-                <a href="{% url 'soal:help' %}" class="text-gray-600 hover:text-blue-600 font-medium transition-colors">Help / FAQ</a>
+    <!-- Navigation Bar -->
+    <nav class="bg-white shadow-md sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16 items-center">
                 
-                {% if user.is_authenticated %}
-                    <div class="relative">
-                        <button type="button" id="profile-menu-button" class="flex flex-row items-center space-x-2 text-blue-600 hover:text-blue-700 transition-colors group focus:outline-none">
-                            {% if user.profile.has_custom_image %}
-                                <img src="{{ user.profile.image.url }}" 
-                                     alt="{{ user.username }}" 
-                                     class="w-10 h-10 rounded-full object-cover border-2 border-blue-200">
-                            {% else %}
-                                <div class="w-10 h-10 rounded-full border-2 border-blue-200 bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
-                                    <span class="text-white text-lg font-bold">{{ user.profile.avatar_letter }}</span>
-                                </div>
-                            {% endif %}
-                            <span class="text-gray-900 font-semibold group-hover:text-gray-700">
-                                {{ user.username }}
-                            </span>
-                        </button>
+                <div class="flex items-center">
+                    <svg class="w-10 h-10 text-blue-600" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M12 2L4 6V12C4 16.5 7.5 20.5 12 22C16.5 20.5 20 16.5 20 12V6L12 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="currentColor" opacity="0.2"/>
+                        <path d="M12 2L4 6V12C4 16.5 7.5 20.5 12 22C16.5 20.5 20 16.5 20 12V6L12 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    <span class="text-blue-600 text-3xl font-bold ml-3">BLOOMERS</span>
+                </div>
+                
+                <div class="hidden md:flex items-center space-x-6">
+                    <a href="{% url 'soal:home' %}" class="text-gray-600 hover:text-blue-600 font-medium transition-colors">Home</a>
+                    <a href="{% url 'klasifikasi:history' %}" class="text-blue-600 hover:text-blue-700 font-semibold transition-colors">History</a>
+                    <a href="{% url 'soal:help' %}" class="text-gray-600 hover:text-blue-600 font-medium transition-colors">Help / FAQ</a>
+                    
+                    {% if user.is_authenticated %}
+                        <div class="relative">
+                            <button type="button" id="profile-menu-button" class="flex flex-row items-center space-x-2 text-blue-600 hover:text-blue-700 transition-colors group focus:outline-none">
+                                {% if user.profile.has_custom_image %}
+                                    <img src="{{ user.profile.image.url }}" 
+                                         alt="{{ user.username }}" 
+                                         class="w-10 h-10 rounded-full object-cover border-2 border-blue-200">
+                                {% else %}
+                                    <div class="w-10 h-10 rounded-full border-2 border-blue-200 bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
+                                        <span class="text-white text-lg font-bold">{{ user.profile.avatar_letter }}</span>
+                                    </div>
+                                {% endif %}
+                                <span class="text-gray-900 font-semibold group-hover:text-gray-700">
+                                    {{ user.username }}
+                                </span>
+                            </button>
 
-                        <div id="profile-menu-dropdown" 
-                             class="hidden absolute right-0 z-10 mt-2 w-48 origin-top-right rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none">
-                            <div class="py-1" role="menu">
-                                <a href="{% url 'users:profile' %}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors" role="menuitem">
-                                    <i class="bi bi-person mr-2"></i> My Profile
-                                </a>
-                                <a href="{% url 'users:settings' %}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors" role="menuitem">
-                                    <i class="bi bi-gear mr-2"></i> Settings
-                                </a>
-                                <hr class="my-1">
-                                <a href="{% url 'users:logout' %}" class="block px-4 py-2 text-sm text-red-600 hover:bg-gray-100 hover:text-red-700 transition-colors" role="menuitem">
-                                    <i class="bi bi-box-arrow-right mr-2"></i> Log Out
-                                </a>
+                            <div id="profile-menu-dropdown" 
+                                 class="hidden absolute right-0 z-10 mt-2 w-48 origin-top-right rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none">
+                                <div class="py-1" role="menu">
+                                    <a href="{% url 'users:profile' %}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors" role="menuitem">
+                                        <i class="bi bi-person mr-2"></i> My Profile
+                                    </a>
+                                    <a href="{% url 'users:settings' %}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors" role="menuitem">
+                                        <i class="bi bi-gear mr-2"></i> Settings
+                                    </a>
+                                    <hr class="my-1">
+                                    <a href="{% url 'users:logout' %}" class="block px-4 py-2 text-sm text-red-600 hover:bg-gray-100 hover:text-red-700 transition-colors" role="menuitem">
+                                        <i class="bi bi-box-arrow-right mr-2"></i> Log Out
+                                    </a>
+                                </div>
                             </div>
                         </div>
-                    </div>
-                {% else %}
-                    <a href="{% url 'users:login' %}" 
-                       class="bg-blue-600 text-white px-6 py-2 rounded-full font-semibold hover:bg-blue-700 transition-all shadow-md hover:shadow-lg text-sm">
-                        Log In
-                    </a>
-                {% endif %}
+                    {% else %}
+                        <a href="{% url 'users:login' %}" 
+                           class="bg-blue-600 text-white px-6 py-2 rounded-full font-semibold hover:bg-blue-700 transition-all shadow-md hover:shadow-lg text-sm">
+                            Log In
+                        </a>
+                    {% endif %}
+                </div>
+
+                <div class="md:hidden">
+                    <button type="button" id="mobile-menu-button" class="text-gray-600 hover:text-blue-600 focus:outline-none">
+                        <i class="bi bi-list text-3xl"></i>
+                    </button>
+                </div>
             </div>
 
-            <div class="md:hidden">
-                <button type="button" id="mobile-menu-button" class="text-gray-600 hover:text-blue-600 focus:outline-none">
-                    <i class="bi bi-list text-3xl"></i>
-                </button>
+            <div id="mobile-menu" class="hidden md:hidden pb-4">
+                <div class="space-y-2">
+                    <a href="{% url 'soal:home' %}" class="block px-4 py-2 text-gray-600 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-colors">Home</a>
+                    <a href="{% url 'klasifikasi:history' %}" class="block px-4 py-2 text-blue-600 bg-blue-50 rounded-lg font-semibold">History</a>
+                    <a href="{% url 'soal:help' %}" class="block px-4 py-2 text-gray-600 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-colors">Help / FAQ</a>
+                    {% if user.is_authenticated %}
+                        <hr>
+                        <a href="{% url 'users:profile' %}" class="block px-4 py-2 text-gray-600 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-colors">
+                            <i class="bi bi-person mr-2"></i> My Profile
+                        </a>
+                        <a href="{% url 'users:logout' %}" class="block px-4 py-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors">
+                            <i class="bi bi-box-arrow-right mr-2"></i>Log Out
+                        </a>
+                    {% else %}
+                        <a href="{% url 'users:login' %}" class="block w-full text-center bg-blue-600 text-white px-6 py-2 rounded-full font-semibold hover:bg-blue-700 transition-all shadow-md text-sm">
+                            Log In
+                        </a>
+                    {% endif %}
+                </div>
             </div>
         </div>
-
-        <div id="mobile-menu" class="hidden md:hidden pb-4">
-            <div class="space-y-2">
-                <a href="{% url 'soal:home' %}" class="block px-4 py-2 text-gray-600 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-colors">Home</a>
-                <a href="{% url 'klasifikasi:history' %}" class="block px-4 py-2 text-blue-600 bg-blue-50 rounded-lg font-semibold">History</a>
-                <a href="{% url 'soal:help' %}" class="block px-4 py-2 text-gray-600 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-colors">Help / FAQ</a>
-                {% if user.is_authenticated %}
-                    <hr>
-                    <a href="{% url 'users:profile' %}" class="block px-4 py-2 text-gray-600 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-colors">
-                        <i class="bi bi-person mr-2"></i> My Profile
-                    </a>
-                    <a href="{% url 'users:logout' %}" class="block px-4 py-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors">
-                        <i class="bi bi-box-arrow-in-right mr-2"></i>Log Out
-                    </a>
-                {% else %}
-                    <a href="{% url 'users:login' %}" class="block w-full text-center bg-blue-600 text-white px-6 py-2 rounded-full font-semibold hover:bg-blue-700 transition-all shadow-md text-sm">
-                        <i class="bi bi-box-arrow-in-right mr-2"></i>Log In
-                    </a>
-                {% endif %}
-            </div>
-        </div>
-    </div>
-</nav>
+    </nav>
 
     <!-- Main Content -->
     <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <!-- Header with Stats -->
-        <div class="mb-8">
-            <h1 class="text-3xl font-bold text-blue-600 mb-4">Your Classification History</h1>
+        <div class="mb-8 fade-in">
+            <h1 class="text-3xl font-bold text-blue-600 mb-4 flex items-center">
+                <i class="bi bi-clock-history mr-3"></i>
+                Your Classification History
+            </h1>
             
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div class="bg-white rounded-lg shadow-sm p-4">
+                <div class="bg-white rounded-lg shadow-md p-5 hover:shadow-xl transition-all-smooth transform hover:-translate-y-1">
                     <div class="flex items-center">
-                        <i class="bi bi-file-earmark-text text-3xl text-blue-500 mr-3"></i>
+                        <div class="p-3 rounded-full bg-blue-100 mr-4">
+                            <i class="bi bi-file-earmark-text text-3xl text-blue-600"></i>
+                        </div>
                         <div>
-                            <p class="text-gray-600 text-sm">Total Classifications</p>
-                            <p class="text-2xl font-bold text-gray-900">{{ total_classifications }}</p>
+                            <p class="text-gray-600 text-sm font-medium">Total Classifications</p>
+                            <p class="text-3xl font-bold text-gray-900">{{ total_classifications }}</p>
                         </div>
                     </div>
                 </div>
-                <div class="bg-white rounded-lg shadow-sm p-4">
+                <div class="bg-white rounded-lg shadow-md p-5 hover:shadow-xl transition-all-smooth transform hover:-translate-y-1">
                     <div class="flex items-center">
-                        <i class="bi bi-question-circle text-3xl text-green-500 mr-3"></i>
+                        <div class="p-3 rounded-full bg-green-100 mr-4">
+                            <i class="bi bi-question-circle text-3xl text-green-600"></i>
+                        </div>
                         <div>
-                            <p class="text-gray-600 text-sm">Total Questions Analyzed</p>
-                            <p class="text-2xl font-bold text-gray-900">{{ total_questions }}</p>
+                            <p class="text-gray-600 text-sm font-medium">Total Questions Analyzed</p>
+                            <p class="text-3xl font-bold text-gray-900">{{ total_questions }}</p>
                         </div>
                     </div>
                 </div>
-                <div class="bg-white rounded-lg shadow-sm p-4">
+                <div class="bg-white rounded-lg shadow-md p-5 hover:shadow-xl transition-all-smooth transform hover:-translate-y-1">
                     <div class="flex items-center">
-                        <i class="bi bi-clock-history text-3xl text-purple-500 mr-3"></i>
+                        <div class="p-3 rounded-full bg-purple-100 mr-4">
+                            <i class="bi bi-calendar-check text-3xl text-purple-600"></i>
+                        </div>
                         <div>
-                            <p class="text-gray-600 text-sm">Last Activity</p>
+                            <p class="text-gray-600 text-sm font-medium">Last Activity</p>
                             <p class="text-lg font-semibold text-gray-900">{{ last_activity|default:"N/A" }}</p>
                         </div>
                     </div>
@@ -137,29 +173,29 @@
         </div>
 
         <!-- Filters and Search -->
-        <div class="bg-white rounded-xl shadow-sm p-4 mb-6">
+        <div class="bg-white rounded-xl shadow-md p-5 mb-6 fade-in">
             <form method="GET" action="{% url 'klasifikasi:history' %}" class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                 <div class="flex-1">
                     <div class="relative">
                         <input type="text" name="search" id="search-input" placeholder="Search by filename..." 
                                value="{{ search_query }}"
-                               class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                        <i class="bi bi-search absolute left-3 top-3 text-gray-400"></i>
+                               class="w-full pl-11 pr-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all">
+                        <i class="bi bi-search absolute left-4 top-4 text-gray-400 text-lg"></i>
                     </div>
                 </div>
                 <div class="flex gap-2">
-                    <select name="sort" id="sort-select" class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
-                        <option value="date-desc" {% if sort_by == 'date-desc' %}selected{% endif %}>Date (Newest)</option>
-                        <option value="date-asc" {% if sort_by == 'date-asc' %}selected{% endif %}>Date (Oldest)</option>
-                        <option value="questions-desc" {% if sort_by == 'questions-desc' %}selected{% endif %}>Questions (Most)</option>
-                        <option value="questions-asc" {% if sort_by == 'questions-asc' %}selected{% endif %}>Questions (Least)</option>
-                        <option value="name-asc" {% if sort_by == 'name-asc' %}selected{% endif %}>Name (A-Z)</option>
-                        <option value="name-desc" {% if sort_by == 'name-desc' %}selected{% endif %}>Name (Z-A)</option>
+                    <select name="sort" id="sort-select" class="px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 font-medium transition-all">
+                        <option value="date-desc" {% if sort_by == 'date-desc' %}selected{% endif %}>📅 Date (Newest)</option>
+                        <option value="date-asc" {% if sort_by == 'date-asc' %}selected{% endif %}>📅 Date (Oldest)</option>
+                        <option value="questions-desc" {% if sort_by == 'questions-desc' %}selected{% endif %}>🔢 Questions (Most)</option>
+                        <option value="questions-asc" {% if sort_by == 'questions-asc' %}selected{% endif %}>🔢 Questions (Least)</option>
+                        <option value="name-asc" {% if sort_by == 'name-asc' %}selected{% endif %}>🔤 Name (A-Z)</option>
+                        <option value="name-desc" {% if sort_by == 'name-desc' %}selected{% endif %}>🔤 Name (Z-A)</option>
                     </select>
-                    <button type="submit" class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors">
-                        <i class="bi bi-funnel"></i>
+                    <button type="submit" class="px-5 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all shadow-md hover:shadow-lg transform hover:scale-105">
+                        <i class="bi bi-funnel-fill"></i>
                     </button>
-                    <a href="{% url 'klasifikasi:history' %}" class="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors">
+                    <a href="{% url 'klasifikasi:history' %}" class="px-5 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-all shadow-md hover:shadow-lg transform hover:scale-105" title="Reset filters">
                         <i class="bi bi-arrow-clockwise"></i>
                     </a>
                 </div>
@@ -170,111 +206,131 @@
         {% if messages %}
         <div id="messages-container" class="mb-6">
             {% for message in messages %}
-            <div class="bg-{{ message.tags }}-100 border border-{{ message.tags }}-400 text-{{ message.tags }}-700 px-4 py-3 rounded relative mb-2" role="alert">
-                <span class="block sm:inline">{{ message }}</span>
-                <button class="absolute top-0 bottom-0 right-0 px-4 py-3 close-message">
-                    <i class="bi bi-x-lg"></i>
-                </button>
+            <div class="{% if message.tags == 'success' %}bg-green-100 border-green-400 text-green-800{% elif message.tags == 'error' %}bg-red-100 border-red-400 text-red-800{% else %}bg-blue-100 border-blue-400 text-blue-800{% endif %} border-l-4 px-4 py-3 rounded-lg relative mb-3 shadow-md fade-in" role="alert">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center">
+                        <i class="bi bi-{% if message.tags == 'success' %}check-circle-fill{% elif message.tags == 'error' %}exclamation-triangle-fill{% else %}info-circle-fill{% endif %} text-xl mr-3"></i>
+                        <span class="font-medium">{{ message }}</span>
+                    </div>
+                    <button class="text-2xl font-bold leading-none hover:opacity-70 transition-opacity close-message">
+                        &times;
+                    </button>
+                </div>
             </div>
             {% endfor %}
         </div>
         {% endif %}
 
         <!-- Table -->
-        <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+        <div class="bg-white rounded-xl shadow-md overflow-hidden fade-in">
             <div class="overflow-x-auto">
                 <table class="min-w-full" id="history-table">
-                    <thead class="bg-blue-100">
+                    <thead class="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
                         <tr>
-                            <th class="px-6 py-4 text-left text-sm font-semibold text-gray-700">#</th>
-                            <th class="px-6 py-4 text-left text-sm font-semibold text-gray-700">File Name</th>
-                            <th class="px-6 py-4 text-left text-sm font-semibold text-gray-700">Questions</th>
-                            <th class="px-6 py-4 text-left text-sm font-semibold text-gray-700">Date</th>
-                            <th class="px-6 py-4 text-center text-sm font-semibold text-gray-700" title="C1: Remember">C1</th>
-                            <th class="px-6 py-4 text-center text-sm font-semibold text-gray-700" title="C2: Understand">C2</th>
-                            <th class="px-6 py-4 text-center text-sm font-semibold text-gray-700" title="C3: Apply">C3</th>
-                            <th class="px-6 py-4 text-center text-sm font-semibold text-gray-700" title="C4: Analyze">C4</th>
-                            <th class="px-6 py-4 text-center text-sm font-semibold text-gray-700" title="C5: Evaluate">C5</th>
-                            <th class="px-6 py-4 text-center text-sm font-semibold text-gray-700" title="C6: Create">C6</th>
-                            <th class="px-6 py-4 text-center text-sm font-semibold text-gray-700">Actions</th>
+                            <th class="px-6 py-4 text-left text-sm font-bold">#</th>
+                            <th class="px-6 py-4 text-left text-sm font-bold">File Name</th>
+                            <th class="px-6 py-4 text-left text-sm font-bold">Questions</th>
+                            <th class="px-6 py-4 text-left text-sm font-bold">Date</th>
+                            <th class="px-6 py-4 text-center text-sm font-bold" title="C1: Remember">C1</th>
+                            <th class="px-6 py-4 text-center text-sm font-bold" title="C2: Understand">C2</th>
+                            <th class="px-6 py-4 text-center text-sm font-bold" title="C3: Apply">C3</th>
+                            <th class="px-6 py-4 text-center text-sm font-bold" title="C4: Analyze">C4</th>
+                            <th class="px-6 py-4 text-center text-sm font-bold" title="C5: Evaluate">C5</th>
+                            <th class="px-6 py-4 text-center text-sm font-bold" title="C6: Create">C6</th>
+                            <th class="px-6 py-4 text-center text-sm font-bold">Actions</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-200" id="table-body">
                         {% for classification in classifications %}
-                        <tr class="hover:bg-gray-50 {% cycle '' 'bg-blue-50' %} transition-colors" data-id="{{ classification.id }}">
-                            <td class="px-6 py-4 text-sm text-gray-900">{{ forloop.counter }}</td>
+                        <tr class="hover:bg-blue-50 transition-all-smooth {% cycle '' 'bg-gray-50' %}" data-id="{{ classification.id }}">
+                            <td class="px-6 py-4 text-sm text-gray-900 font-medium">{{ forloop.counter }}</td>
                             <td class="px-6 py-4 text-sm text-gray-900 font-medium">
                                 <div class="flex items-center">
-                                    <i class="bi bi-file-earmark-pdf text-red-500 mr-2"></i>
-                                    {{ classification.filename }}
+                                    <i class="bi bi-file-earmark-pdf-fill text-red-500 text-xl mr-3"></i>
+                                    <span class="truncate max-w-xs" title="{{ classification.filename }}">{{ classification.filename }}</span>
                                 </div>
                             </td>
                             <td class="px-6 py-4 text-sm text-gray-900">
-                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-blue-100 text-blue-800">
+                                    <i class="bi bi-list-check mr-1"></i>
                                     {{ classification.total_questions }} questions
                                 </span>
                             </td>
-                            <td class="px-6 py-4 text-sm text-gray-900">{{ classification.created_at }}</td>
+                            <td class="px-6 py-4 text-sm text-gray-900">
+                                <div class="flex items-center">
+                                    <i class="bi bi-calendar3 mr-2 text-gray-400"></i>
+                                    {{ classification.created_at }}
+                                </div>
+                            </td>
                             <td class="px-6 py-4 text-sm text-center">
-                                <span class="inline-flex items-center justify-center w-8 h-8 rounded-full bg-green-100 text-green-800 font-semibold">
+                                <span class="inline-flex items-center justify-center w-10 h-10 rounded-full bg-green-100 text-green-800 font-bold shadow-sm">
                                     {{ classification.q1_count }}
                                 </span>
                             </td>
                             <td class="px-6 py-4 text-sm text-center">
-                                <span class="inline-flex items-center justify-center w-8 h-8 rounded-full bg-blue-100 text-blue-800 font-semibold">
+                                <span class="inline-flex items-center justify-center w-10 h-10 rounded-full bg-blue-100 text-blue-800 font-bold shadow-sm">
                                     {{ classification.q2_count }}
                                 </span>
                             </td>
                             <td class="px-6 py-4 text-sm text-center">
-                                <span class="inline-flex items-center justify-center w-8 h-8 rounded-full bg-yellow-100 text-yellow-800 font-semibold">
+                                <span class="inline-flex items-center justify-center w-10 h-10 rounded-full bg-yellow-100 text-yellow-800 font-bold shadow-sm">
                                     {{ classification.q3_count }}
                                 </span>
                             </td>
                             <td class="px-6 py-4 text-sm text-center">
-                                <span class="inline-flex items-center justify-center w-8 h-8 rounded-full bg-orange-100 text-orange-800 font-semibold">
+                                <span class="inline-flex items-center justify-center w-10 h-10 rounded-full bg-orange-100 text-orange-800 font-bold shadow-sm">
                                     {{ classification.q4_count }}
                                 </span>
                             </td>
                             <td class="px-6 py-4 text-sm text-center">
-                                <span class="inline-flex items-center justify-center w-8 h-8 rounded-full bg-purple-100 text-purple-800 font-semibold">
+                                <span class="inline-flex items-center justify-center w-10 h-10 rounded-full bg-purple-100 text-purple-800 font-bold shadow-sm">
                                     {{ classification.q5_count }}
                                 </span>
                             </td>
                             <td class="px-6 py-4 text-sm text-center">
-                                <span class="inline-flex items-center justify-center w-8 h-8 rounded-full bg-red-100 text-red-800 font-semibold">
+                                <span class="inline-flex items-center justify-center w-10 h-10 rounded-full bg-red-100 text-red-800 font-bold shadow-sm">
                                     {{ classification.q6_count }}
                                 </span>
                             </td>
-                            <td class="px-6 py-4 text-center">
-                                <div class="flex items-center justify-center gap-2">
+                            <td class="px-6 py-4">
+                                <div class="flex flex-col items-center gap-2">
+                                    <!-- PROMINENT VIEW RESULTS BUTTON -->
                                     <a href="{% url 'klasifikasi:hasil_klasifikasi' classification.id %}" 
-                                       class="text-blue-600 hover:text-blue-800 transition-colors inline-block" 
-                                       title="View Results">
-                                        <i class="bi bi-eye text-xl"></i>
+                                       class="inline-flex items-center px-5 py-2.5 bg-gradient-to-r from-green-500 to-green-600 text-white text-sm font-bold rounded-xl hover:from-green-600 hover:to-green-700 transition-all shadow-lg hover:shadow-xl pulse-success animate-bounce-slow transform hover:scale-105 whitespace-nowrap" 
+                                       title="View Classification Results">
+                                        <i class="bi bi-eye-fill mr-2"></i>
+                                        VIEW RESULTS
                                     </a>
-                                    <a href="{% url 'klasifikasi:download_report' classification.id %}" 
-                                       class="text-green-600 hover:text-green-800 transition-colors inline-block" 
-                                       title="Download Report">
-                                        <i class="bi bi-download text-xl"></i>
-                                    </a>
-                                    <button class="text-red-600 hover:text-red-800 transition-colors delete-btn" 
-                                            data-id="{{ classification.id }}" 
-                                            data-filename="{{ classification.filename }}"
-                                            title="Delete">
-                                        <i class="bi bi-trash text-xl"></i>
-                                    </button>
+                                    
+                                    <!-- Secondary Actions -->
+                                    <div class="flex items-center gap-2">
+                                        <a href="{% url 'klasifikasi:download_report' classification.id %}" 
+                                           class="text-blue-600 hover:text-blue-800 p-2 hover:bg-blue-100 rounded-lg transition-all transform hover:scale-110" 
+                                           title="Download PDF Report">
+                                            <i class="bi bi-download text-xl"></i>
+                                        </a>
+                                        <button class="text-red-600 hover:text-red-800 p-2 hover:bg-red-100 rounded-lg transition-all transform hover:scale-110 delete-btn" 
+                                                data-id="{{ classification.id }}" 
+                                                data-filename="{{ classification.filename }}"
+                                                title="Delete Classification">
+                                            <i class="bi bi-trash text-xl"></i>
+                                        </button>
+                                    </div>
                                 </div>
                             </td>
                         </tr>
                         {% empty %}
                         <tr>
-                            <td colspan="11" class="px-6 py-12 text-center text-gray-500">
-                                <i class="bi bi-inbox text-6xl mb-4 block"></i>
-                                <p class="text-lg font-medium">No classification history yet</p>
-                                <p class="text-sm mt-2">Upload a file to start classifying questions</p>
-                                <a href="{% url 'soal:home' %}" class="inline-block mt-4 px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors">
-                                    Go to Home
-                                </a>
+                            <td colspan="11" class="px-6 py-16 text-center">
+                                <div class="flex flex-col items-center justify-center">
+                                    <i class="bi bi-inbox text-7xl text-gray-300 mb-4"></i>
+                                    <p class="text-xl font-bold text-gray-700 mb-2">No classification history yet</p>
+                                    <p class="text-sm text-gray-500 mb-6">Upload a file to start classifying questions</p>
+                                    <a href="{% url 'soal:home' %}" class="inline-flex items-center px-6 py-3 bg-blue-600 text-white rounded-full font-bold hover:bg-blue-700 transition-all shadow-lg hover:shadow-xl transform hover:scale-105">
+                                        <i class="bi bi-house-fill mr-2"></i>
+                                        Go to Home
+                                    </a>
+                                </div>
                             </td>
                         </tr>
                         {% endfor %}
@@ -285,34 +341,34 @@
 
         <!-- Pagination -->
         {% if classifications.has_other_pages %}
-        <div class="mt-6 flex justify-center">
-            <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
+        <div class="mt-6 flex justify-center fade-in">
+            <nav class="relative z-0 inline-flex rounded-lg shadow-md -space-x-px" aria-label="Pagination">
                 {% if classifications.has_previous %}
-                <a href="?page=1{% if search_query %}&search={{ search_query }}{% endif %}{% if sort_by %}&sort={{ sort_by }}{% endif %}" class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
+                <a href="?page=1{% if search_query %}&search={{ search_query }}{% endif %}{% if sort_by %}&sort={{ sort_by }}{% endif %}" class="relative inline-flex items-center px-3 py-2 rounded-l-lg border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-blue-50 transition-all">
                     <i class="bi bi-chevron-double-left"></i>
                 </a>
-                <a href="?page={{ classifications.previous_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if sort_by %}&sort={{ sort_by }}{% endif %}" class="relative inline-flex items-center px-2 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
+                <a href="?page={{ classifications.previous_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if sort_by %}&sort={{ sort_by }}{% endif %}" class="relative inline-flex items-center px-3 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-blue-50 transition-all">
                     <i class="bi bi-chevron-left"></i>
                 </a>
                 {% endif %}
 
                 {% for num in classifications.paginator.page_range %}
                 {% if classifications.number == num %}
-                <span class="relative inline-flex items-center px-4 py-2 border border-blue-500 bg-blue-50 text-sm font-medium text-blue-600">
+                <span class="relative inline-flex items-center px-4 py-2 border-2 border-blue-500 bg-blue-600 text-sm font-bold text-white">
                     {{ num }}
                 </span>
                 {% elif num > classifications.number|add:'-3' and num < classifications.number|add:'3' %}
-                <a href="?page={{ num }}{% if search_query %}&search={{ search_query }}{% endif %}{% if sort_by %}&sort={{ sort_by }}{% endif %}" class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50">
+                <a href="?page={{ num }}{% if search_query %}&search={{ search_query }}{% endif %}{% if sort_by %}&sort={{ sort_by }}{% endif %}" class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-blue-50 transition-all">
                     {{ num }}
                 </a>
                 {% endif %}
                 {% endfor %}
 
                 {% if classifications.has_next %}
-                <a href="?page={{ classifications.next_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if sort_by %}&sort={{ sort_by }}{% endif %}" class="relative inline-flex items-center px-2 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
+                <a href="?page={{ classifications.next_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if sort_by %}&sort={{ sort_by }}{% endif %}" class="relative inline-flex items-center px-3 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-blue-50 transition-all">
                     <i class="bi bi-chevron-right"></i>
                 </a>
-                <a href="?page={{ classifications.paginator.num_pages }}{% if search_query %}&search={{ search_query }}{% endif %}{% if sort_by %}&sort={{ sort_by }}{% endif %}" class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
+                <a href="?page={{ classifications.paginator.num_pages }}{% if search_query %}&search={{ search_query }}{% endif %}{% if sort_by %}&sort={{ sort_by }}{% endif %}" class="relative inline-flex items-center px-3 py-2 rounded-r-lg border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-blue-50 transition-all">
                     <i class="bi bi-chevron-double-right"></i>
                 </a>
                 {% endif %}
@@ -322,25 +378,31 @@
     </main>
 
     <!-- Delete Confirmation Modal -->
-    <div id="delete-modal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-        <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+    <div id="delete-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-60 overflow-y-auto h-full w-full z-50 transition-all">
+        <div class="relative top-20 mx-auto p-6 border-2 border-red-200 w-96 shadow-2xl rounded-xl bg-white fade-in">
             <div class="mt-3 text-center">
-                <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100">
-                    <i class="bi bi-exclamation-triangle text-red-600 text-2xl"></i>
+                <div class="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-red-100 mb-4">
+                    <i class="bi bi-exclamation-triangle-fill text-red-600 text-3xl"></i>
                 </div>
-                <h3 class="text-lg leading-6 font-medium text-gray-900 mt-4">Delete Classification</h3>
+                <h3 class="text-xl leading-6 font-bold text-gray-900 mb-2">Delete Classification</h3>
                 <div class="mt-2 px-7 py-3">
-                    <p class="text-sm text-gray-500">
-                        Are you sure you want to delete <strong id="delete-filename"></strong>? This action cannot be undone.
+                    <p class="text-sm text-gray-600 mb-2">
+                        Are you sure you want to delete
+                    </p>
+                    <p class="text-sm font-bold text-gray-900 bg-gray-100 px-3 py-2 rounded-lg mb-2" id="delete-filename"></p>
+                    <p class="text-xs text-red-600 font-medium">
+                        ⚠️ This action cannot be undone.
                     </p>
                 </div>
                 <div class="items-center px-4 py-3">
                     <button id="confirm-delete-btn" 
-                            class="px-4 py-2 bg-red-600 text-white text-base font-medium rounded-md w-full shadow-sm hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500">
-                        Delete
+                            class="px-6 py-3 bg-red-600 text-white text-base font-bold rounded-lg w-full shadow-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 transition-all transform hover:scale-105">
+                        <i class="bi bi-trash-fill mr-2"></i>
+                        Delete Permanently
                     </button>
                     <button id="cancel-delete-btn" 
-                            class="mt-3 px-4 py-2 bg-gray-100 text-gray-700 text-base font-medium rounded-md w-full shadow-sm hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-300">
+                            class="mt-3 px-6 py-3 bg-gray-200 text-gray-800 text-base font-bold rounded-lg w-full shadow-sm hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-400 transition-all">
+                        <i class="bi bi-x-circle mr-2"></i>
                         Cancel
                     </button>
                 </div>
@@ -348,89 +410,11 @@
         </div>
     </div>
 
-    <script>
-        // Mobile menu toggle
-        document.getElementById('mobile-menu-button')?.addEventListener('click', function() {
-            document.getElementById('mobile-menu').classList.toggle('hidden');
-        });
+    <!-- Hidden CSRF Token -->
+    {% csrf_token %}
 
-        // Profile menu toggle
-        document.getElementById('profile-menu-button')?.addEventListener('click', function() {
-            document.getElementById('profile-menu-dropdown').classList.toggle('hidden');
-        });
-
-        // Close profile menu when clicking outside
-        document.addEventListener('click', function(event) {
-            const menu = document.getElementById('profile-menu-dropdown');
-            const button = document.getElementById('profile-menu-button');
-            if (menu && button && !button.contains(event.target) && !menu.contains(event.target)) {
-                menu.classList.add('hidden');
-            }
-        });
-
-        // Auto-submit search form on sort change
-        document.getElementById('sort-select')?.addEventListener('change', function() {
-            this.closest('form').submit();
-        });
-
-        // Close messages
-        document.querySelectorAll('.close-message').forEach(button => {
-            button.addEventListener('click', function() {
-                this.closest('[role="alert"]').remove();
-            });
-        });
-
-        // Delete modal functionality
-        let deleteId = null;
-        const deleteModal = document.getElementById('delete-modal');
-        const deleteFilenameSpan = document.getElementById('delete-filename');
-        const confirmDeleteBtn = document.getElementById('confirm-delete-btn');
-        const cancelDeleteBtn = document.getElementById('cancel-delete-btn');
-
-        document.querySelectorAll('.delete-btn').forEach(button => {
-            button.addEventListener('click', function() {
-                deleteId = this.dataset.id;
-                const filename = this.dataset.filename;
-                deleteFilenameSpan.textContent = filename;
-                deleteModal.classList.remove('hidden');
-            });
-        });
-
-        cancelDeleteBtn?.addEventListener('click', function() {
-            deleteModal.classList.add('hidden');
-            deleteId = null;
-        });
-
-        confirmDeleteBtn?.addEventListener('click', function() {
-            if (deleteId) {
-                // Create a form and submit it
-                const form = document.createElement('form');
-                form.method = 'POST';
-                form.action = `/klasifikasi/delete/${deleteId}/`;
-                
-                // Add CSRF token
-                const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value;
-                if (csrfToken) {
-                    const csrfInput = document.createElement('input');
-                    csrfInput.type = 'hidden';
-                    csrfInput.name = 'csrfmiddlewaretoken';
-                    csrfInput.value = csrfToken;
-                    form.appendChild(csrfInput);
-                }
-                
-                document.body.appendChild(form);
-                form.submit();
-            }
-        });
-
-        // Close modal when clicking outside
-        deleteModal?.addEventListener('click', function(event) {
-            if (event.target === deleteModal) {
-                deleteModal.classList.add('hidden');
-                deleteId = null;
-            }
-        });
-    </script>
+    <script src="{% static 'js/nav.js' %}"></script>
+    <script src="{% static 'js/history.js' %}"></script>
     
 </body>
 </html>
