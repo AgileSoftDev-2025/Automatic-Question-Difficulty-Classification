@@ -1,5 +1,8 @@
+# apps/klasifikasi/ml_model.py - WITH INDONESIAN PATTERN ADJUSTMENT
+
 """
 RoBERTa Model Integration for Bloom's Taxonomy Classification
+Now includes Indonesian pattern-based adjustment
 """
 
 import torch
@@ -12,9 +15,20 @@ from django.conf import settings
 
 logger = logging.getLogger(__name__)
 
+# Import Indonesian adjuster if available
+try:
+    from .indonesian_rules import IndonesianBloomAdjuster
+    ADJUSTER_AVAILABLE = True
+    logger.info("Indonesian pattern adjuster loaded")
+except ImportError:
+    ADJUSTER_AVAILABLE = False
+    logger.warning("Indonesian adjuster not available")
+
+
 class BloomClassifier:
     """
     Wrapper class for RoBERTa-based Bloom's Taxonomy classifier
+    With Indonesian pattern-based adjustment
     """
     
     # Label mapping
@@ -31,18 +45,29 @@ class BloomClassifier:
     # Classification threshold
     THRESHOLD = 0.5
     
-    def __init__(self, model_path=None):
+    def __init__(self, model_path=None, use_indonesian_adjuster=True):
         """
         Initialize the classifier
         
         Args:
             model_path: Path to the model directory (default: settings.MODEL_PATH)
+            use_indonesian_adjuster: Whether to use pattern-based adjustment
         """
         self.model_path = model_path or getattr(settings, 'BLOOM_MODEL_PATH', './roberta_multilabel')
         self.tokenizer = None
         self.model = None
         self.translator = GoogleTranslator(source='id', target='en')
         self.is_loaded = False
+        
+        # Indonesian adjuster
+        self.use_adjuster = use_indonesian_adjuster and ADJUSTER_AVAILABLE
+        if self.use_adjuster:
+            self.adjuster = IndonesianBloomAdjuster()
+            logger.info("Indonesian pattern adjuster enabled")
+        else:
+            self.adjuster = None
+            if use_indonesian_adjuster:
+                logger.warning("Indonesian adjuster requested but not available")
         
     def load_model(self):
         """Load the model and tokenizer"""
@@ -100,20 +125,23 @@ class BloomClassifier:
             logger.warning(f"Translation failed: {e}. Using original text.")
             return text
     
-    def predict_single(self, text, translate=True):
+    def predict_single(self, text, translate=True, original_text=None):
         """
         Predict Bloom's taxonomy category for a single question
+        WITH INDONESIAN PATTERN ADJUSTMENT
         
         Args:
-            text: Question text
+            text: Question text (can be Indonesian or English)
             translate: Whether to translate from Indonesian to English
+            original_text: Original Indonesian text (for pattern matching)
             
         Returns:
             dict: {
                 'category': 'C1-C6',
                 'category_name': 'Remember/Understand/etc',
                 'confidence': float (0-1),
-                'all_probabilities': dict of all category probabilities
+                'all_probabilities': dict of all category probabilities,
+                'was_adjusted': bool (whether Indonesian patterns adjusted the result)
             }
         """
         if not self.is_loaded:
@@ -121,6 +149,10 @@ class BloomClassifier:
                 raise RuntimeError("Model not loaded. Cannot make predictions.")
         
         try:
+            # Store original for pattern matching
+            if original_text is None:
+                original_text = text
+            
             # Translate if needed
             if translate:
                 text = self.translate_text(text, src="id", dest="en")
@@ -152,7 +184,8 @@ class BloomClassifier:
             category = self.LABEL_TO_CATEGORY[max_label]
             confidence = all_probs[max_label]['probability']
             
-            result = {
+            # Create ML prediction
+            ml_result = {
                 'category': category,
                 'category_name': max_label,
                 'confidence': confidence,
@@ -160,9 +193,33 @@ class BloomClassifier:
                 'translated_text': text if translate else None
             }
             
-            logger.debug(f"Prediction: {category} ({max_label}) with confidence {confidence:.3f}")
-            
-            return result
+            # Apply Indonesian pattern adjustment if enabled
+            if self.use_adjuster and translate:
+                adjusted_result = self.adjuster.adjust_classification(
+                    original_text, 
+                    ml_result
+                )
+                
+                # Check if adjustment was made
+                was_adjusted = (
+                    adjusted_result['category'] != ml_result['category'] or
+                    abs(adjusted_result['confidence'] - ml_result['confidence']) > 0.05
+                )
+                
+                adjusted_result['was_adjusted'] = was_adjusted
+                adjusted_result['ml_category'] = ml_result['category']
+                adjusted_result['ml_confidence'] = ml_result['confidence']
+                
+                if was_adjusted:
+                    logger.info(
+                        f"Adjusted: {ml_result['category']}({ml_result['confidence']:.2f}) -> "
+                        f"{adjusted_result['category']}({adjusted_result['confidence']:.2f})"
+                    )
+                
+                return adjusted_result
+            else:
+                ml_result['was_adjusted'] = False
+                return ml_result
             
         except Exception as e:
             logger.error(f"Prediction error: {str(e)}", exc_info=True)
@@ -171,6 +228,7 @@ class BloomClassifier:
     def predict_batch(self, texts, translate=True, batch_size=8):
         """
         Predict categories for multiple questions
+        WITH INDONESIAN PATTERN ADJUSTMENT
         
         Args:
             texts: List of question texts
@@ -187,16 +245,27 @@ class BloomClassifier:
         results = []
         
         try:
+            # Store originals for pattern matching
+            original_texts = texts.copy()
+            
             # Translate all texts if needed
             if translate:
                 logger.info(f"Translating {len(texts)} texts...")
-                translated_texts = [self.translate_text(text, src="id", dest="en") for text in texts]
+                translated_texts = []
+                for text in texts:
+                    try:
+                        translated = self.translate_text(text, src="id", dest="en")
+                        translated_texts.append(translated)
+                    except Exception as e:
+                        logger.warning(f"Translation failed for text, using original: {e}")
+                        translated_texts.append(text)
             else:
                 translated_texts = texts
             
             # Process in batches
             for i in range(0, len(translated_texts), batch_size):
                 batch = translated_texts[i:i + batch_size]
+                batch_originals = original_texts[i:i + batch_size]
                 
                 # Tokenize batch
                 inputs = self.tokenizer(
@@ -213,7 +282,7 @@ class BloomClassifier:
                     probs_batch = sigmoid(outputs.logits).numpy()
                 
                 # Process each prediction in batch
-                for j, probs in enumerate(probs_batch):
+                for j, (probs, original) in enumerate(zip(probs_batch, batch_originals)):
                     all_probs = {}
                     for label, prob in zip(self.LABEL_COLUMNS, probs):
                         all_probs[label] = {
@@ -226,20 +295,51 @@ class BloomClassifier:
                     category = self.LABEL_TO_CATEGORY[max_label]
                     confidence = all_probs[max_label]['probability']
                     
-                    result = {
+                    # Create ML prediction
+                    ml_result = {
                         'category': category,
                         'category_name': max_label,
                         'confidence': confidence,
                         'all_probabilities': all_probs,
                         'translated_text': batch[j] if translate else None,
-                        'original_text': texts[i + j]
+                        'original_text': original
                     }
                     
-                    results.append(result)
+                    # Apply Indonesian pattern adjustment if enabled
+                    if self.use_adjuster and translate:
+                        adjusted_result = self.adjuster.adjust_classification(
+                            original,
+                            ml_result
+                        )
+                        
+                        # Check if adjustment was made
+                        was_adjusted = (
+                            adjusted_result['category'] != ml_result['category'] or
+                            abs(adjusted_result['confidence'] - ml_result['confidence']) > 0.05
+                        )
+                        
+                        adjusted_result['was_adjusted'] = was_adjusted
+                        adjusted_result['ml_category'] = ml_result['category']
+                        adjusted_result['ml_confidence'] = ml_result['confidence']
+                        adjusted_result['original_text'] = original
+                        
+                        results.append(adjusted_result)
+                    else:
+                        ml_result['was_adjusted'] = False
+                        results.append(ml_result)
                 
                 logger.info(f"Processed batch {i//batch_size + 1}/{(len(texts)-1)//batch_size + 1}")
             
-            logger.info(f"Batch prediction completed: {len(results)} questions classified")
+            # Log adjustment statistics
+            if self.use_adjuster:
+                adjusted_count = sum(1 for r in results if r.get('was_adjusted', False))
+                logger.info(
+                    f"Batch prediction completed: {len(results)} questions classified, "
+                    f"{adjusted_count} adjusted by Indonesian patterns"
+                )
+            else:
+                logger.info(f"Batch prediction completed: {len(results)} questions classified")
+            
             return results
             
         except Exception as e:
@@ -257,23 +357,27 @@ class BloomClassifier:
             "labels": self.LABEL_COLUMNS,
             "threshold": self.THRESHOLD,
             "model_type": "RoBERTa",
-            "max_length": 512
+            "max_length": 512,
+            "indonesian_adjuster": self.use_adjuster
         }
 
 
 # Global classifier instance (singleton pattern)
 _classifier_instance = None
 
-def get_classifier():
+def get_classifier(use_indonesian_adjuster=True):
     """
     Get or create the global classifier instance
+    
+    Args:
+        use_indonesian_adjuster: Whether to enable Indonesian pattern adjustment
     
     Returns:
         BloomClassifier instance
     """
     global _classifier_instance
     if _classifier_instance is None:
-        _classifier_instance = BloomClassifier()
+        _classifier_instance = BloomClassifier(use_indonesian_adjuster=use_indonesian_adjuster)
         _classifier_instance.load_model()
     return _classifier_instance
 

@@ -1,8 +1,8 @@
-# apps/klasifikasi/indonesian_rules.py
+# apps/klasifikasi/indonesian_rules.py - NUCLEAR C1/C2 ENFORCEMENT
 
 """
-Indonesian-specific pattern recognition for Bloom's Taxonomy classification
-Adjusts ML model predictions based on question structure and keywords
+ULTRA-AGGRESSIVE Indonesian pattern recognition
+Rule: When in doubt, force to lower level (C1/C2)
 """
 
 import re
@@ -13,331 +13,191 @@ logger = logging.getLogger(__name__)
 
 class IndonesianBloomAdjuster:
     """
-    Adjusts Bloom's Taxonomy classifications based on Indonesian question patterns
+    AGGRESSIVE adjuster - forces C1/C2 for definition questions
     """
     
-    # Question patterns mapped to Bloom levels
-    PATTERNS = {
-        'C1': {
-            'keywords': [
-                'sebutkan', 'tuliskan', 'identifikasi', 'definisi', 'pengertian',
-                'apa itu', 'apa yang dimaksud', 'jelaskan pengertian',
-                'nama', 'jenis-jenis', 'macam-macam', 'contoh',
-                'siapa', 'kapan', 'dimana', 'berapa',
-                'salah satu', 'komponen', 'unsur', 'bagian dari',
-                'istilah', 'maksud dari', 'arti dari'
-            ],
-            'patterns': [
-                r'^sebutkan',
-                r'^tuliskan',
-                r'^apa\s+(yang\s+dimaksud|itu|pengertian)',
-                r'definisi.+adalah',
-                r'pengertian.+adalah',
-                r'^identifikasi',
-                r'salah\s+satu\s+(komponen|faktor|kategori)',
-                r'yang\s+dimaksud\s+dengan.+adalah'
-            ],
-            'confidence_boost': 0.15
-        },
-        'C2': {
-            'keywords': [
-                'jelaskan', 'uraikan', 'deskripsikan', 'gambarkan',
-                'bedakan', 'perbedaan', 'persamaan', 'hubungan',
-                'mengapa', 'bagaimana', 'klasifikasi',
-                'interpretasi', 'maksud', 'tujuan dari',
-                'fungsi', 'kegunaan', 'manfaat',
-                'kesimpulan dari', 'ringkasan'
-            ],
-            'patterns': [
-                r'^jelaskan(?!\s+cara)',  # "Jelaskan" but not "Jelaskan cara"
-                r'^uraikan',
-                r'^deskripsikan',
-                r'^bedakan',
-                r'perbedaan\s+antara',
-                r'apa\s+fungsi',
-                r'mengapa',
-                r'bagaimana(?!\s+(cara|membuat|merancang))',
-                r'hubungan\s+antara'
-            ],
-            'confidence_boost': 0.12
-        },
-        'C3': {
-            'keywords': [
-                'gunakan', 'terapkan', 'implementasikan', 'praktikkan',
-                'demonstrasikan', 'hitunglah', 'buatlah perhitungan',
-                'aplikasikan', 'selesaikan', 'operasikan',
-                'jelaskan cara', 'bagaimana cara', 'lakukan',
-                'eksekusi', 'jalankan', 'konfigurasi',
-                'tahap', 'langkah-langkah', 'prosedur'
-            ],
-            'patterns': [
-                r'^gunakan',
-                r'^terapkan',
-                r'^implementasikan',
-                r'^aplikasikan',
-                r'^hitunglah',
-                r'^selesaikan',
-                r'jelaskan\s+cara',
-                r'bagaimana\s+cara',
-                r'langkah-langkah',
-                r'tahap.+dalam'
-            ],
-            'confidence_boost': 0.10
-        },
-        'C4': {
-            'keywords': [
-                'analisis', 'analisislah', 'bandingkan', 'kontras',
-                'bedakan', 'kategorikan', 'klasifikasikan',
-                'organisasi', 'susun', 'strukturkan',
-                'pisahkan', 'uraikan komponen', 'identifikasi penyebab',
-                'hubungan sebab akibat', 'faktor yang mempengaruhi',
-                'mengapa terjadi', 'penyebab', 'akibat dari'
-            ],
-            'patterns': [
-                r'^analisis',
-                r'^analisislah',
-                r'^bandingkan',
-                r'perbedaan.+dan.+perbedaan',
-                r'faktor.+mempengaruhi',
-                r'penyebab.+tidak',
-                r'mengapa.+(terjadi|tidak|gagal)',
-                r'identifikasi\s+penyebab',
-                r'hubungan\s+sebab'
-            ],
-            'confidence_boost': 0.10
-        },
-        'C5': {
-            'keywords': [
-                'evaluasi', 'nilai', 'kritik', 'berikan penilaian',
-                'apakah efektif', 'apakah tepat', 'keunggulan dan kelemahan',
-                'pro dan kontra', 'setuju atau tidak', 'justifikasi',
-                'rekomendasikan', 'putuskan', 'pilih yang terbaik',
-                'beri pendapat', 'kriteria', 'prioritaskan',
-                'efektivitas', 'efisiensi', 'validitas'
-            ],
-            'patterns': [
-                r'^evaluasi',
-                r'^nilai',
-                r'keunggulan\s+dan\s+kelemahan',
-                r'apakah\s+(efektif|tepat|sesuai|valid)',
-                r'setuju\s+atau\s+tidak',
-                r'pro\s+dan\s+kontra',
-                r'berikan\s+penilaian',
-                r'efektivitas.+(dibandingkan|versus)'
-            ],
-            'confidence_boost': 0.08
-        },
-        'C6': {
-            'keywords': [
-                'rancang', 'rancanglah', 'buatlah', 'ciptakan',
-                'kembangkan', 'desain', 'susunlah', 'konstruksi',
-                'formulasikan', 'rencanakan', 'kreasikan',
-                'hasilkan', 'produksi', 'bangun', 'integrasikan',
-                'rancang sistem', 'buat rancangan', 'desain arsitektur',
-                'kembangkan model', 'susun strategi'
-            ],
-            'patterns': [
-                r'^rancang',
-                r'^buatlah\s+(rancangan|desain|sistem|model|algoritma|strategi)',
-                r'^desain',
-                r'^kembangkan',
-                r'^susunlah\s+(strategi|rencana|sistem)',
-                r'^ciptakan',
-                r'rancang\s+(sistem|algoritma|database|arsitektur)',
-                r'buat\s+rancangan',
-                r'kembangkan\s+(aplikasi|sistem|model)'
-            ],
-            'confidence_boost': 0.08
-        }
-    }
+    # ULTIMATE C1 INDICATORS - these FORCE C1 classification
+    FORCE_C1_PATTERNS = [
+        # "Pengertian/definisi/arti" = definition = ALWAYS C1
+        r'\b(?:pengertian|definisi|arti)\s+(?:dari\s+)?(?:yang\s+paling\s+)?(?:umum|utama|inti)?',
+        r'\bapa\s+(?:yang\s+)?dimaksud\s+(?:dengan|dari)',
+        r'\byang\s+dimaksud\s+(?:dengan|dari|sebagai)',
+        r'\bdisebut\s+(?:sebagai\s+)?(?:adalah)?',
+        r'\bdinamakan\s+(?:sebagai)?',
+        r'\bmerupakan\s+(?:salah\s+satu)?',
+        r'\btermasuk\s+(?:dalam\s+)?(?:kategori|jenis|golongan)',
+        r'\bsalah\s+satu\s+(?:komponen|faktor|kategori|jenis|bentuk|unsur|teknik|metode)',
+        r'\btahap\s+(?:pertama|awal|akhir|terakhir)',
+        r'\bkegiatan\s+(?:pertama|awal|terakhir)',
+        r'\bsifat\s+(?:utama|dari)',
+        r'\bfungsi\s+(?:dari\s+)?(?:adalah)?(?!\s+untuk)',  # "fungsi adalah" but NOT "fungsi adalah untuk"
+        r'\barti\s+dari',
+        r'\bmaksud\s+dari',
+        r'\bjenis\s+(?:dari)?',
+        r'\bmacam\s+(?:dari)?',
+        r'\bkondisi\s+(?:yang\s+)?(?:ideal|terbaik)',
+        r'\bmetode\s+(?:yang\s+sering\s+digunakan|yang\s+paling)',
+        r'\bsumber\s+(?:yang\s+paling\s+penting|utama)',
+        r'\bbiaya\s+yang\s+dikeluarkan\s+untuk',
+        r'\bformulir\s+yang\s+digunakan',
+        r'\bkegiatan\s+terakhir\s+dari',
+        r'\bsalah\s+satu\s+(?:bentuk|upaya|teknik)',
+    ]
+    
+    # ULTIMATE C2 INDICATORS - these FORCE C2 classification
+    FORCE_C2_PATTERNS = [
+        # "hal ini berarti" = understanding = C2
+        r'\bhal\s+ini\s+berarti',
+        r'\bsebagai\s+dasar\s+yang\s+digunakan\s+untuk',
+        r'\bfaktor\s+yang\s+mempengaruhi',
+        r'\bhubungan\s+antara',
+        r'\bperbedaan\s+(?:antara|dari)',
+        r'\bbagaimana\b(?!\s+cara)',  # "bagaimana" but NOT "bagaimana cara"
+        r'\bmengapa\b',
+        r'\bjelaskan\b(?!\s+cara)',  # "jelaskan" but NOT "jelaskan cara"
+    ]
+    
+    # C1/C2 KEYWORDS - if present, very likely C1/C2
+    C1_KEYWORDS = [
+        'pengertian', 'definisi', 'arti', 'maksud', 'dimaksud', 'disebut', 
+        'dinamakan', 'merupakan', 'termasuk', 'salah satu', 'tahap pertama',
+        'tahap awal', 'tahap akhir', 'tahap terakhir', 'kegiatan terakhir',
+        'sifat utama', 'jenis', 'macam', 'kategori', 'komponen', 'unsur',
+        'bentuk dari', 'kondisi ideal', 'metode yang', 'sumber utama',
+        'sumber yang paling', 'biaya yang dikeluarkan', 'formulir yang',
+        'salah satu bentuk', 'salah satu teknik', 'salah satu upaya',
+    ]
+    
+    C2_KEYWORDS = [
+        'hal ini berarti', 'sebagai dasar', 'dasar yang digunakan',
+        'faktor yang mempengaruhi', 'hubungan antara', 'perbedaan',
+    ]
+    
+    # ANTI-PATTERNS - if these exist, NOT C1
+    NOT_C1_PATTERNS = [
+        r'\bhitunglah\b',
+        r'\bterapkan\b',
+        r'\bgunakan\b',
+        r'\baplikasikan\b',
+        r'\banalisis\b',
+        r'\bbandingkan\b',
+        r'\bevaluasi\b',
+        r'\bnilai\b',
+        r'\brancang\b',
+        r'\bbuatlah\b',
+        r'\bdesain\b',
+        r'\bkembangkan\b',
+    ]
+    
+    # ANTI-PATTERNS - if these exist, NOT C2
+    NOT_C2_PATTERNS = [
+        r'\bhitunglah\b',
+        r'\bterapkan\b',
+        r'\banalisis\b',
+        r'\brancang\b',
+        r'\bbuatlah\b',
+    ]
     
     def __init__(self):
-        self.compiled_patterns = self._compile_patterns()
-    
-    def _compile_patterns(self):
-        """Pre-compile regex patterns for efficiency"""
-        compiled = {}
-        for level, data in self.PATTERNS.items():
-            compiled[level] = {
-                'patterns': [re.compile(p, re.IGNORECASE) for p in data['patterns']],
-                'keywords': data['keywords'],
-                'boost': data['confidence_boost']
-            }
-        return compiled
+        self.compiled_force_c1 = [re.compile(p, re.IGNORECASE) for p in self.FORCE_C1_PATTERNS]
+        self.compiled_force_c2 = [re.compile(p, re.IGNORECASE) for p in self.FORCE_C2_PATTERNS]
+        self.compiled_not_c1 = [re.compile(p, re.IGNORECASE) for p in self.NOT_C1_PATTERNS]
+        self.compiled_not_c2 = [re.compile(p, re.IGNORECASE) for p in self.NOT_C2_PATTERNS]
     
     def adjust_classification(self, question_text, ml_prediction):
         """
-        Adjust ML classification based on Indonesian patterns
+        AGGRESSIVE adjustment
         
-        Args:
-            question_text: Original question text in Indonesian
-            ml_prediction: Dict with 'category', 'confidence', 'all_probabilities'
-        
-        Returns:
-            Adjusted prediction dict with same structure
+        Priority:
+        1. FORCE C1 if C1 pattern detected (unless strong anti-pattern)
+        2. FORCE C2 if C2 pattern detected (unless anti-pattern)
+        3. Otherwise keep ML prediction
         """
-        # Clean and normalize question
         question_lower = question_text.lower().strip()
         
-        # Get pattern matches for each level
-        level_scores = {}
-        for level, data in self.compiled_patterns.items():
-            score = self._calculate_pattern_score(question_lower, data)
-            level_scores[level] = score
-        
-        # Find best matching level
-        best_pattern_level = max(level_scores.items(), key=lambda x: x[1])
-        
-        # Decide whether to override ML prediction
         ml_level = ml_prediction['category']
         ml_confidence = ml_prediction['confidence']
         
-        # Apply adjustment logic
-        adjusted = self._apply_adjustment_logic(
-            question_lower,
-            ml_level,
-            ml_confidence,
-            best_pattern_level,
-            ml_prediction['all_probabilities']
-        )
+        # === RULE 1: CHECK FOR FORCE C1 ===
+        has_force_c1 = any(p.search(question_lower) for p in self.compiled_force_c1)
+        has_c1_keywords = any(kw in question_lower for kw in self.C1_KEYWORDS)
+        has_anti_c1 = any(p.search(question_lower) for p in self.compiled_not_c1)
         
-        logger.debug(
-            f"Q: '{question_text[:50]}...' | "
-            f"ML: {ml_level}({ml_confidence:.2f}) -> "
-            f"Adjusted: {adjusted['category']}({adjusted['confidence']:.2f}) | "
-            f"Pattern: {best_pattern_level[0]}({best_pattern_level[1]:.2f})"
-        )
-        
-        return adjusted
-    
-    def _calculate_pattern_score(self, question_lower, pattern_data):
-        """Calculate how well question matches patterns for a level"""
-        score = 0.0
-        
-        # Check regex patterns (high weight)
-        for pattern in pattern_data['patterns']:
-            if pattern.search(question_lower):
-                score += 0.3
-        
-        # Check keywords (medium weight)
-        for keyword in pattern_data['keywords']:
-            if keyword in question_lower:
-                score += 0.1
-        
-        return min(score, 1.0)  # Cap at 1.0
-    
-    def _apply_adjustment_logic(self, question_lower, ml_level, ml_confidence, 
-                                best_pattern, all_probs):
-        """
-        Apply logic to decide whether to adjust ML prediction
-        
-        Strategy:
-        1. If pattern match is strong (>0.5) and ML confidence is low (<0.7), use pattern
-        2. If pattern level is adjacent to ML level and confidence is medium, blend
-        3. Otherwise keep ML prediction but boost confidence if pattern agrees
-        """
-        pattern_level, pattern_score = best_pattern
-        
-        # Case 1: Strong pattern match with low ML confidence
-        if pattern_score > 0.5 and ml_confidence < 0.7:
-            return self._create_adjusted_prediction(
-                pattern_level,
-                min(ml_confidence + self.compiled_patterns[pattern_level]['boost'], 0.95),
-                all_probs,
-                reason="strong_pattern_low_ml"
-            )
-        
-        # Case 2: Pattern strongly suggests C1 (recall) and ML says higher
-        if pattern_level == 'C1' and pattern_score > 0.4 and ml_level in ['C2', 'C3', 'C4', 'C5', 'C6']:
-            if self._is_recall_question(question_lower):
-                return self._create_adjusted_prediction(
-                    'C1',
-                    min(0.85 + pattern_score * 0.1, 0.95),
-                    all_probs,
-                    reason="clear_recall_pattern"
+        if (has_force_c1 or has_c1_keywords) and not has_anti_c1:
+            if ml_level != 'C1':
+                logger.info(
+                    f"FORCED C1: ML said {ml_level}({ml_confidence:.2f}) | "
+                    f"Q: {question_text[:70]}..."
                 )
+            return {
+                'category': 'C1',
+                'category_name': 'Remember',
+                'confidence': 0.95,
+                'all_probabilities': ml_prediction['all_probabilities'],
+                'adjustment_reason': 'force_c1_pattern',
+                'ml_category': ml_level,
+                'ml_confidence': ml_confidence,
+                'was_adjusted': True
+            }
         
-        # Case 3: Pattern matches ML prediction - boost confidence
-        if pattern_level == ml_level and pattern_score > 0.3:
-            boosted_confidence = min(
-                ml_confidence + self.compiled_patterns[pattern_level]['boost'],
-                0.98
-            )
-            return self._create_adjusted_prediction(
-                ml_level,
-                boosted_confidence,
-                all_probs,
-                reason="pattern_confirms_ml"
-            )
+        # === RULE 2: CHECK FOR FORCE C2 ===
+        has_force_c2 = any(p.search(question_lower) for p in self.compiled_force_c2)
+        has_c2_keywords = any(kw in question_lower for kw in self.C2_KEYWORDS)
+        has_anti_c2 = any(p.search(question_lower) for p in self.compiled_not_c2)
         
-        # Case 4: Pattern suggests adjacent level with good score
-        if pattern_score > 0.4:
-            level_distance = abs(int(pattern_level[1]) - int(ml_level[1]))
-            if level_distance == 1:  # Adjacent levels
-                # Blend: if ML is confident, keep it; if not, consider pattern
-                if ml_confidence < 0.6:
-                    return self._create_adjusted_prediction(
-                        pattern_level,
-                        0.70,
-                        all_probs,
-                        reason="adjacent_pattern_low_ml"
-                    )
+        if (has_force_c2 or has_c2_keywords) and not has_anti_c2:
+            if ml_level != 'C2':
+                logger.info(
+                    f"FORCED C2: ML said {ml_level}({ml_confidence:.2f}) | "
+                    f"Q: {question_text[:70]}..."
+                )
+            return {
+                'category': 'C2',
+                'category_name': 'Understand',
+                'confidence': 0.90,
+                'all_probabilities': ml_prediction['all_probabilities'],
+                'adjustment_reason': 'force_c2_pattern',
+                'ml_category': ml_level,
+                'ml_confidence': ml_confidence,
+                'was_adjusted': True
+            }
         
-        # Default: Keep ML prediction
+        # === RULE 3: DOWNGRADE HIGH CLASSIFICATIONS FOR SIMPLE QUESTIONS ===
+        # If ML says C4/C5/C6 but question is simple (short, basic), downgrade
+        if ml_level in ['C4', 'C5', 'C6']:
+            word_count = len(question_lower.split())
+            
+            # Simple question = C3 max
+            if word_count < 12 and ml_confidence < 0.75:
+                logger.info(
+                    f"DOWNGRADED: {ml_level}({ml_confidence:.2f}) -> C3 (too simple) | "
+                    f"Q: {question_text[:70]}..."
+                )
+                return {
+                    'category': 'C3',
+                    'category_name': 'Apply',
+                    'confidence': 0.70,
+                    'all_probabilities': ml_prediction['all_probabilities'],
+                    'adjustment_reason': 'downgrade_simple_question',
+                    'ml_category': ml_level,
+                    'ml_confidence': ml_confidence,
+                    'was_adjusted': True
+                }
+        
+        # === RULE 4: KEEP ML PREDICTION ===
         return {
             'category': ml_level,
+            'category_name': ml_prediction['category_name'],
             'confidence': ml_confidence,
-            'all_probabilities': all_probs,
-            'category_name': self._get_category_name(ml_level),
-            'adjustment_reason': 'ml_prediction_kept'
+            'all_probabilities': ml_prediction['all_probabilities'],
+            'adjustment_reason': 'ml_kept',
+            'ml_category': ml_level,
+            'ml_confidence': ml_confidence,
+            'was_adjusted': False
         }
-    
-    def _is_recall_question(self, question_lower):
-        """Check if question is clearly asking for recall/definition"""
-        recall_indicators = [
-            'apa yang dimaksud',
-            'pengertian',
-            'definisi',
-            'apa itu',
-            'sebutkan',
-            'tuliskan',
-            'salah satu'
-        ]
-        return any(ind in question_lower for ind in recall_indicators)
-    
-    def _create_adjusted_prediction(self, level, confidence, all_probs, reason="adjusted"):
-        """Create adjusted prediction dict"""
-        return {
-            'category': level,
-            'confidence': confidence,
-            'all_probabilities': all_probs,
-            'category_name': self._get_category_name(level),
-            'adjustment_reason': reason
-        }
-    
-    def _get_category_name(self, code):
-        """Get category full name"""
-        names = {
-            'C1': 'Remember',
-            'C2': 'Understand',
-            'C3': 'Apply',
-            'C4': 'Analyze',
-            'C5': 'Evaluate',
-            'C6': 'Create'
-        }
-        return names.get(code, code)
 
 
 def adjust_classification_with_patterns(question_text, ml_prediction):
-    """
-    Convenience function to adjust classification
-    
-    Args:
-        question_text: Indonesian question text
-        ml_prediction: ML model prediction dict
-    
-    Returns:
-        Adjusted prediction dict
-    """
+    """Convenience function"""
     adjuster = IndonesianBloomAdjuster()
     return adjuster.adjust_classification(question_text, ml_prediction)
