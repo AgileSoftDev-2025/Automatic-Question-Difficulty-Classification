@@ -31,9 +31,16 @@ from reportlab.lib.units import inch
 from reportlab.lib.enums import TA_CENTER, TA_LEFT
 from reportlab.platypus import (
     SimpleDocTemplate, Table, TableStyle, Paragraph, 
-    Spacer, PageBreak, KeepTogether
+    Spacer, PageBreak, KeepTogether, Image
 )
 from io import BytesIO
+
+# For chart generation
+import matplotlib
+matplotlib.use('Agg')  # Use non-interactive backend
+import matplotlib.pyplot as plt
+from matplotlib.patches import Wedge
+import numpy as np
 
 
 def redirect_to_main_home(request):
@@ -335,6 +342,266 @@ def delete_classification(request, pk):
         return redirect('klasifikasi:history')
 
 
+def generate_bar_chart(category_counts, total_questions):
+    """
+    Generate a beautiful bar chart for Bloom's Taxonomy distribution
+    Returns: BytesIO object containing PNG image
+    """
+    try:
+        # Prepare data
+        categories = ['C1', 'C2', 'C3', 'C4', 'C5', 'C6']
+        category_names = ['Remember', 'Understand', 'Apply', 'Analyze', 'Evaluate', 'Create']
+        counts = [category_counts.get(cat, 0) for cat in categories]
+        
+        # Colors matching your web interface
+        colors_hex = ['#10b981', '#3b82f6', '#f59e0b', '#f97316', '#ef4444', '#a855f7']
+        
+        # Create figure with better styling
+        fig, ax = plt.subplots(figsize=(10, 5.5))
+        fig.patch.set_facecolor('white')
+        
+        # Create bars with gradient effect
+        bars = ax.bar(range(len(categories)), counts, color=colors_hex, 
+                      alpha=0.85, edgecolor='white', linewidth=2.5)
+        
+        # Customize chart
+        ax.set_xlabel('Bloom\'s Taxonomy Levels', fontsize=13, fontweight='bold', 
+                      color='#374151', labelpad=10)
+        ax.set_ylabel('Number of Questions', fontsize=13, fontweight='bold', 
+                      color='#374151', labelpad=10)
+        ax.set_title('Question Distribution by Cognitive Level', 
+                    fontsize=16, fontweight='bold', color='#1e40af', pad=20)
+        ax.set_xticks(range(len(categories)))
+        ax.set_xticklabels([f'{cat}\n{name}' for cat, name in zip(categories, category_names)], 
+                           fontsize=10, fontweight='600')
+        
+        # Style the axis
+        ax.spines['top'].set_visible(False)
+        ax.spines['right'].set_visible(False)
+        ax.spines['left'].set_color('#cbd5e1')
+        ax.spines['bottom'].set_color('#cbd5e1')
+        ax.tick_params(colors='#64748b', labelsize=10)
+        
+        # Add value labels on bars with better styling
+        for bar, count in zip(bars, counts):
+            height = bar.get_height()
+            percentage = (count / total_questions * 100) if total_questions > 0 else 0
+            ax.text(bar.get_x() + bar.get_width()/2., height + (max(counts) * 0.02),
+                   f'{count}\n({percentage:.1f}%)',
+                   ha='center', va='bottom', fontsize=10, fontweight='bold',
+                   color='#374151')
+        
+        # Add elegant grid
+        ax.yaxis.grid(True, linestyle='--', alpha=0.25, color='#cbd5e1', linewidth=1)
+        ax.set_axisbelow(True)
+        
+        # Set y-axis to start from 0
+        ax.set_ylim(bottom=0, top=max(counts) * 1.25 if counts else 10)
+        
+        plt.tight_layout()
+        
+        # Save to BytesIO
+        img_buffer = BytesIO()
+        plt.savefig(img_buffer, format='png', dpi=180, bbox_inches='tight', 
+                   facecolor='white', edgecolor='none')
+        img_buffer.seek(0)
+        plt.close(fig)
+        
+        return img_buffer
+        
+    except Exception as e:
+        logger.error(f"Error generating bar chart: {str(e)}", exc_info=True)
+        return None
+
+
+def generate_doughnut_chart(category_counts, total_questions):
+    """
+    Generate a beautiful doughnut chart for Bloom's Taxonomy distribution
+    Returns: BytesIO object containing PNG image
+    """
+    try:
+        # Prepare data
+        categories = ['C1', 'C2', 'C3', 'C4', 'C5', 'C6']
+        category_names = ['Remember', 'Understand', 'Apply', 'Analyze', 'Evaluate', 'Create']
+        counts = [category_counts.get(cat, 0) for cat in categories]
+        
+        # Filter out zero values
+        filtered_data = [(cat, name, count) for cat, name, count in zip(categories, category_names, counts) if count > 0]
+        
+        if not filtered_data:
+            # Return empty chart if no data
+            fig, ax = plt.subplots(figsize=(6, 6))
+            fig.patch.set_facecolor('white')
+            ax.text(0.5, 0.5, 'No data available', ha='center', va='center', 
+                   fontsize=14, color='#9ca3af')
+            ax.axis('off')
+            img_buffer = BytesIO()
+            plt.savefig(img_buffer, format='png', dpi=180, bbox_inches='tight', facecolor='white')
+            img_buffer.seek(0)
+            plt.close(fig)
+            return img_buffer
+        
+        categories_filtered = [item[0] for item in filtered_data]
+        names_filtered = [item[1] for item in filtered_data]
+        counts_filtered = [item[2] for item in filtered_data]
+        
+        # Colors matching your web interface
+        color_map = {
+            'C1': '#10b981',
+            'C2': '#3b82f6',
+            'C3': '#f59e0b',
+            'C4': '#f97316',
+            'C5': '#ef4444',
+            'C6': '#a855f7'
+        }
+        colors_filtered = [color_map[cat] for cat in categories_filtered]
+        
+        # Create figure with better proportions
+        fig, ax = plt.subplots(figsize=(7, 5.5))
+        fig.patch.set_facecolor('white')
+        
+        # Create beautiful doughnut chart with shadow effect
+        wedges, texts, autotexts = ax.pie(
+            counts_filtered,
+            labels=[f'{cat} - {name}' for cat, name in zip(categories_filtered, names_filtered)],
+            colors=colors_filtered,
+            autopct=lambda pct: f'{pct:.1f}%\n({int(pct*total_questions/100)})' if pct > 3 else '',
+            startangle=90,
+            pctdistance=0.82,
+            wedgeprops=dict(width=0.45, edgecolor='white', linewidth=3, 
+                          antialiased=True),
+            explode=[0.03] * len(counts_filtered),  # Slight separation
+            shadow=False
+        )
+        
+        # Beautify labels
+        for text in texts:
+            text.set_fontsize(10)
+            text.set_fontweight('600')
+            text.set_color('#374151')
+        
+        for autotext in autotexts:
+            autotext.set_color('white')
+            autotext.set_fontsize(9)
+            autotext.set_fontweight('bold')
+        
+        ax.set_title('Question Type Distribution', 
+                    fontsize=16, fontweight='bold', color='#1e40af', pad=20)
+        
+        plt.tight_layout()
+        
+        # Save to BytesIO
+        img_buffer = BytesIO()
+        plt.savefig(img_buffer, format='png', dpi=180, bbox_inches='tight', 
+                   facecolor='white', edgecolor='none')
+        img_buffer.seek(0)
+        plt.close(fig)
+        
+        return img_buffer
+        
+    except Exception as e:
+        logger.error(f"Error generating doughnut chart: {str(e)}", exc_info=True)
+        return None
+
+
+def generate_summary_chart(category_counts, total_questions):
+    """
+    Generate a beautiful combined visualization with LOTS vs HOTS
+    Returns: BytesIO object containing PNG image
+    """
+    try:
+        # Calculate LOTS and HOTS
+        lots = category_counts.get('C1', 0) + category_counts.get('C2', 0)
+        hots = sum(category_counts.get(f'C{i}', 0) for i in range(3, 7))
+        
+        # Create figure with refined layout
+        fig = plt.figure(figsize=(10, 4.5))
+        fig.patch.set_facecolor('white')
+        
+        # Create grid spec for better control
+        gs = fig.add_gridspec(1, 2, width_ratios=[1, 1.2], wspace=0.3)
+        ax1 = fig.add_subplot(gs[0])
+        ax2 = fig.add_subplot(gs[1])
+        
+        # Left: LOTS vs HOTS - Beautiful pie chart
+        lots_hots_data = [lots, hots]
+        lots_hots_labels = ['Lower Order\nThinking\n(C1-C2)', 'Higher Order\nThinking\n(C3-C6)']
+        lots_hots_colors = ['#60a5fa', '#f97316']
+        
+        wedges, texts, autotexts = ax1.pie(
+            lots_hots_data,
+            labels=lots_hots_labels,
+            colors=lots_hots_colors,
+            autopct=lambda pct: f'{pct:.1f}%\n({int(pct*total_questions/100)})' if pct > 0 else '',
+            startangle=90,
+            wedgeprops=dict(edgecolor='white', linewidth=3, antialiased=True),
+            explode=[0.05, 0.05],
+            textprops={'fontsize': 10, 'fontweight': '600', 'color': '#374151'}
+        )
+        
+        for autotext in autotexts:
+            autotext.set_color('white')
+            autotext.set_fontsize(10)
+            autotext.set_fontweight('bold')
+        
+        ax1.set_title('Cognitive Complexity', fontsize=13, fontweight='bold', 
+                     color='#1e40af', pad=15)
+        
+        # Right: Category distribution - Elegant horizontal bars
+        categories = ['C1', 'C2', 'C3', 'C4', 'C5', 'C6']
+        category_names = ['Remember', 'Understand', 'Apply', 'Analyze', 'Evaluate', 'Create']
+        counts = [category_counts.get(cat, 0) for cat in categories]
+        colors_hex = ['#10b981', '#3b82f6', '#f59e0b', '#f97316', '#ef4444', '#a855f7']
+        
+        y_pos = np.arange(len(categories))
+        bars = ax2.barh(y_pos, counts, color=colors_hex, alpha=0.85, 
+                       edgecolor='white', linewidth=2, height=0.7)
+        
+        ax2.set_yticks(y_pos)
+        ax2.set_yticklabels([f'{cat}' for cat in categories], 
+                           fontsize=11, fontweight='bold', color='#374151')
+        ax2.set_xlabel('Number of Questions', fontsize=11, fontweight='bold', 
+                      color='#374151', labelpad=8)
+        ax2.set_title('Distribution by Level', fontsize=13, fontweight='bold', 
+                     color='#1e40af', pad=15)
+        
+        # Style the axis
+        ax2.spines['top'].set_visible(False)
+        ax2.spines['right'].set_visible(False)
+        ax2.spines['left'].set_color('#cbd5e1')
+        ax2.spines['bottom'].set_color('#cbd5e1')
+        ax2.tick_params(colors='#64748b', labelsize=10)
+        
+        # Add elegant grid
+        ax2.xaxis.grid(True, linestyle='--', alpha=0.25, color='#cbd5e1', linewidth=1)
+        ax2.set_axisbelow(True)
+        
+        # Add value labels with better positioning
+        for bar, count in zip(bars, counts):
+            width = bar.get_width()
+            percentage = (count / total_questions * 100) if total_questions > 0 else 0
+            if width > 0:
+                ax2.text(width + (max(counts) * 0.02), bar.get_y() + bar.get_height()/2.,
+                        f' {count} ({percentage:.1f}%)',
+                        ha='left', va='center', fontsize=9, fontweight='600',
+                        color='#374151')
+        
+        plt.tight_layout()
+        
+        # Save to BytesIO
+        img_buffer = BytesIO()
+        plt.savefig(img_buffer, format='png', dpi=180, bbox_inches='tight', 
+                   facecolor='white', edgecolor='none')
+        img_buffer.seek(0)
+        plt.close(fig)
+        
+        return img_buffer
+        
+    except Exception as e:
+        logger.error(f"Error generating summary chart: {str(e)}", exc_info=True)
+        return None
+
+
 def add_page_number(canvas_obj, doc):
     """Add page numbers to PDF"""
     page_num = canvas_obj.getPageNumber()
@@ -353,7 +620,7 @@ def add_page_number(canvas_obj, doc):
 @login_required
 @require_http_methods(["GET"])
 def download_report(request, pk):
-    """Generate and download PDF report with real data"""
+    """Generate and download PDF report with visualizations"""
     try:
         classification = get_object_or_404(
             ClassificationHistory, 
@@ -372,6 +639,11 @@ def download_report(request, pk):
         results = classification.classification_results
         questions_data = results.get('questions', [])
         category_counts = results.get('category_counts', {})
+        
+        # Generate charts
+        bar_chart_buffer = generate_bar_chart(category_counts, classification.total_questions)
+        doughnut_chart_buffer = generate_doughnut_chart(category_counts, classification.total_questions)
+        summary_chart_buffer = generate_summary_chart(category_counts, classification.total_questions)
         
         # Generate PDF
         buffer = BytesIO()
@@ -452,7 +724,42 @@ def download_report(request, pk):
         elements.append(info_table)
         elements.append(Spacer(1, 0.3*inch))
         
-        # Distribution
+        # === VISUAL ANALYSIS SECTION ===
+        elements.append(PageBreak())
+        elements.append(Paragraph("Visual Analysis", heading_style))
+        elements.append(Spacer(1, 0.15*inch))
+        
+        # Summary Chart (LOTS vs HOTS + Distribution) - Top of page
+        if summary_chart_buffer:
+            summary_img = Image(summary_chart_buffer, width=6.5*inch, height=2.925*inch)
+            elements.append(summary_img)
+            elements.append(Spacer(1, 0.25*inch))
+        
+        # Create a table layout for bar and doughnut charts side by side
+        chart_row = []
+        
+        # Bar Chart
+        if bar_chart_buffer:
+            bar_img = Image(bar_chart_buffer, width=3.2*inch, height=1.76*inch)
+            chart_row.append(bar_img)
+        
+        # Doughnut Chart
+        if doughnut_chart_buffer:
+            doughnut_img = Image(doughnut_chart_buffer, width=3.2*inch, height=1.76*inch)
+            chart_row.append(doughnut_img)
+        
+        # Add charts in a table for side-by-side layout
+        if chart_row:
+            chart_table = Table([chart_row], colWidths=[3.2*inch, 3.2*inch])
+            chart_table.setStyle(TableStyle([
+                ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+                ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ]))
+            elements.append(chart_table)
+            elements.append(Spacer(1, 0.2*inch))
+        
+        # === DISTRIBUTION TABLE ===
+        elements.append(PageBreak())
         elements.append(Paragraph("Classification Distribution", heading_style))
         
         total = classification.total_questions
@@ -494,7 +801,33 @@ def download_report(request, pk):
         elements.append(dist_table)
         elements.append(Spacer(1, 0.3*inch))
         
-        # Questions
+        # Statistical Summary
+        elements.append(Paragraph("Statistical Summary", subheading_style))
+        lots = category_counts.get('C1', 0) + category_counts.get('C2', 0)
+        hots = sum(category_counts.get(f'C{i}', 0) for i in range(3, 7))
+        
+        stats_data = [
+            ['Metric', 'Value'],
+            ['Lower Order Thinking (C1-C2)', f"{lots} questions ({(lots/total*100):.1f}%)" if total > 0 else "0"],
+            ['Higher Order Thinking (C3-C6)', f"{hots} questions ({(hots/total*100):.1f}%)" if total > 0 else "0"],
+            ['Most Common Category', max(category_counts, key=category_counts.get) if category_counts else "N/A"],
+        ]
+        
+        stats_table = Table(stats_data, colWidths=[3*inch, 3*inch])
+        stats_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#f3f4f6')),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, -1), 10),
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            ('TOPPADDING', (0, 0), (-1, -1), 8),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
+        ]))
+        
+        elements.append(stats_table)
+        elements.append(Spacer(1, 0.3*inch))
+        
+        # === QUESTIONS SECTION ===
         elements.append(PageBreak())
         elements.append(Paragraph("Detailed Question Classification", heading_style))
         elements.append(Spacer(1, 0.1*inch))
@@ -535,7 +868,7 @@ def download_report(request, pk):
             
             elements.append(KeepTogether([q_table, Spacer(1, 0.15*inch)]))
         
-        # Footer
+        # === FOOTER ===
         elements.append(PageBreak())
         elements.append(Spacer(1, 0.5*inch))
         
