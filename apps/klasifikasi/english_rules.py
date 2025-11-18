@@ -1,4 +1,4 @@
-# apps/klasifikasi/english_rules.py - COMPLETE WITH CONSISTENCY BOOSTING
+# apps/klasifikasi/english_rules.py 
 
 
 import re
