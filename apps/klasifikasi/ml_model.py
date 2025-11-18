@@ -1,8 +1,8 @@
-# apps/klasifikasi/ml_model.py - WITH INDONESIAN PATTERN ADJUSTMENT
+# apps/klasifikasi/ml_model.py - COMPLETE INTEGRATION WITH BOTH ADJUSTERS
 
 """
 RoBERTa Model Integration for Bloom's Taxonomy Classification
-Now includes Indonesian pattern-based adjustment
+Now includes BOTH Indonesian and English pattern-based adjustment
 """
 
 import torch
@@ -12,23 +12,32 @@ from deep_translator import GoogleTranslator
 import logging
 from pathlib import Path
 from django.conf import settings
+import re
 
 logger = logging.getLogger(__name__)
 
-# Import Indonesian adjuster if available
+# Import BOTH pattern adjusters
 try:
     from .indonesian_rules import IndonesianBloomAdjuster
-    ADJUSTER_AVAILABLE = True
+    INDONESIAN_ADJUSTER_AVAILABLE = True
     logger.info("Indonesian pattern adjuster loaded")
 except ImportError:
-    ADJUSTER_AVAILABLE = False
+    INDONESIAN_ADJUSTER_AVAILABLE = False
     logger.warning("Indonesian adjuster not available")
+
+try:
+    from .english_rules import EnglishBloomAdjuster
+    ENGLISH_ADJUSTER_AVAILABLE = True
+    logger.info("English pattern adjuster loaded")
+except ImportError:
+    ENGLISH_ADJUSTER_AVAILABLE = False
+    logger.warning("English adjuster not available")
 
 
 class BloomClassifier:
     """
     Wrapper class for RoBERTa-based Bloom's Taxonomy classifier
-    With Indonesian pattern-based adjustment
+    With BOTH Indonesian and English pattern-based adjustment
     """
     
     # Label mapping
@@ -45,13 +54,13 @@ class BloomClassifier:
     # Classification threshold
     THRESHOLD = 0.5
     
-    def __init__(self, model_path=None, use_indonesian_adjuster=True):
+    def __init__(self, model_path=None, use_pattern_adjusters=True):
         """
         Initialize the classifier
         
         Args:
             model_path: Path to the model directory (default: settings.MODEL_PATH)
-            use_indonesian_adjuster: Whether to use pattern-based adjustment
+            use_pattern_adjusters: Whether to use pattern-based adjustment
         """
         self.model_path = model_path or getattr(settings, 'BLOOM_MODEL_PATH', './roberta_multilabel')
         self.tokenizer = None
@@ -59,15 +68,26 @@ class BloomClassifier:
         self.translator = GoogleTranslator(source='id', target='en')
         self.is_loaded = False
         
+        # Pattern adjusters - BOTH languages
+        self.use_adjusters = use_pattern_adjusters
+        
         # Indonesian adjuster
-        self.use_adjuster = use_indonesian_adjuster and ADJUSTER_AVAILABLE
-        if self.use_adjuster:
-            self.adjuster = IndonesianBloomAdjuster()
-            logger.info("Indonesian pattern adjuster enabled")
+        if self.use_adjusters and INDONESIAN_ADJUSTER_AVAILABLE:
+            self.indonesian_adjuster = IndonesianBloomAdjuster()
+            logger.info("✓ Indonesian pattern adjuster enabled")
         else:
-            self.adjuster = None
-            if use_indonesian_adjuster:
+            self.indonesian_adjuster = None
+            if use_pattern_adjusters and not INDONESIAN_ADJUSTER_AVAILABLE:
                 logger.warning("Indonesian adjuster requested but not available")
+        
+        # English adjuster
+        if self.use_adjusters and ENGLISH_ADJUSTER_AVAILABLE:
+            self.english_adjuster = EnglishBloomAdjuster()
+            logger.info("✓ English pattern adjuster enabled")
+        else:
+            self.english_adjuster = None
+            if use_pattern_adjusters and not ENGLISH_ADJUSTER_AVAILABLE:
+                logger.warning("English adjuster requested but not available")
         
     def load_model(self):
         """Load the model and tokenizer"""
@@ -101,6 +121,54 @@ class BloomClassifier:
             self.is_loaded = False
             return False
     
+    def _detect_language(self, text):
+        """
+        Detect if text is Indonesian or English
+        
+        Returns: 'id' for Indonesian, 'en' for English
+        
+        Strategy:
+        - Check for Indonesian-specific words
+        - Check for English-specific words
+        - Use character/pattern analysis
+        """
+        text_lower = text.lower().strip()
+        
+        # Indonesian indicators (high-frequency words)
+        indonesian_words = [
+            'yang', 'adalah', 'dari', 'untuk', 'dengan', 'pada', 'dalam',
+            'atau', 'dan', 'ini', 'itu', 'akan', 'dapat', 'tersebut',
+            'sebagai', 'oleh', 'karena', 'apakah', 'dimaksud', 'merupakan',
+            'termasuk', 'pengertian', 'definisi', 'bagaimana', 'mengapa'
+        ]
+        
+        # English indicators (high-frequency words)
+        english_words = [
+            'the', 'is', 'are', 'was', 'were', 'what', 'which', 'who',
+            'how', 'why', 'when', 'where', 'this', 'that', 'these', 'those',
+            'would', 'should', 'could', 'define', 'explain', 'describe',
+            'analyze', 'evaluate', 'create'
+        ]
+        
+        # Count matches
+        indonesian_count = sum(1 for word in indonesian_words if f' {word} ' in f' {text_lower} ')
+        english_count = sum(1 for word in english_words if f' {word} ' in f' {text_lower} ')
+        
+        # Decision
+        if indonesian_count > english_count:
+            logger.debug(f"Detected Indonesian (ID:{indonesian_count} vs EN:{english_count})")
+            return 'id'
+        elif english_count > indonesian_count:
+            logger.debug(f"Detected English (EN:{english_count} vs ID:{indonesian_count})")
+            return 'en'
+        else:
+            # Fallback: check for specific patterns
+            # Indonesian often has repeated vowels, English has more consonant clusters
+            if re.search(r'[aiueo]{2,}', text_lower):
+                return 'id'
+            else:
+                return 'en'
+    
     def translate_text(self, text, src="id", dest="en"):
         """
         Translate text from Indonesian to English
@@ -128,12 +196,12 @@ class BloomClassifier:
     def predict_single(self, text, translate=True, original_text=None):
         """
         Predict Bloom's taxonomy category for a single question
-        WITH INDONESIAN PATTERN ADJUSTMENT
+        WITH INTELLIGENT PATTERN ADJUSTMENT (Indonesian OR English)
         
         Args:
             text: Question text (can be Indonesian or English)
             translate: Whether to translate from Indonesian to English
-            original_text: Original Indonesian text (for pattern matching)
+            original_text: Original text (for pattern matching)
             
         Returns:
             dict: {
@@ -141,7 +209,9 @@ class BloomClassifier:
                 'category_name': 'Remember/Understand/etc',
                 'confidence': float (0-1),
                 'all_probabilities': dict of all category probabilities,
-                'was_adjusted': bool (whether Indonesian patterns adjusted the result)
+                'was_adjusted': bool (whether patterns adjusted the result),
+                'detected_language': 'id' or 'en',
+                'adjuster_used': 'indonesian', 'english', or None
             }
         """
         if not self.is_loaded:
@@ -153,8 +223,12 @@ class BloomClassifier:
             if original_text is None:
                 original_text = text
             
+            # Detect language BEFORE translation
+            detected_lang = self._detect_language(original_text)
+            logger.info(f"Language detected: {detected_lang.upper()}")
+            
             # Translate if needed
-            if translate:
+            if translate and detected_lang == 'id':
                 text = self.translate_text(text, src="id", dest="en")
             
             # Tokenize
@@ -190,36 +264,63 @@ class BloomClassifier:
                 'category_name': max_label,
                 'confidence': confidence,
                 'all_probabilities': all_probs,
-                'translated_text': text if translate else None
+                'translated_text': text if translate else None,
+                'detected_language': detected_lang
             }
             
-            # Apply Indonesian pattern adjustment if enabled
-            if self.use_adjuster and translate:
-                adjusted_result = self.adjuster.adjust_classification(
-                    original_text, 
-                    ml_result
-                )
+            # === APPLY APPROPRIATE PATTERN ADJUSTER ===
+            adjuster_used = None
+            
+            if self.use_adjusters:
+                # Use Indonesian adjuster for Indonesian text
+                if detected_lang == 'id' and self.indonesian_adjuster:
+                    adjusted_result = self.indonesian_adjuster.adjust_classification(
+                        original_text, 
+                        ml_result
+                    )
+                    adjuster_used = 'indonesian'
+                    logger.info(f"Applied Indonesian pattern adjuster")
+                
+                # Use English adjuster for English text
+                elif detected_lang == 'en' and self.english_adjuster:
+                    adjusted_result = self.english_adjuster.adjust_classification(
+                        original_text,
+                        ml_result
+                    )
+                    adjuster_used = 'english'
+                    logger.info(f"Applied English pattern adjuster")
+                
+                else:
+                    # No adjuster available for this language
+                    adjusted_result = ml_result
+                    logger.info(f"No adjuster available for {detected_lang}")
                 
                 # Check if adjustment was made
-                was_adjusted = (
-                    adjusted_result['category'] != ml_result['category'] or
-                    abs(adjusted_result['confidence'] - ml_result['confidence']) > 0.05
-                )
-                
-                adjusted_result['was_adjusted'] = was_adjusted
-                adjusted_result['ml_category'] = ml_result['category']
-                adjusted_result['ml_confidence'] = ml_result['confidence']
-                
-                if was_adjusted:
-                    logger.info(
-                        f"Adjusted: {ml_result['category']}({ml_result['confidence']:.2f}) -> "
-                        f"{adjusted_result['category']}({adjusted_result['confidence']:.2f})"
+                if adjuster_used:
+                    was_adjusted = (
+                        adjusted_result.get('category') != ml_result['category'] or
+                        abs(adjusted_result.get('confidence', 0) - ml_result['confidence']) > 0.05
                     )
-                
-                return adjusted_result
-            else:
-                ml_result['was_adjusted'] = False
-                return ml_result
+                    
+                    adjusted_result['was_adjusted'] = was_adjusted
+                    adjusted_result['adjuster_used'] = adjuster_used
+                    adjusted_result['detected_language'] = detected_lang
+                    adjusted_result['ml_category'] = ml_result['category']
+                    adjusted_result['ml_confidence'] = ml_result['confidence']
+                    
+                    if was_adjusted:
+                        logger.info(
+                            f"✓ Adjusted ({adjuster_used}): "
+                            f"{ml_result['category']}({ml_result['confidence']:.2f}) -> "
+                            f"{adjusted_result['category']}({adjusted_result['confidence']:.2f})"
+                        )
+                    
+                    return adjusted_result
+            
+            # No adjustment applied
+            ml_result['was_adjusted'] = False
+            ml_result['adjuster_used'] = None
+            return ml_result
             
         except Exception as e:
             logger.error(f"Prediction error: {str(e)}", exc_info=True)
@@ -228,7 +329,7 @@ class BloomClassifier:
     def predict_batch(self, texts, translate=True, batch_size=8):
         """
         Predict categories for multiple questions
-        WITH INDONESIAN PATTERN ADJUSTMENT
+        WITH INTELLIGENT PATTERN ADJUSTMENT (Indonesian OR English)
         
         Args:
             texts: List of question texts
@@ -245,19 +346,24 @@ class BloomClassifier:
         results = []
         
         try:
-            # Store originals for pattern matching
+            # Store originals and detect languages
             original_texts = texts.copy()
+            detected_languages = [self._detect_language(text) for text in texts]
             
-            # Translate all texts if needed
+            # Translate texts that need it
             if translate:
-                logger.info(f"Translating {len(texts)} texts...")
+                logger.info(f"Processing {len(texts)} texts...")
                 translated_texts = []
-                for text in texts:
-                    try:
-                        translated = self.translate_text(text, src="id", dest="en")
-                        translated_texts.append(translated)
-                    except Exception as e:
-                        logger.warning(f"Translation failed for text, using original: {e}")
+                for text, lang in zip(texts, detected_languages):
+                    if lang == 'id':
+                        try:
+                            translated = self.translate_text(text, src="id", dest="en")
+                            translated_texts.append(translated)
+                        except Exception as e:
+                            logger.warning(f"Translation failed, using original: {e}")
+                            translated_texts.append(text)
+                    else:
+                        # Already English, no translation needed
                         translated_texts.append(text)
             else:
                 translated_texts = texts
@@ -266,6 +372,7 @@ class BloomClassifier:
             for i in range(0, len(translated_texts), batch_size):
                 batch = translated_texts[i:i + batch_size]
                 batch_originals = original_texts[i:i + batch_size]
+                batch_languages = detected_languages[i:i + batch_size]
                 
                 # Tokenize batch
                 inputs = self.tokenizer(
@@ -282,7 +389,7 @@ class BloomClassifier:
                     probs_batch = sigmoid(outputs.logits).numpy()
                 
                 # Process each prediction in batch
-                for j, (probs, original) in enumerate(zip(probs_batch, batch_originals)):
+                for j, (probs, original, lang) in enumerate(zip(probs_batch, batch_originals, batch_languages)):
                     all_probs = {}
                     for label, prob in zip(self.LABEL_COLUMNS, probs):
                         all_probs[label] = {
@@ -302,43 +409,72 @@ class BloomClassifier:
                         'confidence': confidence,
                         'all_probabilities': all_probs,
                         'translated_text': batch[j] if translate else None,
-                        'original_text': original
+                        'original_text': original,
+                        'detected_language': lang
                     }
                     
-                    # Apply Indonesian pattern adjustment if enabled
-                    if self.use_adjuster and translate:
-                        adjusted_result = self.adjuster.adjust_classification(
-                            original,
-                            ml_result
-                        )
+                    # === APPLY APPROPRIATE PATTERN ADJUSTER ===
+                    adjuster_used = None
+                    
+                    if self.use_adjusters:
+                        # Indonesian adjuster
+                        if lang == 'id' and self.indonesian_adjuster:
+                            adjusted_result = self.indonesian_adjuster.adjust_classification(
+                                original,
+                                ml_result
+                            )
+                            adjuster_used = 'indonesian'
+                        
+                        # English adjuster
+                        elif lang == 'en' and self.english_adjuster:
+                            adjusted_result = self.english_adjuster.adjust_classification(
+                                original,
+                                ml_result
+                            )
+                            adjuster_used = 'english'
+                        
+                        else:
+                            adjusted_result = ml_result
                         
                         # Check if adjustment was made
-                        was_adjusted = (
-                            adjusted_result['category'] != ml_result['category'] or
-                            abs(adjusted_result['confidence'] - ml_result['confidence']) > 0.05
-                        )
-                        
-                        adjusted_result['was_adjusted'] = was_adjusted
-                        adjusted_result['ml_category'] = ml_result['category']
-                        adjusted_result['ml_confidence'] = ml_result['confidence']
-                        adjusted_result['original_text'] = original
-                        
-                        results.append(adjusted_result)
+                        if adjuster_used:
+                            was_adjusted = (
+                                adjusted_result.get('category') != ml_result['category'] or
+                                abs(adjusted_result.get('confidence', 0) - ml_result['confidence']) > 0.05
+                            )
+                            
+                            adjusted_result['was_adjusted'] = was_adjusted
+                            adjusted_result['adjuster_used'] = adjuster_used
+                            adjusted_result['detected_language'] = lang
+                            adjusted_result['ml_category'] = ml_result['category']
+                            adjusted_result['ml_confidence'] = ml_result['confidence']
+                            adjusted_result['original_text'] = original
+                            
+                            results.append(adjusted_result)
+                        else:
+                            ml_result['was_adjusted'] = False
+                            ml_result['adjuster_used'] = None
+                            results.append(ml_result)
                     else:
                         ml_result['was_adjusted'] = False
+                        ml_result['adjuster_used'] = None
                         results.append(ml_result)
                 
                 logger.info(f"Processed batch {i//batch_size + 1}/{(len(texts)-1)//batch_size + 1}")
             
             # Log adjustment statistics
-            if self.use_adjuster:
+            if self.use_adjusters:
                 adjusted_count = sum(1 for r in results if r.get('was_adjusted', False))
+                indonesian_count = sum(1 for r in results if r.get('adjuster_used') == 'indonesian')
+                english_count = sum(1 for r in results if r.get('adjuster_used') == 'english')
+                
                 logger.info(
-                    f"Batch prediction completed: {len(results)} questions classified, "
-                    f"{adjusted_count} adjusted by Indonesian patterns"
+                    f"Batch completed: {len(results)} questions | "
+                    f"{adjusted_count} adjusted "
+                    f"(ID:{indonesian_count}, EN:{english_count})"
                 )
             else:
-                logger.info(f"Batch prediction completed: {len(results)} questions classified")
+                logger.info(f"Batch completed: {len(results)} questions (no adjusters)")
             
             return results
             
@@ -358,26 +494,29 @@ class BloomClassifier:
             "threshold": self.THRESHOLD,
             "model_type": "RoBERTa",
             "max_length": 512,
-            "indonesian_adjuster": self.use_adjuster
+            "adjusters": {
+                "indonesian": self.indonesian_adjuster is not None,
+                "english": self.english_adjuster is not None
+            }
         }
 
 
 # Global classifier instance (singleton pattern)
 _classifier_instance = None
 
-def get_classifier(use_indonesian_adjuster=True):
+def get_classifier(use_pattern_adjusters=True):
     """
     Get or create the global classifier instance
     
     Args:
-        use_indonesian_adjuster: Whether to enable Indonesian pattern adjustment
+        use_pattern_adjusters: Whether to enable pattern adjustment
     
     Returns:
         BloomClassifier instance
     """
     global _classifier_instance
     if _classifier_instance is None:
-        _classifier_instance = BloomClassifier(use_indonesian_adjuster=use_indonesian_adjuster)
+        _classifier_instance = BloomClassifier(use_pattern_adjusters=use_pattern_adjusters)
         _classifier_instance.load_model()
     return _classifier_instance
 
