@@ -1,5 +1,5 @@
 /**
- * Enhanced Classification Results JavaScript - Complete with All Features
+ * Enhanced Classification Results JavaScript - Complete with All Features + Dark Mode
  * Handles navigation, classification updates, charts, mobile interactions, and animations
  */
 
@@ -49,7 +49,8 @@
       distribution: null,
       type: null
     },
-    isProcessing: false
+    isProcessing: false,
+    isDarkMode: false
   };
 
   // ==================== DOM ELEMENTS ====================
@@ -66,6 +67,7 @@
 
     state.totalQuestions = elements.questions.length;
     state.classificationId = getClassificationId();
+    state.isDarkMode = document.documentElement.classList.contains('dark');
 
     setupEventListeners();
     initializeCharts();
@@ -74,6 +76,7 @@
     setActiveQuestion(0);
     setupResponsiveFeatures();
     addSmoothScrolling();
+    setupDarkModeListener();
 
     console.log('✓ Classification page initialized with', state.totalQuestions, 'questions');
   }
@@ -110,8 +113,37 @@
       toastContainer: document.getElementById('toast-container'),
       loadingOverlay: document.getElementById('loading-overlay'),
       downloadBtn: document.getElementById('download-btn'),
-      exportBtn: document.getElementById('export-btn')
+      exportBtn: document.getElementById('export-btn'),
+      darkModeToggle: document.getElementById('dark-mode-toggle')
     };
+  }
+
+  // ==================== DARK MODE ====================
+  function setupDarkModeListener() {
+    if (elements.darkModeToggle) {
+      elements.darkModeToggle.addEventListener('click', () => {
+        setTimeout(() => {
+          state.isDarkMode = document.documentElement.classList.contains('dark');
+          updateChartsForDarkMode();
+        }, 100);
+      });
+    }
+  }
+
+  function updateChartsForDarkMode() {
+    const textColor = state.isDarkMode ? '#e5e7eb' : '#374151';
+    const gridColor = state.isDarkMode ? 'rgba(75, 85, 99, 0.3)' : 'rgba(0, 0, 0, 0.05)';
+
+    if (state.charts.distribution) {
+      state.charts.distribution.options.scales.y.grid.color = gridColor;
+      state.charts.distribution.options.scales.y.ticks.color = textColor;
+      state.charts.distribution.options.scales.x.ticks.color = textColor;
+      state.charts.distribution.update('none');
+    }
+
+    if (state.charts.type) {
+      state.charts.type.update('none');
+    }
   }
 
   // ==================== EVENT LISTENERS ====================
@@ -244,11 +276,11 @@
     // Update navigation buttons with animation
     elements.navItems.forEach((btn, i) => {
       if (i === index) {
-        btn.classList.remove('bg-blue-50', 'text-blue-700');
+        btn.classList.remove('bg-blue-50', 'text-blue-700', 'dark:bg-gray-700', 'dark:text-blue-300');
         btn.classList.add('bg-blue-600', 'text-white', 'active', 'ring-2', 'ring-blue-300', 'scale-105');
       } else {
         btn.classList.remove('bg-blue-600', 'text-white', 'active', 'ring-2', 'ring-blue-300', 'scale-105');
-        btn.classList.add('bg-blue-50', 'text-blue-700');
+        btn.classList.add('bg-blue-50', 'text-blue-700', 'dark:bg-gray-700', 'dark:text-blue-300');
       }
     });
 
@@ -317,11 +349,11 @@
       
       elements.navItems.forEach((btn, i) => {
         if (i === currentIndex) {
-          btn.classList.remove('bg-blue-50', 'text-blue-700');
+          btn.classList.remove('bg-blue-50', 'text-blue-700', 'dark:bg-gray-700', 'dark:text-blue-300');
           btn.classList.add('bg-blue-600', 'text-white', 'active');
         } else {
           btn.classList.remove('bg-blue-600', 'text-white', 'active');
-          btn.classList.add('bg-blue-50', 'text-blue-700');
+          btn.classList.add('bg-blue-50', 'text-blue-700', 'dark:bg-gray-700', 'dark:text-blue-300');
         }
       });
 
@@ -509,6 +541,9 @@
   function initializeCharts() {
     if (!elements.distributionCanvas || !elements.typeCanvas) return;
 
+    const textColor = state.isDarkMode ? '#e5e7eb' : '#374151';
+    const gridColor = state.isDarkMode ? 'rgba(75, 85, 99, 0.3)' : 'rgba(0, 0, 0, 0.05)';
+
     // Bar Chart
     const ctxBar = elements.distributionCanvas.getContext('2d');
     state.charts.distribution = new Chart(ctxBar, {
@@ -531,10 +566,12 @@
         plugins: {
           legend: { display: false },
           tooltip: {
-            backgroundColor: 'rgba(0, 0, 0, 0.9)',
+            backgroundColor: state.isDarkMode ? 'rgba(31, 41, 55, 0.95)' : 'rgba(0, 0, 0, 0.9)',
             padding: 12,
             titleFont: { size: 14, weight: 'bold' },
             bodyFont: { size: 13 },
+            borderColor: state.isDarkMode ? '#4b5563' : 'rgba(0, 0, 0, 0.1)',
+            borderWidth: 1,
             callbacks: {
               title: (ctx) => ctx[0].label + ' - ' + getCategoryName(ctx[0].label),
               label: (ctx) => 'Questions: ' + ctx.parsed.y
@@ -544,12 +581,18 @@
         scales: {
           y: { 
             beginAtZero: true, 
-            ticks: { stepSize: 1 },
-            grid: { color: 'rgba(0, 0, 0, 0.05)' }
+            ticks: { 
+              stepSize: 1,
+              color: textColor
+            },
+            grid: { color: gridColor }
           },
           x: { 
             grid: { display: false },
-            ticks: { font: { weight: 'bold' } }
+            ticks: { 
+              font: { weight: 'bold' },
+              color: textColor
+            }
           }
         },
         animation: {
@@ -559,8 +602,15 @@
       }
     });
 
-    // Doughnut Chart
+    // Doughnut Chart with Percentages
     const ctxDoughnut = elements.typeCanvas.getContext('2d');
+    
+    // Check if ChartDataLabels plugin is available
+    const doughnutPlugins = [];
+    if (typeof ChartDataLabels !== 'undefined') {
+      doughnutPlugins.push(ChartDataLabels);
+    }
+    
     state.charts.type = new Chart(ctxDoughnut, {
       type: 'doughnut',
       data: {
@@ -568,7 +618,7 @@
         datasets: [{
           data: [0, 0, 0, 0, 0, 0],
           backgroundColor: Object.values(CATEGORY_COLORS).map(c => c.bg),
-          borderColor: '#ffffff',
+          borderColor: state.isDarkMode ? '#1f2937' : '#ffffff',
           borderWidth: 3,
           hoverOffset: 12,
           hoverBorderWidth: 4
@@ -581,10 +631,12 @@
         plugins: {
           legend: { display: false },
           tooltip: {
-            backgroundColor: 'rgba(0, 0, 0, 0.9)',
+            backgroundColor: state.isDarkMode ? 'rgba(31, 41, 55, 0.95)' : 'rgba(0, 0, 0, 0.9)',
             padding: 12,
             titleFont: { size: 14, weight: 'bold' },
             bodyFont: { size: 13 },
+            borderColor: state.isDarkMode ? '#4b5563' : 'rgba(0, 0, 0, 0.1)',
+            borderWidth: 1,
             callbacks: {
               title: (ctx) => ctx[0].label + ' - ' + getCategoryName(ctx[0].label),
               label: (ctx) => {
@@ -593,13 +645,26 @@
                 return ['Questions: ' + ctx.parsed, 'Percentage: ' + pct + '%'];
               }
             }
-          }
+          },
+          datalabels: typeof ChartDataLabels !== 'undefined' ? {
+            color: '#ffffff',
+            font: {
+              weight: 'bold',
+              size: 14
+            },
+            formatter: function(value, context) {
+              const total = context.dataset.data.reduce((a, b) => a + b, 0);
+              const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
+              return percentage > 3 ? percentage + '%' : ''; // Only show if > 3%
+            }
+          } : undefined
         },
         animation: {
           duration: 1000,
           easing: 'easeInOutQuart'
         }
-      }
+      },
+      plugins: doughnutPlugins
     });
   }
 
@@ -618,6 +683,8 @@
       state.charts.type.data.datasets[0].data = [
         counts.C1, counts.C2, counts.C3, counts.C4, counts.C5, counts.C6
       ];
+      // Update border color based on dark mode
+      state.charts.type.data.datasets[0].borderColor = state.isDarkMode ? '#1f2937' : '#ffffff';
       state.charts.type.update('active');
     }
 
@@ -633,15 +700,12 @@
       const pct = total > 0 ? ((count / total) * 100).toFixed(1) : 0;
       
       return `
-        <div class="flex items-center justify-between py-2 px-3 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer">
-          <div class="flex items-center gap-3">
-            <div class="w-4 h-4 rounded-full shadow-sm" style="background-color: ${CATEGORY_COLORS[cat].bg}"></div>
-            <span class="text-sm font-medium text-gray-700">${cat} - ${getCategoryName(cat)}</span>
+        <div class="legend-item">
+          <div class="flex items-center">
+            <div class="legend-color" style="background-color: ${CATEGORY_COLORS[cat].bg};"></div>
+            <span class="legend-label">${cat} - ${getCategoryName(cat)}</span>
           </div>
-          <div class="text-right">
-            <div class="text-sm font-bold text-gray-800">${count}</div>
-            <div class="text-xs text-gray-500">${pct}%</div>
-          </div>
+          <span class="legend-percentage">${pct}%</span>
         </div>
       `;
     }).join('');
@@ -717,12 +781,12 @@
     const tab = e.currentTarget.getAttribute('data-tab');
 
     elements.tabLinks.forEach(link => {
-      link.classList.remove('text-blue-600', 'font-semibold', 'bg-blue-50', 'active');
-      link.classList.add('text-gray-600');
+      link.classList.remove('text-blue-600', 'dark:text-blue-400', 'font-semibold', 'bg-blue-50', 'dark:bg-gray-700', 'active');
+      link.classList.add('text-gray-600', 'dark:text-gray-300');
     });
 
-    e.currentTarget.classList.remove('text-gray-600');
-    e.currentTarget.classList.add('text-blue-600', 'font-semibold', 'bg-blue-50', 'active');
+    e.currentTarget.classList.remove('text-gray-600', 'dark:text-gray-300');
+    e.currentTarget.classList.add('text-blue-600', 'dark:text-blue-400', 'font-semibold', 'bg-blue-50', 'dark:bg-gray-700', 'active');
 
     if (tab === 'detail') {
       elements.tabDetail?.classList.remove('hidden');
