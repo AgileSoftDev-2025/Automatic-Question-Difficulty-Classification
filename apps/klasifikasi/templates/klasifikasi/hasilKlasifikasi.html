@@ -161,12 +161,22 @@
         .animate-pulse {
             animation: pulse 1s cubic-bezier(0.4, 0, 0.6, 1) infinite;
         }
+
+        .navbar-sticky {
+        position: sticky;
+        top: 0;
+        z-index: 1000;
+        transition: box-shadow 0.3s ease;
+    }
+    .navbar-scrolled {
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    }
     </style>
 </head>
 
 <body class="bg-gradient-to-b from-blue-50 to-gray-100 min-h-screen">
     <!-- Navigation Bar -->
-    <nav class="bg-white shadow-md sticky top-0 z-50">
+    <nav class="navbar-sticky bg-white shadow-md">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex justify-between h-16 items-center">
                 
