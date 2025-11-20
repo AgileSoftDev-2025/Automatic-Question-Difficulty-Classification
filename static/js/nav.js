@@ -1,6 +1,6 @@
 /**
  * Navigation JavaScript
- * Handles mobile menu, profile dropdown, and profile page initialization
+ * Handles mobile menu, profile dropdown, sticky navbar, and profile page initialization
  */
 
 // Use IIFE to avoid global scope pollution
@@ -17,6 +17,7 @@
     function init() {
         initializeMobileMenu();
         initializeProfileDropdown();
+        initializeStickyNavbar();
         
         // Initialize profile page functions if on profile page
         if (document.getElementById('profile-pic-form')) {
@@ -25,6 +26,22 @@
         
         // Auto-hide alert messages
         initializeAlertMessages();
+    }
+
+    /**
+     * Sticky Navbar Scroll Effect
+     */
+    function initializeStickyNavbar() {
+        const navbar = document.querySelector('.navbar-sticky');
+        if (!navbar) return;
+        
+        window.addEventListener('scroll', function() {
+            if (window.scrollY > 10) {
+                navbar.classList.add('navbar-scrolled');
+            } else {
+                navbar.classList.remove('navbar-scrolled');
+            }
+        });
     }
 
     /**
