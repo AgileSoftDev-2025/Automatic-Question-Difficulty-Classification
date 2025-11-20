@@ -18,6 +18,7 @@
         initializeMobileMenu();
         initializeProfileDropdown();
         initializeStickyNavbar();
+        initializeDarkMode();
         
         // Initialize profile page functions if on profile page
         if (document.getElementById('profile-pic-form')) {
@@ -43,6 +44,42 @@
             }
         });
     }
+
+     /**
+ * Dark Mode Toggle
+ */
+function initializeDarkMode() {
+    const darkModeToggle = document.getElementById('dark-mode-toggle');
+    if (!darkModeToggle) return;
+    
+    // Check for saved theme preference or default to light mode
+    const currentTheme = localStorage.getItem('theme') || 'light';
+    
+    // Apply theme on page load
+    if (currentTheme === 'dark') {
+        document.documentElement.classList.add('dark');
+        updateDarkModeIcon(true);
+    }
+    
+    // Toggle dark mode
+    darkModeToggle.addEventListener('click', function() {
+        document.documentElement.classList.toggle('dark');
+        
+        const isDark = document.documentElement.classList.contains('dark');
+        localStorage.setItem('theme', isDark ? 'dark' : 'light');
+        updateDarkModeIcon(isDark);
+    });
+}
+
+function updateDarkModeIcon(isDark) {
+    const toggle = document.getElementById('dark-mode-toggle');
+    if (!toggle) return;
+    
+    const icon = toggle.querySelector('i');
+    if (icon) {
+        icon.className = isDark ? 'bi bi-sun-fill' : 'bi bi-moon-fill';
+    }
+}
 
     /**
      * Mobile Menu Toggle
@@ -498,4 +535,5 @@
         `;
         document.head.appendChild(style);
     }
+   
 })();
