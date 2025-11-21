@@ -1,4 +1,4 @@
-# apps/klasifikasi/indonesian_rules.py - V6: COMPREHENSIVE ACCURACY IMPROVEMENT
+# apps/klasifikasi/indonesian_rules.py - V7: ANTI-HALLUCINATION FIX
 
 import re
 import logging
@@ -8,96 +8,127 @@ logger = logging.getLogger(__name__)
 
 class IndonesianBloomAdjuster:
     """
-    V6: Comprehensive improvements based on classification report analysis
+    V7: Critical fix for "High-Level Hallucination" - system over-predicting C5/C6
     
-    Key improvements:
-    1. Better C6 blocking - many C6 are actually C1/C2 definitions
-    2. Improved "sistem yang..." pattern detection
-    3. Better handling of "adalah" declarative statements
-    4. Fixed low-confidence misclassifications
-    5. Added patterns for common Indonesian exam question structures
+    Root causes fixed:
+    1. "Disebut" questions always misclassified as C3/C6
+    2. System definitions ("Sistem yang...") triggered C6 instead of C1
+    3. Long technical descriptions confused as higher-order thinking
+    4. Keywords like "formulir", "laporan" auto-triggered C6
+    5. "Cara" (way/method) triggered C3/C6 for definitional questions
     """
     
-    # ========== C1 (REMEMBER) - EXPANDED PATTERNS ==========
-    FORCE_C1_PATTERNS = [
-        # === STRONGEST: Pure definition patterns ===
-        r'\bpengertian\s+(?:yang\s+)?(?:paling\s+)?(?:umum|utama|inti|dari|tentang)',
-        r'\bdefinisi\s+(?:dari|tentang|yang)',
-        r'\barti\s+(?:dari\s+)?[\w\s]+\s+(?:adalah|merupakan|ialah)',
-        r'\bapakah\s+(?:yang\s+)?dimaksud\s+(?:dengan|dari)',
-        r'\bapa\s+(?:yang\s+)?dimaksud\s+(?:dengan|dari)\s+[\w\s]+\??$',
+    # ========== ULTRA-PRIORITY: C1 DEFINITION BLOCKERS ==========
+    # These patterns MUST force C1, regardless of other signals
+    ABSOLUTE_C1_BLOCKERS = [
+        # "Disebut" patterns - ALWAYS C1 (Fixes #48-16, #48-39, #94-21, #94-24)
+        r'\bdisebut\s+(?:sebagai\s+)?(?:apa|apakah)\s*\??$',
+        r'\b(?:apa|apakah)\s+yang\s+disebut\b',
+        r'\b[\w\s]+\s+disebut\s*\??$',
+        r'\bdinamakan\s+(?:apa|apakah)',
+        r'\bdikenal\s+sebagai\s+(?:apa|apakah)',
+        r'\bapa\s+(?:nama|istilah|sebutan)\s+(?:dari|untuk)',
         
-        # === "Yang dimaksud" with "adalah" pattern ===
-        r'\byang\s+dimaksud\s+(?:dengan\s+)?[\w\s]{3,40}\s+(?:adalah|ialah|merupakan)',
-        r'\b(?:adalah|merupakan)\s+yang\s+dimaksud\s+(?:dengan|dari)',
-
-        # === Category/classification questions ===
+        # "Adalah" definition patterns - ALWAYS C1
+        r'\b[\w\s]+\s+adalah\s*\.?\s*$',
+        r'\byang\s+dimaksud\s+(?:dengan\s+)?[\w\s]+\s+adalah\s*$',
+        r'\b[\w\s]+\s+merupakan\s*\.?\s*$',
+        r'\b[\w\s]+\s+ialah\s*\.?\s*$',
+        
+        # Fill-in-blank/completion (Fixes #93-42)
+        r'\.{3,}',  # "..." ellipsis
+        r'\b(?:adalah|merupakan)\s+\.{3,}',
+        r'\.{3,}\s+(?:adalah|merupakan)',
+        
+        # "Termasuk" (includes/belongs to) - ALWAYS C1 (Fixes #93-9)
+        r'\btermasuk\s+(?:dalam\s+)?(?:kategori|jenis|golongan|tipe)',
+        r'\bkategori\s+[\w\s]+\s+termasuk',
+        
+        # System/form definitions that look like C6 (Fixes #48-16, #48-39, #93-40)
+        r'\bsistem\s+(?:informasi\s+)?(?:yang\s+)?(?:dirancang|digunakan|dibuat)\s+[\w\s]+\s+disebut',
+        r'\bformulir\s+(?:yang\s+)?(?:digunakan|dibuat)\s+[\w\s]+\s+disebut',
+        r'\blaporan\s+(?:yang\s+)?(?:digunakan|dibuat)\s+[\w\s]+\s+disebut',
+        
+        # "Berisi informasi tentang" (Fixes #93-40)
+        r'\bberisi\s+informasi\s+(?:tentang|mengenai)',
+        r'\bharus\s+berisi\s+informasi',
+        
+        # Technical terminology identification (Fixes #94-24)
+        r'\bstruktur\s+[\w\s]+\s+disebut',
+        r'\bfungsi\s+[\w\s]+\s+disebut',
+        r'\bperangkat\s+[\w\s]+\s+disebut',
+        
+        # "Tahap/langkah pertama" (sequence recall) (Fixes #48-30)
+        r'\btahap\s+(?:pertama|awal|terakhir)',
+        r'\blangkah\s+(?:pertama|awal|terakhir)',
+        r'\bkegiatan\s+(?:pertama|awal)',
+        
+        # "Yaitu berupa" (namely/that is) (Fixes #94-48)
+        r'\byaitu\s+berupa',
+        r'\byaitu\s+[\w\s]+$',
+        r'\bberupa\s+[\w\s]+$',
+    ]
+    
+    # ========== C1 (REMEMBER) - COMPREHENSIVE PATTERNS ==========
+    FORCE_C1_PATTERNS = [
+        # === Core definition patterns ===
+        r'\bpengertian\s+(?:yang\s+)?(?:paling\s+)?(?:umum|utama|dari|tentang)',
+        r'\bdefinisi\s+(?:dari|tentang|yang)',
+        r'\barti\s+(?:dari\s+)?[\w\s]+\s+(?:adalah|merupakan)',
+        r'\bapakah\s+(?:yang\s+)?dimaksud\s+(?:dengan|dari)',
+        r'\bapa\s+(?:yang\s+)?dimaksud\s+(?:dengan|dari)',
+        
+        # === "Yang dimaksud" patterns ===
+        r'\byang\s+dimaksud\s+(?:dengan\s+)?[\w\s]{3,40}\s+(?:adalah|merupakan)',
+        
+        # === Category/classification ===
         r'\bkategori\s+.*?\b(?:analisis|evaluasi)',
-        r'\btermasuk\s+(?:dalam\s+)?(?:kategori|jenis|subsistem|golongan|komponen|bentuk|klasifikasi)',
-        r'\bsalah\s+satu\s+(?:komponen|faktor|bentuk|unsur|teknik|metode|upaya|elemen|jenis|contoh)',
-        r'\bkategori\s+(?:analisis|evaluasi)\s+[\w\s]+\s+(?:adalah|merupakan)',
+        r'\bsalah\s+satu\s+(?:komponen|faktor|bentuk|unsur|teknik|metode)',
         r'\bmerupakan\s+(?:salah\s+satu|bagian\s+dari)',
         
-        # === "disebut sebagai" patterns (fixed) ===
-        r'\bdisebut\s+sebagai\s+(?!apa|apakah)\w+',
-        r'\b(?:disebut|dinamakan|dikenal)\s+(?:apa|apakah|sebagai\s+apa)\s*\??$',
-        r'\b(?:disebut|dinamakan|dikenal)\s+sebagai\s+(?:apa|apakah)',
-        r'\bapa\s+(?:nama|istilah|sebutan)\s+(?:dari|untuk|bagi)',
-        
-        # === Naming/identification patterns ===
-        r'\bformulir\s+[\w\s]+\s+disebut\b',
-        r'\bpengujian\s+[\w\s]+\s+disebut\s+pengujian\b',
-        r'\bsistem\s+[\w\s]+\s+disebut\b',
-        r'\bsistem\s+informasi\s+(?:yang\s+)?(?:dirancang|digunakan|mendukung)\s+untuk',
-        
-        # === Sequence/order questions ===
-        r'\btahap\s+(?:pertama|awal|akhir|terakhir|pertama\s+kali)',
-        r'\bkegiatan\s+(?:pertama|awal|terakhir|yang\s+pertama)',
-        r'\blangkah\s+(?:pertama|awal|terakhir)',
+        # === Naming patterns ===
+        r'\bsistem\s+informasi\s+(?:yang\s+)?mendukung',
+        r'\bpengujian\s+[\w\s]+\s+disebut\s+pengujian',
         
         # === Properties/characteristics - asking WHAT ===
         r'\bsifat\s+(?:utama|dari|yang|khas)',
-        r'\bkondisi\s+(?:yang\s+)?(?:ideal|terbaik|optimum)',
-        r'\bkomponen\s+(?:penentu|utama|yang)',
+        r'\bkondisi\s+(?:yang\s+)?(?:ideal|terbaik)',
         r'\bkarakteristik\s+(?:utama|dari|produk)',
         
-        # === Cost/type questions ===
-        r'\bbiaya\s+langsung\s+.*?(?:dikeluarkan|adalah)',
-        r'\bjenis\s+(?:biaya|sistem|data)',
+        # === NEW: "Cara" when asking for definition (Fixes #94-48) ===
+        r'\bcara\s+[\w\s]+\s+yaitu\s+berupa',
+        r'\bcara\s+[\w\s]+\s+adalah',
+        r'\bmetode\s+[\w\s]+\s+yaitu',
         
-        # === Structural/component questions ===
-        r'\bstruktur\s+(?:basis\s+data|dasar|utama)',
-        r'\bkomponen\s+utama\s+(?:CPU|komputer|sistem)',
-        r'\bperangkat\s+(?:keras|lunak)\s+(?:yang\s+)?(?:termasuk|adalah)',
-        
-        # === NEW: System definition patterns (fixes C6 over-predictions) ===
-        r'\bsistem\s+(?:yang\s+)?(?:dapat|mampu|bisa)\s+[\w\s]+\s+(?:adalah|disebut)',
-        r'\bsistem\s+(?:informasi\s+)?(?:yang\s+)?menghasilkan\s+laporan',
-        r'\bsistem\s+(?:yang\s+)?mengintegrasikan',
-        r'\bperangkat\s+lunak\s+(?:dasar|sistem)\s+(?:yang\s+)?(?:berfungsi|adalah)',
-        r'\bkumpulan\s+(?:model|data|informasi)\s+[\w\s]+\s+adalah',
-        
-        # === NEW: "merupakan" definition patterns ===
-        r'^[\w\s,]+\s+merupakan\s*$',
-        r'\b[\w\s]+\s+merupakan\s+(?:contoh|jenis|bagian)',
-        
-        # === NEW: KECUALI (except) questions - always recall ===
-        r'\bkecuali\s*$',
+        # === KECUALI (except) questions ===
+        r'\bkecuali\s*[:\.]?\s*$',
         r'\b(?:adalah|berikut)\s+[\w\s,]+,?\s+kecuali',
         
-        # === NEW: Definition by listing ===
+        # === Definition by listing ===
         r'\bberikut\s+(?:ini\s+)?(?:yang\s+)?(?:merupakan|adalah|termasuk)',
-        r'\bdi\s+bawah\s+ini\s+(?:yang\s+)?(?:merupakan|adalah|termasuk|bukan)',
+        r'\bdi\s+bawah\s+ini\s+(?:yang\s+)?(?:merupakan|adalah)',
         
-        # === NEW: Specific domain patterns ===
+        # === Domain-specific patterns ===
         r'\bprotokol\s+(?:yang\s+)?(?:digunakan|adalah)',
         r'\bmedia\s+(?:transmisi|penyimpanan)\s+[\w\s]+\s+adalah',
-        r'\btopologi\s+(?:jaringan\s+)?(?:yang\s+)?(?:menyediakan|adalah)',
-        r'\blayer\s+(?:OSI\s+)?(?:yang\s+)?(?:beroperasi|adalah)',
+        r'\btopologi\s+(?:jaringan\s+)?yang',
+        r'\blayer\s+(?:OSI\s+)?yang',
         
-        # === NEW: "adalah...berikut" patterns ===
+        # === "Adalah...berikut" patterns ===
         r'\badalah\s+(?:sebagai\s+)?berikut',
-        r'\bsebagai\s+berikut\s*[,:]',
+        r'\bsebagai\s+berikut\s*[,:.]',
+        
+        # === NEW: System characteristics (not creation) ===
+        r'\bsistem\s+yang\s+(?:dapat\s+)?diduga\s+reaksinya',
+        r'\bkeputusan\s+(?:yang\s+)?bersifat',
+        
+        # === NEW: Cost/type definitions ===
+        r'\bbiaya\s+[\w\s]+\s+(?:yang\s+)?dikeluarkan',
+        r'\bjenis\s+(?:biaya|sistem|data|keputusan)',
+        
+        # === NEW: Component listing ===
+        r'\bkomponen\s+(?:penentu|utama|dari)',
+        r'\bperangkat\s+(?:keras|lunak)\s+(?:yang\s+)?termasuk',
     ]
     
     # ========== C2 (UNDERSTAND) PATTERNS ==========
@@ -105,148 +136,116 @@ class IndonesianBloomAdjuster:
         # === Relationship understanding ===
         r'\byang\s+dimaksud\s+(?:dengan\s+)?relevansi(?!\s+adalah)',
         r'\baksesibilitas\s+(?:dapat\s+)?mempengaruhi',
-        r'\b(?:mempengaruhi|berpengaruh\s+terhadap)\s+nilai',
-        r'\bevaluasi\s+[\w\s]+\s+melalui\s+kriteria',
+        r'\bmempengaruhi\s+nilai',
         r'\bupaya\s+(?:untuk\s+)?menentukan\s+prioritas',
-        
-        # === Decision/nature questions ===
-        r'\bkeputusan\s+.*?sifat',
-        r'\bdasar\s+.*?untuk\s+mengukur',
         
         # === Explanation with reasoning ===
         r'\bjelaskan\s+mengapa(?!\s+cara)',
-        r'\bjelaskan\s+bagaimana(?!\s+cara\s+(?:menggunakan|menerapkan|membuat))',
+        r'\bjelaskan\s+bagaimana(?!\s+cara\s+(?:menggunakan|menerapkan))',
         r'\buraikan\s+(?:hubungan|perbedaan|mengapa)',
         
-        # === WHY questions (understanding cause/effect) ===
-        r'\bmengapa\s+[\w\s]+\s+(?:dapat|bisa|mempengaruhi|menyebabkan)',
+        # === WHY questions ===
+        r'\bmengapa\s+[\w\s]+\s+(?:dapat|mempengaruhi|menyebabkan)',
         r'\bmengapa\s+[\w\s]+\s+(?:penting|diperlukan)',
         r'\bapa\s+(?:yang\s+)?menyebabkan',
         
-        # === HOW questions (understanding process) ===
-        r'\bbagaimana\s+[\w\s]+\s+(?:mempengaruhi|dapat|bisa)(?!\s+cara)',
-        r'\bbagaimana\s+[\w\s]+\s+(?:melindungi|menjaga)',
+        # === HOW questions (process understanding) ===
+        r'\bbagaimana\s+[\w\s]+\s+mempengaruhi(?!\s+cara)',
+        r'\bbagaimana\s+auditor\s+(?:memperoleh|mendapatkan)',
         
         # === Relationships ===
         r'\bhubungan\s+antara\s+[\w\s]+\s+(?:dan|dengan)',
-        r'\bfaktor\s+(?:yang\s+)?(?:mempengaruhi|menentukan|menjadi)',
-        r'\bkeuntungan\s+(?:utama|dari)\s+[\w\s]+\s+(?:adalah|merupakan)',
-        r'\brisiko\s+(?:yang\s+)?(?:mendasar|utama|yang)',
-        r'\bsebagai\s+alat\s+bantu',
-        r'\bsesuai\s+dengan',
+        r'\bfaktor\s+(?:yang\s+)?(?:mempengaruhi|menentukan)',
+        r'\bkeuntungan\s+(?:utama|dari)',
+        r'\brisiko\s+(?:yang\s+)?(?:mendasar|utama)',
         
         # === Function/purpose understanding ===
-        r'\bfungsi\s+(?:basis\s+data|dari|utama)',
-        r'\btujuan\s+(?:dari|utama)',
-        r'\bmembantu\s+[\w\s]+\s+(?:jenis|tipe)\s+keputusan',
-        r'\bpemeriksaan\s+mutu\s+[\w\s]+\s+dilakukan',
+        r'\bfungsi\s+(?:basis\s+data|dari|utama)(?!\s+disebut)',
+        r'\btujuan\s+(?:dari|utama)(?!\s+adalah\s*$)',
+        r'\bmembantu\s+[\w\s]+\s+jenis\s+keputusan',
         
-        # === Nature/characteristics understanding ===
-        r'\bsistem\s+yang\s+diduga\s+reaksinya',
-        r'\bkeputusan\s+(?:yang\s+)?bersifat',
-        r'\b(?:terjadi|muncul)\s+karena',
-        r'\bproblem\s+[\w\s]+\s+(?:terjadi|dapat\s+terjadi)\s+karena',
+        # === Purpose/basis (Fixes #96-12, #96-14) ===
+        r'\bdasar\s+(?:untuk\s+)?(?:mengukur|opini)',
+        r'\bberdasarkan\s+(?:pada|atas)',
+        r'\bditurunkan\s+dari',
         
-        # === Purpose/intent ===
-        r'\bberisi\s+informasi\s+tentang',
-        
-        # === Comparison (understanding level) ===
-        r'\bperbedaan\s+(?:antara|dari)\s+[\w\s]+\s+(?:dan|dengan)',
-        r'\bapa\s+(?:perbedaan|persamaan)',
-        
-        # === NEW: Process understanding ===
-        r'\bproses\s+(?:yang\s+)?(?:bertujuan|dilakukan)\s+untuk',
-        r'\baktivitas\s+[\w\s]+\s+(?:yang\s+)?(?:meliputi|termasuk|adalah)',
-        r'\bpertukaran\s+[\w\s]+\s+(?:di\s+antara|antara)',
-        
-        # === NEW: Characteristic listing ===
-        r'\bkarakteristik\s+[\w\s]+\s+(?:yang\s+)?membuat',
-        r'\bnilai\s+bisnis\s+(?:utama\s+)?(?:dari|adalah)',
+        # === NEW: Process understanding (not application) ===
+        r'\bproses\s+(?:yang\s+)?(?:bertujuan|dilakukan)',
+        r'\baktivitas\s+[\w\s]+\s+(?:yang\s+)?meliputi',
     ]
     
     # ========== C3 (APPLY) - MUST BE IMPERATIVE ==========
     FORCE_C3_PATTERNS = [
         r'\bterapkan(?:lah)?\s+',
-        r'\bgunakan(?:lah)?\s+[\w\s]+\s+untuk\s+(?:menghitung|menyelesaikan|menganalisis)',
+        r'\bgunakan(?:lah)?\s+[\w\s]+\s+untuk\s+(?:menghitung|menyelesaikan)',
         r'\bhitunglah\b',
         r'\bselesaikan(?:lah)?\s+',
         r'\bimplementasikan\b',
         r'\baplikasikan\b',
-        r'\bcara\s+(?:menggunakan|menerapkan)\s+[\w\s]+\s+untuk',
         
-        # === NEW: Application patterns ===
-        r'\bpenggunaan\s+[\w\s]+\s+untuk\s+menghubungkan',
-        r'\bmenggunakan\s+[\w\s]+\s+untuk\s+(?:pelelangan|transaksi)',
+        # === Application scenarios ===
+        r'\bpenggunaan\s+[\w\s]+\s+untuk\s+(?:menghubungkan|transaksi)',
     ]
     
     # ========== C4 (ANALYZE) - MUST BE IMPERATIVE + ANALYTICAL ==========
     FORCE_C4_PATTERNS = [
-        r'\banalisis(?:lah)?\s+(?:penyebab|faktor|komponen|struktur|hubungan)',
+        r'\banalisis(?:lah)?\s+(?:penyebab|faktor|komponen|struktur)',
         r'\bteliti\s+(?:pola|struktur)',
         r'\bbandingkan\s+dan\s+kontraskan',
         r'\bidentifikasi\s+(?:pola|kecenderungan|masalah|penyebab)',
         r'\bklasifikasikan(?:lah)?\s+[\w\s]+\s+berdasarkan',
         
-        # === NEW: Analytical patterns ===
+        # === Analytical challenges ===
         r'\bperusahaan\s+harus\s+berhadapan\s+dengan',
     ]
     
     # ========== C5 (EVALUATE) - MUST BE IMPERATIVE + JUDGMENT ==========
     FORCE_C5_PATTERNS = [
-        r'\bevaluasi(?:lah)?\s+(?:efektivitas|kualitas|kelayakan)\s+dari',
-        r'\bnilai(?:lah)?\s+(?:efektivitas|kelayakan)\s+dari',
+        r'\bevaluasi(?:lah)?\s+(?:efektivitas|kualitas|kelayakan)',
+        r'\bnilai(?:lah)?\s+(?:efektivitas|kelayakan)',
         r'\bpertimbangkan\s+[\w\s]+\s+untuk\s+memilih',
         r'\bjustifikasi\s+(?:pilihan|keputusan)',
         r'\brekomendasi(?:kan)?\s+[\w\s]+\s+yang\s+(?:terbaik|paling)',
-        r'\bapa\s+yang\s+(?:lebih|paling)\s+(?:baik|efektif)\s+antara',
+        r'\bapa\s+yang\s+(?:lebih|paling)\s+(?:baik|efektif)',
         r'\bmana\s+yang\s+lebih\s+baik',
-        r'\bputuskan\s+(?:apakah|mana|sistem\s+mana)',
+        r'\bputuskan\s+(?:apakah|mana)',
     ]
     
     # ========== C6 (CREATE) - MUST BE IMPERATIVE + CREATIVE ==========
     FORCE_C6_PATTERNS = [
         r'\brancang(?:lah)?\s+(?:sebuah|suatu)\s+(?:sistem|model)',
         r'\bdesain(?:lah)?\s+(?:sebuah|suatu)',
-        r'\bbuatlah\s+(?:sistem|model)',
+        r'\bbuatlah\s+(?:sistem|model|rancangan)',
         r'\bkembangkan\s+(?:sistem|model)',
         r'\bciptakan\b',
         r'\bsusun(?:lah)?\s+(?:rencana|strategi|sistem)',
-        r'\busulkan\s+(?:desain|rancangan)\s+untuk',
+        r'\busulkan\s+(?:desain|rancangan)',
     ]
     
-    # ========== BLOCKING PATTERNS ==========
-    ULTRA_STRONG_C1_BLOCKERS = [
-        r'\bpengertian\b',
-        r'\bdefinisi\b',
-        r'\barti\s+(?:dari|tentang)',
-        r'\byang\s+dimaksud\s+[\w\s]+\s+(?:adalah|merupakan|ialah)',
-        r'\bdisebut\s+(?:apa|sebagai\s+apa|apakah)',
-        r'\btermasuk\s+(?:dalam\s+)?(?:kategori|subsistem)',
-        r'\bsalah\s+satu\s+(?:komponen|bentuk)',
-        r'\b(?:adalah|merupakan|ialah)\s+',
-    ]
-    
-    BLOCK_C5_C6_CRITERIA = [
+    # ========== CRITICAL: BLOCK FALSE C5/C6 ==========
+    BLOCK_C5_C6_IF_ASKING_ABOUT = [
         r'\bmelalui\s+kriteria',
         r'\bdengan\s+kriteria',
         r'\bmenggunakan\s+kriteria',
         r'\bkriteria\s+(?:yang|untuk|evaluasi)',
+        r'\bdasar\s+(?:untuk\s+)?opini',  # Fixes #96-12
     ]
     
-    # === NEW: C6 BLOCKING PATTERNS (prevent false C6) ===
-    BLOCK_C6_PATTERNS = [
+    BLOCK_C6_DESCRIPTIVE = [
+        # These describe systems, not ask to create them
         r'\bsistem\s+(?:yang\s+)?(?:menghasilkan|mengintegrasikan|melintasi)',
         r'\bperangkat\s+lunak\s+(?:dasar|sistem)',
         r'\bkumpulan\s+(?:model|data)',
-        r'\bproses\s+(?:mengembangkan|memasarkan)',
-        r'\bcara\s+menyediakan',
         r'\bsuatu\s+sistem\s+yang\s+mengintegrasikan',
-        r'\bpembelian,?\s+penjualan',
         r'\bentri\s+data,?\s+pemrosesan',
+        
+        # "Cara menyediakan" when asking definition (Fixes #94-48)
+        r'\bcara\s+menyediakan\s+[\w\s]+\s+yaitu',
     ]
     
     def __init__(self):
         """Compile all patterns"""
+        self.compiled_absolute_c1 = [re.compile(p, re.IGNORECASE) for p in self.ABSOLUTE_C1_BLOCKERS]
         self.compiled_force_c1 = [re.compile(p, re.IGNORECASE) for p in self.FORCE_C1_PATTERNS]
         self.compiled_force_c2 = [re.compile(p, re.IGNORECASE) for p in self.FORCE_C2_PATTERNS]
         self.compiled_force_c3 = [re.compile(p, re.IGNORECASE) for p in self.FORCE_C3_PATTERNS]
@@ -254,12 +253,11 @@ class IndonesianBloomAdjuster:
         self.compiled_force_c5 = [re.compile(p, re.IGNORECASE) for p in self.FORCE_C5_PATTERNS]
         self.compiled_force_c6 = [re.compile(p, re.IGNORECASE) for p in self.FORCE_C6_PATTERNS]
         
-        self.compiled_c1_blockers = [re.compile(p, re.IGNORECASE) for p in self.ULTRA_STRONG_C1_BLOCKERS]
-        self.compiled_block_c5_c6 = [re.compile(p, re.IGNORECASE) for p in self.BLOCK_C5_C6_CRITERIA]
-        self.compiled_block_c6 = [re.compile(p, re.IGNORECASE) for p in self.BLOCK_C6_PATTERNS]
+        self.compiled_block_c5_c6 = [re.compile(p, re.IGNORECASE) for p in self.BLOCK_C5_C6_IF_ASKING_ABOUT]
+        self.compiled_block_c6_desc = [re.compile(p, re.IGNORECASE) for p in self.BLOCK_C6_DESCRIPTIVE]
     
     def _has_imperative_verb(self, text):
-        """Check if question has imperative verb (command)"""
+        """Check if question has imperative verb"""
         imperative_verbs = [
             'hitunglah', 'terapkan', 'gunakan', 'selesaikan', 'buatlah',
             'rancanglah', 'evaluasilah', 'analisislah', 'bandingkan',
@@ -269,99 +267,91 @@ class IndonesianBloomAdjuster:
         text_lower = text.lower()
         return any(verb in text_lower for verb in imperative_verbs)
     
-    def _is_question_declarative(self, text):
-        """Check if question uses declarative form (not command)"""
-        declarative_indicators = [
-            r'\badalah\s*$',
-            r'\bmerupakan\s*$',
-            r'\bialah\s*$',
-            r'\b(?:adalah|merupakan|ialah)\s+[\w\s]+$',
-            r'\btermasuk\s+',
-            r'\bdisebut\s+',
-            r'\byang\s+dimaksud\s+',
-            r'\bkecuali\s*$',
-        ]
-        text_lower = text.lower()
-        return any(re.search(p, text_lower) for p in declarative_indicators)
-    
-    def _ends_with_adalah(self, text):
-        """Check if question ends with 'adalah' or similar"""
+    def _is_declarative(self, text):
+        """Check if question uses declarative form"""
         text_lower = text.lower().strip()
-        endings = ['adalah', 'merupakan', 'ialah', 'yaitu']
-        return any(text_lower.endswith(e) for e in endings)
+        
+        # Check endings
+        endings = ['adalah', 'merupakan', 'ialah', 'yaitu', 'disebut', 'termasuk']
+        if any(text_lower.endswith(e) for e in endings):
+            return True
+        
+        # Check patterns
+        declarative_patterns = [
+            r'\b(?:adalah|merupakan|ialah)\s+[\w\s]+$',
+            r'\bdisebut\s+(?:apa|apakah|sebagai)?\s*\??$',
+            r'\btermasuk\s+(?:dalam\s+)?kategori',
+            r'\.{3,}',  # ellipsis
+        ]
+        return any(re.search(p, text_lower) for p in declarative_patterns)
     
-    def _boost_confidence(self, category, ml_confidence, pattern_count):
+    def _boost_confidence(self, category, pattern_count):
         """Boost confidence based on pattern strength"""
-        base = {'C1': 0.94, 'C2': 0.90, 'C3': 0.87, 'C4': 0.89, 'C5': 0.91, 'C6': 0.93}
+        base = {'C1': 0.95, 'C2': 0.90, 'C3': 0.87, 'C4': 0.89, 'C5': 0.91, 'C6': 0.93}
         confidence = base.get(category, 0.85)
         if pattern_count >= 2:
             confidence = min(0.97, confidence + 0.02)
         return confidence
     
     def adjust_classification(self, question_text, ml_prediction):
-        """V6: Comprehensive pattern-based adjustment"""
+        """V7: Anti-hallucination logic with absolute C1 priority"""
         question_lower = question_text.lower().strip()
         
         ml_level = ml_prediction['category']
         ml_confidence = ml_prediction['confidence']
         
-        # ====== STAGE 0: BLOCK FALSE C6 PREDICTIONS ======
+        # ====== STAGE 0: ABSOLUTE C1 BLOCKERS (HIGHEST PRIORITY) ======
+        absolute_c1_count = sum(1 for p in self.compiled_absolute_c1 if p.search(question_lower))
+        
+        if absolute_c1_count >= 1:
+            logger.info(f"🔒 ABSOLUTE C1 BLOCK: {ml_level}({ml_confidence:.2f}) → C1(0.96)")
+            return self._create_result('C1', 'Remember', 0.96, ml_prediction,
+                                      'absolute_c1_blocker', ml_level, ml_confidence)
+        
+        # ====== STAGE 1: BLOCK FALSE C6 (DESCRIPTIVE SYSTEMS) ======
         if ml_level == 'C6':
-            if any(p.search(question_lower) for p in self.compiled_block_c6):
-                if self._is_question_declarative(question_text) or self._ends_with_adalah(question_text):
-                    logger.info(f"BLOCK C6→C1: False C6 detected (declarative definition)")
-                    return self._create_result('C1', 'Remember', 0.92, ml_prediction,
-                                              'block_false_c6', ml_level, ml_confidence)
+            if any(p.search(question_lower) for p in self.compiled_block_c6_desc):
+                if self._is_declarative(question_text):
+                    logger.info(f"⛔ BLOCK C6→C1: False C6 (descriptive definition)")
+                    return self._create_result('C1', 'Remember', 0.94, ml_prediction,
+                                              'block_false_c6_descriptive', ml_level, ml_confidence)
         
-        # ====== STAGE 1: ULTRA-STRONG C1 BLOCKING ======
-        c1_blocker_count = sum(1 for p in self.compiled_c1_blockers if p.search(question_lower))
-        
-        if c1_blocker_count >= 1:
-            c1_pattern_count = sum(1 for p in self.compiled_force_c1 if p.search(question_lower))
-            
-            if c1_pattern_count >= 1:
-                confidence = self._boost_confidence('C1', ml_confidence, c1_pattern_count)
-                if ml_level != 'C1':
-                    logger.info(f"✓ ULTRA-BLOCK: {ml_level}({ml_confidence:.2f}) → C1({confidence:.2f})")
-                return self._create_result('C1', 'Remember', confidence, ml_prediction,
-                                          'ultra_strong_c1_block', ml_level, ml_confidence)
-        
-        # ====== STAGE 2: BLOCK C5/C6 IF ASKING ABOUT CRITERIA ======
+        # ====== STAGE 2: BLOCK C5/C6 IF ASKING ABOUT CRITERIA/BASIS ======
         if any(p.search(question_lower) for p in self.compiled_block_c5_c6):
             if ml_level in ['C5', 'C6']:
-                logger.info(f"BLOCK C5/C6: {ml_level} → C1 (asking about criteria)")
-                return self._create_result('C1', 'Remember', 0.92, ml_prediction,
+                logger.info(f"⛔ BLOCK C5/C6→C1: Asking about criteria/basis")
+                return self._create_result('C1', 'Remember', 0.93, ml_prediction,
                                           'block_c5_c6_criteria', ml_level, ml_confidence)
         
         # ====== STAGE 3: DECLARATIVE ENDING CHECK ======
-        if self._ends_with_adalah(question_text):
+        if self._is_declarative(question_text):
             if ml_level in ['C3', 'C4', 'C5', 'C6']:
-                logger.info(f"DECLARATIVE END: {ml_level} → C1 (ends with adalah)")
-                return self._create_result('C1', 'Remember', 0.93, ml_prediction,
-                                          'declarative_ending', ml_level, ml_confidence)
+                logger.info(f"⛔ DECLARATIVE→C1: {ml_level} → C1 (declarative form)")
+                return self._create_result('C1', 'Remember', 0.94, ml_prediction,
+                                          'declarative_downgrade', ml_level, ml_confidence)
         
         # ====== STAGE 4: PATTERN MATCHING (C1 → C6) ======
         
-        # Check C1 patterns
+        # C1
         c1_count = sum(1 for p in self.compiled_force_c1 if p.search(question_lower))
         if c1_count >= 1:
-            confidence = self._boost_confidence('C1', ml_confidence, c1_count)
+            confidence = self._boost_confidence('C1', c1_count)
             if ml_level != 'C1':
-                logger.info(f"FORCE C1: {ml_level}({ml_confidence:.2f}) → C1({confidence:.2f})")
+                logger.info(f"✓ FORCE C1: {ml_level}({ml_confidence:.2f}) → C1({confidence:.2f})")
             return self._create_result('C1', 'Remember', confidence, ml_prediction,
                                       'force_c1_pattern', ml_level, ml_confidence)
         
-        # Check C2 patterns
+        # C2
         c2_count = sum(1 for p in self.compiled_force_c2 if p.search(question_lower))
         if c2_count >= 1:
-            if not self._is_question_declarative(question_text):
-                confidence = self._boost_confidence('C2', ml_confidence, c2_count)
+            if not self._is_declarative(question_text):
+                confidence = self._boost_confidence('C2', c2_count)
                 if ml_level != 'C2':
-                    logger.info(f"FORCE C2: {ml_level}({ml_confidence:.2f}) → C2({confidence:.2f})")
+                    logger.info(f"✓ FORCE C2: {ml_level}({ml_confidence:.2f}) → C2({confidence:.2f})")
                 return self._create_result('C2', 'Understand', confidence, ml_prediction,
                                           'force_c2_pattern', ml_level, ml_confidence)
         
-        # Check C3+ patterns (MUST have imperative verb)
+        # C3+ (MUST have imperative)
         has_imperative = self._has_imperative_verb(question_text)
         
         if has_imperative:
@@ -373,23 +363,20 @@ class IndonesianBloomAdjuster:
             ]:
                 count = sum(1 for p in patterns if p.search(question_lower))
                 if count >= 1:
-                    confidence = self._boost_confidence(level, ml_confidence, count)
+                    confidence = self._boost_confidence(level, count)
                     if ml_level != level:
-                        logger.info(f"FORCE {level}: {ml_level}({ml_confidence:.2f}) → {level}({confidence:.2f})")
+                        logger.info(f"✓ FORCE {level}: {ml_level}({ml_confidence:.2f}) → {level}({confidence:.2f})")
                     return self._create_result(level, name, confidence, ml_prediction,
                                               f'force_{level.lower()}_pattern', ml_level, ml_confidence)
         
         # ====== STAGE 5: DOWNGRADE UNCERTAIN HIGH LEVELS ======
         if ml_level in ['C3', 'C4', 'C5', 'C6'] and ml_confidence < 0.70:
             if not has_imperative:
-                if self._is_question_declarative(question_text):
-                    logger.info(f"DOWNGRADE: {ml_level}({ml_confidence:.2f}) → C1")
-                    return self._create_result('C1', 'Remember', 0.82, ml_prediction,
-                                              'downgrade_to_c1', ml_level, ml_confidence)
-                else:
-                    logger.info(f"DOWNGRADE: {ml_level}({ml_confidence:.2f}) → C2")
-                    return self._create_result('C2', 'Understand', 0.78, ml_prediction,
-                                              'downgrade_uncertain', ml_level, ml_confidence)
+                target = 'C1' if self._is_declarative(question_text) else 'C2'
+                target_name = 'Remember' if target == 'C1' else 'Understand'
+                logger.info(f"⬇️ DOWNGRADE: {ml_level}({ml_confidence:.2f}) → {target}")
+                return self._create_result(target, target_name, 0.80, ml_prediction,
+                                          'downgrade_uncertain', ml_level, ml_confidence)
         
         # ====== STAGE 6: KEEP ML PREDICTION ======
         return {
