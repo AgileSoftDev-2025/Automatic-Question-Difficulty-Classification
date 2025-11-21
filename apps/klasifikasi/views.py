@@ -79,11 +79,18 @@ def hasil_klasifikasi(request, pk=None):
         questions_data = results.get('questions', [])
         category_counts = results.get('category_counts', {})
         
-        # Format questions for template
+        # Format questions for template - EXTRACT ONLY QUESTION STEM (no answer choices)
+        from apps.klasifikasi.file_extractor import QuestionExtractor
+        extractor = QuestionExtractor()
+        
         formatted_questions = []
         for q in questions_data:
+            # Extract ONLY the question stem (without answer choices)
+            question_stem = extractor.extract_question_stem_only(q['question_text'])
+            
             formatted_questions.append({
-                'question': q['question_text'],
+                'question': question_stem,
+                'full_text': q['question_text'],  # Keep full text as reference
                 'level': q['category'],
                 'index': q['question_number'],
                 'confidence': q['confidence'] * 100,
