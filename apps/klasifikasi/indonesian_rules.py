@@ -1,4 +1,4 @@
-# apps/klasifikasi/indonesian_rules.py - V7: ANTI-HALLUCINATION FIX
+# apps/klasifikasi/indonesian_rules.py - V8: LEGAL/HISTORICAL CONTEXT FIX
 
 import re
 import logging
@@ -8,20 +8,98 @@ logger = logging.getLogger(__name__)
 
 class IndonesianBloomAdjuster:
     """
-    V7: Critical fix for "High-Level Hallucination" - system over-predicting C5/C6
+    V8: Critical fix for Legal/Historical multiple-choice exams
     
-    Root causes fixed:
-    1. "Disebut" questions always misclassified as C3/C6
-    2. System definitions ("Sistem yang...") triggered C6 instead of C1
-    3. Long technical descriptions confused as higher-order thinking
-    4. Keywords like "formulir", "laporan" auto-triggered C6
-    5. "Cara" (way/method) triggered C3/C6 for definitional questions
+    New issues fixed from Report #105:
+    1. "Dikemukakan oleh" (proposed by) → asking WHO, not asking to propose
+    2. "Dikembangkan" (developed) in historical context → asking NAME, not create
+    3. "Disampaikan kepada" (sent to) → asking WHERE/WHO, not create
+    4. "Membuat" in prohibition context → asking what's prohibited, not create
+    5. Article citations ("Menurut Pasal X") → recall of article content, not apply
+    6. Passive voice verbs describing facts, not student actions
     """
     
+    # ========== V8 NEW: PASSIVE VOICE FACT PATTERNS ==========
+    # These describe WHAT HAPPENED, not what student must DO
+    PASSIVE_FACT_PATTERNS = [
+        # "Proposed by" / "Said by" patterns - asking WHO said it
+        r'\bdikemukakan\s+oleh\b',
+        r'\bdikatakan\s+oleh\b', 
+        r'\bdinyatakan\s+oleh\b',
+        r'\bdisampaikan\s+oleh\b',
+        r'\bdiungkapkan\s+oleh\b',
+        r'\bdiperkenalkan\s+oleh\b',
+        r'\bdicetuskan\s+oleh\b',
+        r'\bdirumuskan\s+oleh\b',
+        
+        # "Sent to" / "Delivered to" - asking WHERE/TO WHOM
+        r'\bdisampaikan\s+kepada\b',
+        r'\bdikirimkan\s+kepada\b',
+        r'\bdiserahkan\s+kepada\b',
+        r'\bdilaporkan\s+kepada\b',
+        
+        # "Developed into" / "Known as" - asking for NAME
+        r'\bdikembangkan\s+menjadi\b',
+        r'\bdikenal\s+dengan\s+nama\b',
+        r'\bdikenal\s+sebagai\b',
+        r'\bdisebut\s+dengan\b',
+        r'\bdinamakan\b',
+        
+        # "Regulated in" / "Stated in" - asking which article/law
+        r'\bdiatur\s+dalam\b',
+        r'\bdicantumkan\s+dalam\b',
+        r'\bditetapkan\s+dalam\b',
+        r'\bdimuat\s+dalam\b',
+        r'\btercantum\s+dalam\b',
+    ]
+    
+    # ========== V8 NEW: PROHIBITION/RULE CONTEXT ==========
+    # Questions about what is PROHIBITED/REQUIRED - these are recall
+    PROHIBITION_RULE_PATTERNS = [
+        r'\bdilarang\s+(?:untuk\s+)?(?:membuat|melakukan|mencantumkan)',
+        r'\btidak\s+(?:boleh|diperbolehkan|diizinkan)\s+(?:untuk\s+)?',
+        r'\bharus\s+memenuhi\s+(?:syarat|ketentuan|kriteria)',
+        r'\bwajib\s+(?:untuk\s+)?(?:memenuhi|mematuhi)',
+        r'\bapabila\s+menyatakan\b',  # "if stating..." in prohibition context
+    ]
+    
+    # ========== V8 NEW: ARTICLE/LAW CITATION PATTERNS ==========
+    # "According to Article X" - usually recall, not application
+    ARTICLE_CITATION_RECALL = [
+        r'\bmenurut\s+pasal\s+\d+',
+        r'\bberdasarkan\s+pasal\s+\d+',
+        r'\bsesuai\s+(?:dengan\s+)?pasal\s+\d+',
+        r'\bsebagaimana\s+(?:diatur|dimaksud)\s+(?:dalam\s+)?pasal',
+        r'\bdalam\s+pasal\s+\d+\s+(?:diatur|dinyatakan|disebutkan)',
+        r'\bpasal\s+\d+\s+(?:mengatur|menyatakan|menyebutkan)',
+        # Asking WHICH article number
+        r'\bdiatur\s+dalam\s+pasal\s*$',
+        r'\btercantum\s+dalam\s+pasal\s*$',
+    ]
+    
+    # ========== V8 NEW: WHO/WHAT/WHERE QUESTION MARKERS ==========
+    # These indicate factual recall, not higher-order thinking
+    WHO_WHAT_WHERE_MARKERS = [
+        # WHO questions
+        r'\boleh\s+siapa\b',
+        r'\bsiapa\s+(?:yang|saja)\b',
+        r'\b(?:dikemukakan|disampaikan|diperkenalkan)\s+oleh\s*$',
+        
+        # WHERE questions  
+        r'\bkepada\s+siapa\b',
+        r'\bdi\s+mana\b',
+        r'\bke\s+mana\b',
+        r'\bdisampaikan\s+kepada\s*$',
+        
+        # WHAT questions (naming)
+        r'\bdengan\s+nama\s*$',
+        r'\bsebagai\s+apa\b',
+        r'\bapa\s+(?:nama|istilah|sebutan)nya\b',
+    ]
+    
     # ========== ULTRA-PRIORITY: C1 DEFINITION BLOCKERS ==========
-    # These patterns MUST force C1, regardless of other signals
     ABSOLUTE_C1_BLOCKERS = [
-        # "Disebut" patterns - ALWAYS C1 (Fixes #48-16, #48-39, #94-21, #94-24)
+        # "Disebut" patterns - ALWAYS C1
         r'\bdisebut\s+(?:sebagai\s+)?(?:apa|apakah)\s*\??$',
         r'\b(?:apa|apakah)\s+yang\s+disebut\b',
         r'\b[\w\s]+\s+disebut\s*\??$',
@@ -35,38 +113,43 @@ class IndonesianBloomAdjuster:
         r'\b[\w\s]+\s+merupakan\s*\.?\s*$',
         r'\b[\w\s]+\s+ialah\s*\.?\s*$',
         
-        # Fill-in-blank/completion (Fixes #93-42)
-        r'\.{3,}',  # "..." ellipsis
+        # Fill-in-blank/completion
+        r'\.{3,}',
         r'\b(?:adalah|merupakan)\s+\.{3,}',
         r'\.{3,}\s+(?:adalah|merupakan)',
         
-        # "Termasuk" (includes/belongs to) - ALWAYS C1 (Fixes #93-9)
+        # "Termasuk" (includes/belongs to) - ALWAYS C1
         r'\btermasuk\s+(?:dalam\s+)?(?:kategori|jenis|golongan|tipe)',
         r'\bkategori\s+[\w\s]+\s+termasuk',
         
-        # System/form definitions that look like C6 (Fixes #48-16, #48-39, #93-40)
+        # System/form definitions
         r'\bsistem\s+(?:informasi\s+)?(?:yang\s+)?(?:dirancang|digunakan|dibuat)\s+[\w\s]+\s+disebut',
         r'\bformulir\s+(?:yang\s+)?(?:digunakan|dibuat)\s+[\w\s]+\s+disebut',
         r'\blaporan\s+(?:yang\s+)?(?:digunakan|dibuat)\s+[\w\s]+\s+disebut',
         
-        # "Berisi informasi tentang" (Fixes #93-40)
+        # "Berisi informasi tentang"
         r'\bberisi\s+informasi\s+(?:tentang|mengenai)',
         r'\bharus\s+berisi\s+informasi',
         
-        # Technical terminology identification (Fixes #94-24)
+        # Technical terminology identification
         r'\bstruktur\s+[\w\s]+\s+disebut',
         r'\bfungsi\s+[\w\s]+\s+disebut',
         r'\bperangkat\s+[\w\s]+\s+disebut',
         
-        # "Tahap/langkah pertama" (sequence recall) (Fixes #48-30)
+        # "Tahap/langkah pertama" (sequence recall)
         r'\btahap\s+(?:pertama|awal|terakhir)',
         r'\blangkah\s+(?:pertama|awal|terakhir)',
         r'\bkegiatan\s+(?:pertama|awal)',
         
-        # "Yaitu berupa" (namely/that is) (Fixes #94-48)
+        # "Yaitu berupa" (namely/that is)
         r'\byaitu\s+berupa',
         r'\byaitu\s+[\w\s]+$',
         r'\bberupa\s+[\w\s]+$',
+        
+        # V8 NEW: Historical/Legal recall patterns
+        r'\bdikemukakan\s+oleh\s*$',
+        r'\bdikenal\s+dengan\s+nama\s*$',
+        r'\bdisampaikan\s+kepada\s*$',
     ]
     
     # ========== C1 (REMEMBER) - COMPREHENSIVE PATTERNS ==========
@@ -95,14 +178,16 @@ class IndonesianBloomAdjuster:
         r'\bkondisi\s+(?:yang\s+)?(?:ideal|terbaik)',
         r'\bkarakteristik\s+(?:utama|dari|produk)',
         
-        # === NEW: "Cara" when asking for definition (Fixes #94-48) ===
+        # === "Cara" when asking for definition ===
         r'\bcara\s+[\w\s]+\s+yaitu\s+berupa',
         r'\bcara\s+[\w\s]+\s+adalah',
         r'\bmetode\s+[\w\s]+\s+yaitu',
         
-        # === KECUALI (except) questions ===
+        # === KECUALI (except) questions - ALWAYS C1 ===
         r'\bkecuali\s*[:\.]?\s*$',
         r'\b(?:adalah|berikut)\s+[\w\s,]+,?\s+kecuali',
+        r'\bseperti\s+(?:tersebut\s+)?di\s+bawah\s+ini,?\s+kecuali',
+        r'\bseperti\s+hal-hal\s+(?:tersebut\s+)?di\s+bawah\s+ini,?\s+kecuali',
         
         # === Definition by listing ===
         r'\bberikut\s+(?:ini\s+)?(?:yang\s+)?(?:merupakan|adalah|termasuk)',
@@ -118,17 +203,30 @@ class IndonesianBloomAdjuster:
         r'\badalah\s+(?:sebagai\s+)?berikut',
         r'\bsebagai\s+berikut\s*[,:.]',
         
-        # === NEW: System characteristics (not creation) ===
+        # === System characteristics (not creation) ===
         r'\bsistem\s+yang\s+(?:dapat\s+)?diduga\s+reaksinya',
         r'\bkeputusan\s+(?:yang\s+)?bersifat',
         
-        # === NEW: Cost/type definitions ===
+        # === Cost/type definitions ===
         r'\bbiaya\s+[\w\s]+\s+(?:yang\s+)?dikeluarkan',
         r'\bjenis\s+(?:biaya|sistem|data|keputusan)',
         
-        # === NEW: Component listing ===
+        # === Component listing ===
         r'\bkomponen\s+(?:penentu|utama|dari)',
         r'\bperangkat\s+(?:keras|lunak)\s+(?:yang\s+)?termasuk',
+        
+        # === V8 NEW: Legal/Historical fact patterns ===
+        r'\bpengertian\s+[\w\s]+\s+(?:tersebut\s+)?dikemukakan\s+oleh',
+        r'\bteori\s+[\w\s]+\s+dikemukakan\s+oleh',
+        r'\btokoh\s+(?:yang\s+)?mendukung',
+        r'\btokoh-tokoh\s+(?:yang\s+)?mendukung',
+        r'\byang\s+bertindak\s+sebagai',
+        r'\byang\s+memiliki\s+fungsi',
+        r'\bcontoh\s+[\w\s]+\s+adalah',
+        r'\bcontohnya\s+(?:adalah\s+)?seperti',
+        r'\bdapat\s+berasal\s+dari',
+        r'\bbiasa\s+digunakan\s+oleh',
+        r'\bartinya\s+sebagai',
     ]
     
     # ========== C2 (UNDERSTAND) PATTERNS ==========
@@ -164,14 +262,18 @@ class IndonesianBloomAdjuster:
         r'\btujuan\s+(?:dari|utama)(?!\s+adalah\s*$)',
         r'\bmembantu\s+[\w\s]+\s+jenis\s+keputusan',
         
-        # === Purpose/basis (Fixes #96-12, #96-14) ===
+        # === Purpose/basis ===
         r'\bdasar\s+(?:untuk\s+)?(?:mengukur|opini)',
         r'\bberdasarkan\s+(?:pada|atas)',
         r'\bditurunkan\s+dari',
         
-        # === NEW: Process understanding (not application) ===
+        # === Process understanding (not application) ===
         r'\bproses\s+(?:yang\s+)?(?:bertujuan|dilakukan)',
         r'\baktivitas\s+[\w\s]+\s+(?:yang\s+)?meliputi',
+        
+        # === V8 NEW: Understanding basis/reasoning ===
+        r'\bdidasarkan\s+pada\b',
+        r'\batas\s+dasar\b',
     ]
     
     # ========== C3 (APPLY) - MUST BE IMPERATIVE ==========
@@ -228,7 +330,7 @@ class IndonesianBloomAdjuster:
         r'\bdengan\s+kriteria',
         r'\bmenggunakan\s+kriteria',
         r'\bkriteria\s+(?:yang|untuk|evaluasi)',
-        r'\bdasar\s+(?:untuk\s+)?opini',  # Fixes #96-12
+        r'\bdasar\s+(?:untuk\s+)?opini',
     ]
     
     BLOCK_C6_DESCRIPTIVE = [
@@ -238,9 +340,24 @@ class IndonesianBloomAdjuster:
         r'\bkumpulan\s+(?:model|data)',
         r'\bsuatu\s+sistem\s+yang\s+mengintegrasikan',
         r'\bentri\s+data,?\s+pemrosesan',
-        
-        # "Cara menyediakan" when asking definition (Fixes #94-48)
         r'\bcara\s+menyediakan\s+[\w\s]+\s+yaitu',
+        
+        # V8 NEW: Historical development (not student creation)
+        r'\bdikembangkan\s+menjadi',
+        r'\bkemudian\s+dikenal\s+dengan',
+        r'\bdikenal\s+dengan\s+nama',
+    ]
+    
+    # ========== V8 NEW: BLOCK FALSE C3 (APPLY) ==========
+    BLOCK_C3_ARTICLE_RECALL = [
+        # Article number questions - recall, not apply
+        r'\bmenurut\s+pasal\s+\d+\s+[\w\s]+,\s+[\w\s]+\s+sesuai\s+dengan',
+        r'\bsebagaimana\s+diatur\s+dalam\s+pasal',
+        r'\bKUH\s*(?:Perdata|Pidana)\s+mengatur',
+        r'\bUndang-undang\s+[\w\s]+\s+(?:mengatur|menyatakan)',
+        # Asking what law says
+        r'\bmenurut\s+[\w\s]+,\s+[\w\s]+\s+dianggap',
+        r'\bmenurut\s+[\w\s]+,\s+pengertian',
     ]
     
     def __init__(self):
@@ -255,9 +372,16 @@ class IndonesianBloomAdjuster:
         
         self.compiled_block_c5_c6 = [re.compile(p, re.IGNORECASE) for p in self.BLOCK_C5_C6_IF_ASKING_ABOUT]
         self.compiled_block_c6_desc = [re.compile(p, re.IGNORECASE) for p in self.BLOCK_C6_DESCRIPTIVE]
+        
+        # V8 NEW
+        self.compiled_passive_fact = [re.compile(p, re.IGNORECASE) for p in self.PASSIVE_FACT_PATTERNS]
+        self.compiled_prohibition = [re.compile(p, re.IGNORECASE) for p in self.PROHIBITION_RULE_PATTERNS]
+        self.compiled_article_citation = [re.compile(p, re.IGNORECASE) for p in self.ARTICLE_CITATION_RECALL]
+        self.compiled_who_what_where = [re.compile(p, re.IGNORECASE) for p in self.WHO_WHAT_WHERE_MARKERS]
+        self.compiled_block_c3 = [re.compile(p, re.IGNORECASE) for p in self.BLOCK_C3_ARTICLE_RECALL]
     
     def _has_imperative_verb(self, text):
-        """Check if question has imperative verb"""
+        """Check if question has imperative verb directed at student"""
         imperative_verbs = [
             'hitunglah', 'terapkan', 'gunakan', 'selesaikan', 'buatlah',
             'rancanglah', 'evaluasilah', 'analisislah', 'bandingkan',
@@ -281,9 +405,30 @@ class IndonesianBloomAdjuster:
             r'\b(?:adalah|merupakan|ialah)\s+[\w\s]+$',
             r'\bdisebut\s+(?:apa|apakah|sebagai)?\s*\??$',
             r'\btermasuk\s+(?:dalam\s+)?kategori',
-            r'\.{3,}',  # ellipsis
+            r'\.{3,}',
         ]
         return any(re.search(p, text_lower) for p in declarative_patterns)
+    
+    def _has_passive_fact_pattern(self, text):
+        """V8: Check if question contains passive voice describing facts"""
+        return any(p.search(text) for p in self.compiled_passive_fact)
+    
+    def _has_prohibition_context(self, text):
+        """V8: Check if question is about rules/prohibitions"""
+        return any(p.search(text) for p in self.compiled_prohibition)
+    
+    def _has_article_citation(self, text):
+        """V8: Check if question cites specific legal article"""
+        return any(p.search(text) for p in self.compiled_article_citation)
+    
+    def _has_who_what_where(self, text):
+        """V8: Check if question asks WHO/WHAT/WHERE"""
+        return any(p.search(text) for p in self.compiled_who_what_where)
+    
+    def _is_kecuali_question(self, text):
+        """V8: Check if question is 'kecuali' (except) type - always C1"""
+        text_lower = text.lower()
+        return 'kecuali' in text_lower
     
     def _boost_confidence(self, category, pattern_count):
         """Boost confidence based on pattern strength"""
@@ -294,7 +439,7 @@ class IndonesianBloomAdjuster:
         return confidence
     
     def adjust_classification(self, question_text, ml_prediction):
-        """V7: Anti-hallucination logic with absolute C1 priority"""
+        """V8: Anti-hallucination logic with legal/historical context awareness"""
         question_lower = question_text.lower().strip()
         
         ml_level = ml_prediction['category']
@@ -308,29 +453,71 @@ class IndonesianBloomAdjuster:
             return self._create_result('C1', 'Remember', 0.96, ml_prediction,
                                       'absolute_c1_blocker', ml_level, ml_confidence)
         
-        # ====== STAGE 1: BLOCK FALSE C6 (DESCRIPTIVE SYSTEMS) ======
+        # ====== STAGE 0.5: V8 NEW - KECUALI QUESTIONS (ALWAYS C1) ======
+        if self._is_kecuali_question(question_text):
+            logger.info(f"🔒 KECUALI QUESTION: {ml_level}({ml_confidence:.2f}) → C1(0.97)")
+            return self._create_result('C1', 'Remember', 0.97, ml_prediction,
+                                      'kecuali_question', ml_level, ml_confidence)
+        
+        # ====== STAGE 1: V8 NEW - PASSIVE FACT PATTERNS (BLOCK C6/C3) ======
+        if self._has_passive_fact_pattern(question_lower):
+            if ml_level in ['C6', 'C5', 'C4', 'C3']:
+                logger.info(f"⛔ PASSIVE FACT→C1: {ml_level}({ml_confidence:.2f}) → C1")
+                return self._create_result('C1', 'Remember', 0.95, ml_prediction,
+                                          'passive_fact_to_c1', ml_level, ml_confidence)
+        
+        # ====== STAGE 1.5: V8 NEW - WHO/WHAT/WHERE QUESTIONS ======
+        if self._has_who_what_where(question_lower):
+            if ml_level in ['C6', 'C5', 'C4', 'C3']:
+                logger.info(f"⛔ WHO/WHAT/WHERE→C1: {ml_level}({ml_confidence:.2f}) → C1")
+                return self._create_result('C1', 'Remember', 0.94, ml_prediction,
+                                          'who_what_where_to_c1', ml_level, ml_confidence)
+        
+        # ====== STAGE 2: V8 NEW - PROHIBITION/RULE CONTEXT ======
+        if self._has_prohibition_context(question_lower):
+            if ml_level in ['C6', 'C5', 'C4', 'C3']:
+                # Questions about what is prohibited are recall
+                logger.info(f"⛔ PROHIBITION CONTEXT→C1: {ml_level}({ml_confidence:.2f}) → C1")
+                return self._create_result('C1', 'Remember', 0.94, ml_prediction,
+                                          'prohibition_context_to_c1', ml_level, ml_confidence)
+        
+        # ====== STAGE 2.5: V8 NEW - ARTICLE CITATION (BLOCK FALSE C3) ======
+        if self._has_article_citation(question_lower):
+            if ml_level == 'C3':
+                # Asking what an article says is recall, not application
+                logger.info(f"⛔ ARTICLE CITATION→C1: C3({ml_confidence:.2f}) → C1")
+                return self._create_result('C1', 'Remember', 0.94, ml_prediction,
+                                          'article_citation_to_c1', ml_level, ml_confidence)
+        
+        # ====== STAGE 2.6: V8 NEW - BLOCK C3 ARTICLE RECALL ======
+        if any(p.search(question_lower) for p in self.compiled_block_c3):
+            if ml_level == 'C3':
+                logger.info(f"⛔ BLOCK C3→C1: Article recall pattern")
+                return self._create_result('C1', 'Remember', 0.93, ml_prediction,
+                                          'block_c3_article_recall', ml_level, ml_confidence)
+        
+        # ====== STAGE 3: BLOCK FALSE C6 (DESCRIPTIVE SYSTEMS) ======
         if ml_level == 'C6':
             if any(p.search(question_lower) for p in self.compiled_block_c6_desc):
-                if self._is_declarative(question_text):
-                    logger.info(f"⛔ BLOCK C6→C1: False C6 (descriptive definition)")
-                    return self._create_result('C1', 'Remember', 0.94, ml_prediction,
-                                              'block_false_c6_descriptive', ml_level, ml_confidence)
+                logger.info(f"⛔ BLOCK C6→C1: False C6 (descriptive definition)")
+                return self._create_result('C1', 'Remember', 0.94, ml_prediction,
+                                          'block_false_c6_descriptive', ml_level, ml_confidence)
         
-        # ====== STAGE 2: BLOCK C5/C6 IF ASKING ABOUT CRITERIA/BASIS ======
+        # ====== STAGE 4: BLOCK C5/C6 IF ASKING ABOUT CRITERIA/BASIS ======
         if any(p.search(question_lower) for p in self.compiled_block_c5_c6):
             if ml_level in ['C5', 'C6']:
                 logger.info(f"⛔ BLOCK C5/C6→C1: Asking about criteria/basis")
                 return self._create_result('C1', 'Remember', 0.93, ml_prediction,
                                           'block_c5_c6_criteria', ml_level, ml_confidence)
         
-        # ====== STAGE 3: DECLARATIVE ENDING CHECK ======
+        # ====== STAGE 5: DECLARATIVE ENDING CHECK ======
         if self._is_declarative(question_text):
             if ml_level in ['C3', 'C4', 'C5', 'C6']:
                 logger.info(f"⛔ DECLARATIVE→C1: {ml_level} → C1 (declarative form)")
                 return self._create_result('C1', 'Remember', 0.94, ml_prediction,
                                           'declarative_downgrade', ml_level, ml_confidence)
         
-        # ====== STAGE 4: PATTERN MATCHING (C1 → C6) ======
+        # ====== STAGE 6: PATTERN MATCHING (C1 → C6) ======
         
         # C1
         c1_count = sum(1 for p in self.compiled_force_c1 if p.search(question_lower))
@@ -369,7 +556,7 @@ class IndonesianBloomAdjuster:
                     return self._create_result(level, name, confidence, ml_prediction,
                                               f'force_{level.lower()}_pattern', ml_level, ml_confidence)
         
-        # ====== STAGE 5: DOWNGRADE UNCERTAIN HIGH LEVELS ======
+        # ====== STAGE 7: DOWNGRADE UNCERTAIN HIGH LEVELS ======
         if ml_level in ['C3', 'C4', 'C5', 'C6'] and ml_confidence < 0.70:
             if not has_imperative:
                 target = 'C1' if self._is_declarative(question_text) else 'C2'
@@ -378,7 +565,14 @@ class IndonesianBloomAdjuster:
                 return self._create_result(target, target_name, 0.80, ml_prediction,
                                           'downgrade_uncertain', ml_level, ml_confidence)
         
-        # ====== STAGE 6: KEEP ML PREDICTION ======
+        # ====== STAGE 8: V8 NEW - FINAL SAFETY CHECK FOR C6 ======
+        # If ML still says C6 but no imperative creative verb, block it
+        if ml_level == 'C6' and not has_imperative:
+            logger.info(f"⛔ FINAL C6 BLOCK: No imperative verb → C1")
+            return self._create_result('C1', 'Remember', 0.88, ml_prediction,
+                                      'final_c6_block_no_imperative', ml_level, ml_confidence)
+        
+        # ====== STAGE 9: KEEP ML PREDICTION ======
         return {
             'category': ml_level,
             'category_name': ml_prediction.get('category_name', ''),

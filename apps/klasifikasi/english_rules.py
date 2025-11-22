@@ -1,4 +1,4 @@
-# apps/klasifikasi/english_rules.py - V4: ENHANCED ANTI-HALLUCINATION
+# apps/klasifikasi/english_rules.py - V5: HISTORICAL CREATOR FIX
 
 import re
 import logging
@@ -7,43 +7,111 @@ logger = logging.getLogger(__name__)
 
 class EnglishBloomAdjuster:
     """
-    V4: Enhanced fix for "Keyword Trap" - addressing Report #97 issues
+    V5: Fix for "Who Created/Proposed" historical questions
     
-    New fixes based on analysis:
-    1. "Opinion" keyword trap - Q12, Q14 (Report #97)
-    2. "Poisoned" technical term trap - Q98 (Report #97)
-    3. "Transmission" definition trap - Q94 (Report #97)
-    4. "Analysis" context errors - Q34 (Report #98)
-    5. "Problem" reasoning trap - Q22 (Report #98)
-    6. "Named/Called" errors in Indonesian context - Q41, Q24, Q7 (Report #99)
+    New fixes based on Report #106 analysis:
+    1. "Who proposed X?" - Q13, Q15, Q25 (historical recall, not create)
+    2. "Who created X?" - asking for historical fact
+    3. "X was proposed by..." - passive historical fact
+    4. "Define X" / "X is defined as" - simple definition recall
+    5. "X stands for" - acronym expansion (C1, not C2)
+    6. "Father of X" / "Founder of X" - historical attribution
     """
     
-    # ========== NEW: TECHNICAL TERMINOLOGY TRAPS ==========
+    # ========== V5 NEW: HISTORICAL CREATOR/PROPOSER PATTERNS ==========
+    # These ask WHO did something historically - always C1 recall
+    HISTORICAL_CREATOR_PATTERNS = [
+        # "Who proposed/created/invented X?"
+        r'\bwho\s+(?:proposed|created|invented|developed|introduced|designed|founded)\b',
+        r'\bwho\s+is\s+(?:the\s+)?(?:father|founder|creator|inventor|author)\s+of\b',
+        r'\bwho\s+(?:first\s+)?(?:proposed|introduced|developed)\s+(?:the\s+)?[\w\s]+\s*\??$',
+        
+        # "X was proposed/created by..."
+        r'\bwas\s+(?:proposed|created|invented|developed|introduced|designed|founded)\s+by\b',
+        r'\bwere\s+(?:proposed|created|invented|developed|introduced)\s+by\b',
+        r'\b(?:proposed|created|invented|developed|introduced)\s+by\s+(?:whom|who)\b',
+        
+        # "The X philosophy/model/method was proposed by..."
+        r'\b(?:philosophy|model|method|methodology|technique|approach)\s+was\s+proposed\s+by\b',
+        r'\b(?:philosophy|model|method|methodology|technique|approach)\s+(?:is\s+)?(?:proposed|introduced)\s+by\b',
+        
+        # "X proposed the Y" (asking what X proposed)
+        r'\b[\w\s]+\s+proposed\s+(?:the\s+)?[\w\s]+\s+(?:model|method|theory|concept)',
+        
+        # "Father/Founder of X is..."
+        r'\b(?:father|founder|creator|inventor)\s+of\s+[\w\s]+\s+is\b',
+        r'\bthe\s+(?:father|founder|creator)\s+of\b',
+        
+        # Passive attribution
+        r'\bis\s+(?:credited|attributed)\s+(?:to|with)\b',
+        r'\bwas\s+(?:credited|attributed)\s+(?:to|with)\b',
+    ]
+    
+    # ========== V5 NEW: DEFINITION RECALL PATTERNS ==========
+    # Simple definitions are C1 recall, not C2 understanding
+    DEFINITION_RECALL_PATTERNS = [
+        # "X is defined as..."
+        r'\bis\s+defined\s+as\b',
+        r'\bare\s+defined\s+as\b',
+        r'\bcan\s+be\s+defined\s+as\b',
+        r'\bmay\s+be\s+defined\s+as\b',
+        
+        # "Define X" (simple command)
+        r'^define\s+(?:the\s+)?(?:term\s+)?[\w\s]+\s*[\.\?]?\s*$',
+        r'\bdefine\s+[\w\s]+\s*:?\s*$',
+        
+        # "The definition of X is..."
+        r'\bthe\s+definition\s+of\s+[\w\s]+\s+is\b',
+        r'\bdefinition\s+of\s+[\w\s]+\s*:',
+        
+        # "X refers to..."
+        r'\brefers\s+to\s+(?:a|an|the)?\b',
+        r'\b[\w\s]+\s+refers\s+to\b',
+        
+        # "X means..."
+        r'\b[\w\s]+\s+means\s*:?\b',
+        r'\bwhat\s+does\s+[\w\s]+\s+mean\s*\??$',
+    ]
+    
+    # ========== V5 NEW: ACRONYM EXPANSION PATTERNS ==========
+    # Acronym questions are always C1 recall
+    ACRONYM_PATTERNS = [
+        r'\bstands\s+for\b',
+        r'\bwhat\s+does\s+[A-Z]{2,}\s+stand\s+for\b',
+        r'\b[A-Z]{2,}\s+stands\s+for\b',
+        r'\bwhat\s+is\s+[A-Z]{2,}\s*\??$',
+        r'\b[A-Z]{2,}\s+(?:is\s+)?(?:an?\s+)?acronym\s+for\b',
+        r'\bexpand\s+(?:the\s+)?(?:acronym\s+)?[A-Z]{2,}\b',
+        r'\bfull\s+form\s+of\s+[A-Z]{2,}\b',
+        r'\b[A-Z]{2,}\s+(?:is\s+)?short\s+for\b',
+    ]
+    
+    # ========== TECHNICAL TERMINOLOGY TRAPS ==========
     TECHNICAL_TERM_BLOCKERS = [
-        # Audit/Opinion terminology (Fixes Report #97: Q12, Q14)
+        # Audit/Opinion terminology
         r'\bwhat\s+is\s+(?:the\s+)?(?:auditor\'?s?\s+)?opinion\s+based\s+on',
         r'\b(?:auditor\'?s?\s+)?opinion\s+(?:is\s+)?(?:based\s+on|derives?\s+from)',
         r'\bthe\s+basis\s+(?:for|of)\s+(?:an?\s+)?(?:auditor\'?s?\s+)?opinion',
         r'\bopinion\s+(?:regarding|about|on)\s+[\w\s]+\s+is\s+based',
         
-        # Security terminology (Fixes Report #97: Q98)
+        # Security terminology
         r'\bthe\s+[\w\s]+\s+can\s+be\s+poisoned',
         r'\bwhat\s+(?:is\s+)?[\w\s]*poisoning',
         r'\b[\w\s]+\s+poisoning\s+(?:is|attack|vulnerability)',
         r'\bvulnerability\s+(?:called|known\s+as|named)',
         
-        # Network terminology (Fixes Report #97: Q94)
+        # Network terminology
         r'\b(?:a|the)\s+transmission\s+(?:that\s+)?sends?\s+[\w\s]+\s+(?:to\s+)?(?:multiple|single|all)',
         r'\b(?:multicast|unicast|broadcast)\s+transmission\s+(?:is|sends?)',
         r'\btype\s+of\s+transmission\s+(?:that|which)',
         
-        # "Analysis" in context (Fixes Report #98: Q34)
+        # "Analysis" in context
         r'\b(?:can\s+be\s+)?(?:seen|identified|determined)\s+from\s+(?:the\s+)?[\w\s]*analysis',
         r'\bshown\s+in\s+(?:the\s+)?[\w\s]*analysis',
         r'\b(?:which|what)\s+type\s+of\s+analysis',
         r'\b(?:which|what)\s+[\w\s]*analysis\s+shows',
         
-        # Problem/Issue reasoning (Fixes Report #98: Q22)
+        # Problem/Issue reasoning
         r'\bwhy\s+(?:does\s+)?(?:the\s+)?problem\s+(?:of\s+)?[\w\s]+\s+occur',
         r'\bthe\s+problem\s+of\s+[\w\s]+\s+(?:occurs|happens)\s+(?:because|when)',
         r'\bcause\s+of\s+(?:the\s+)?[\w\s]*problem',
@@ -93,6 +161,13 @@ class EnglishBloomAdjuster:
         r'\bnamely\s+',
         r'\bthat\s+is\s+to\s+say',
         r'\bi\.e\.',
+        
+        # V5 NEW: Historical attribution endings
+        r'\bproposed\s+by\s*[\.\?]?\s*$',
+        r'\bcreated\s+by\s*[\.\?]?\s*$',
+        r'\binvented\s+by\s*[\.\?]?\s*$',
+        r'\bdeveloped\s+by\s*[\.\?]?\s*$',
+        r'\bintroduced\s+by\s*[\.\?]?\s*$',
     ]
     
     # ========== C1 (REMEMBER) PATTERNS ==========
@@ -144,30 +219,36 @@ class EnglishBloomAdjuster:
         r'\bcost\s+(?:that\s+)?(?:is|are)\s+(?:incurred|spent)',
         r'\btype\s+of\s+(?:cost|system|data|decision|attack|vulnerability)',
         
-        # NEW: Audit terminology
+        # Audit terminology
         r'\bwhat\s+is\s+(?:the\s+)?opinion\s+(?:based\s+on|regarding)',
         r'\b(?:the\s+)?basis\s+for\s+(?:the\s+)?opinion',
         
-        # NEW: Security definitions
+        # Security definitions
         r'\bwhat\s+is\s+[\w\s]*poisoning',
         r'\b[\w\s]+\s+poisoning\s+(?:is\s+)?(?:a|an)\s+(?:type|form)',
         
-        # NEW: Analysis type identification
+        # Analysis type identification
         r'\btype\s+of\s+analysis\s+(?:is|that|which)',
         r'\banalysis\s+(?:called|named|known\s+as)',
+        
+        # V5 NEW: Software engineering terminology
+        r'\b(?:features?|characteristics?|properties)\s+of\s+[\w\s]+\s+(?:is|are|include)',
+        r'\b(?:phases?|stages?|steps?)\s+(?:of|in)\s+[\w\s]+\s+(?:is|are|include)',
+        r'\b(?:activities?|tasks?)\s+(?:of|in)\s+[\w\s]+\s+(?:is|are|include)',
+        r'\bwhat\s+(?:is|are)\s+(?:the\s+)?(?:features?|characteristics?|phases?)\s+of',
     ]
     
     # ========== C2 (UNDERSTAND) PATTERNS ==========
     FORCE_C2_PATTERNS = [
-        # Explanation/description
+        # Explanation/description (NOT simple define)
         r'\bexplain\s+(?:why|how|what)(?!\s+you\s+would)',
         r'\bdescribe\s+(?:the|how|what)(?!\s+a\s+(?:caching|disaster))',
         r'\bsummarize\s+(?:the|what)',
         r'\bparaphrase\s+(?:the|what)',
         r'\binterpret\s+(?:the|what)',
         
-        # Comprehension
-        r'\bwhat\s+does\s+(?:this|it|the\s+\w+)\s+mean',
+        # Comprehension (deeper than recall)
+        r'\bwhat\s+does\s+(?:this|it|the\s+\w+)\s+mean(?!\s*\??$)',
         r'\bwhat\s+is\s+meant\s+by',
         r'\bin\s+your\s+own\s+words',
         r'\bthe\s+main\s+idea\s+(?:is|of)',
@@ -201,7 +282,7 @@ class EnglishBloomAdjuster:
         # Process questions
         r'\bhow\s+does\s+(?:the|an?)\s+(?:auditor|system)\s+(?:derive|obtain)',
         
-        # NEW: "Why does X occur/happen"
+        # "Why does X occur/happen"
         r'\bwhy\s+(?:does|do)\s+[\w\s]+\s+(?:occur|happen|arise)',
         r'\bwhat\s+causes?\s+[\w\s]+\s+to\s+occur',
     ]
@@ -227,6 +308,7 @@ class EnglishBloomAdjuster:
     ]
     
     # ========== C4 (ANALYZE) PATTERNS ==========
+    # V5.1: Tightened to require ACTUAL analytical tasks, not syntax/consequence questions
     FORCE_C4_PATTERNS = [
         r'\banalyze\s+(?:the|this|how|why)',
         r'\bexamine\s+(?:the|how|this)',
@@ -241,12 +323,40 @@ class EnglishBloomAdjuster:
         r'\bclassify\s+(?:the|these)',
         r'\bidentify\s+the\s+(?:pattern|trend|relationship|potential\s+security)',
         r'\bwhat\s+patterns?\s+(?:can\s+you|do\s+you)\s+see',
-        r'\bwhat\s+(?:are\s+the\s+)?(?:causes?|reasons?)\s+(?:of|for|behind)',
-        r'\bwhat\s+(?:are\s+the\s+)?effects?\s+of',
+        # V5.1: Removed overly broad "causes/effects" - moved to blockers
         r'\bwhy\s+does\s+\w+\s+(?:cause|lead\s+to|result\s+in)',
         r'\bidentify\s+the\s+(?:potential\s+)?(?:security\s+)?vulnerability',
         r'\bwhat\s+is\s+the\s+(?:primary\s+)?risk\s+of\s+this\s+design',
         r'\banalyze\s+(?:the\s+following\s+)?code\s+snippet',
+        # V5.1: Code debugging with WHY (true analysis)
+        r'\bwhy\s+(?:is\s+)?(?:the\s+following\s+)?(?:statement|query|code)\s+(?:is\s+)?(?:erroneous|incorrect|wrong)',
+        r'\bfind\s+(?:the\s+)?(?:error|bug|mistake)\s+in',
+        r'\bdebug\s+(?:the|this)',
+    ]
+    
+    # ========== V5.1 NEW: BLOCK FALSE C4 PATTERNS ==========
+    # These look like analysis but are actually C1/C2/C3
+    BLOCK_FALSE_C4_PATTERNS = [
+        # "Which command is correct" - syntax recall, not analysis
+        r'\bwhich\s+(?:of\s+the\s+following\s+)?(?:command|statement|query|syntax)\s+is\s+(?:correct|valid|proper)',
+        r'\bwhich\s+is\s+(?:the\s+)?correct\s+(?:command|statement|query|syntax)',
+        r'\bcorrect\s+(?:command|statement|query|syntax)\s+(?:to|for)',
+        r'\bselect\s+the\s+correct\s+(?:command|statement|query)',
+        
+        # "What happens if X" - consequence recall (C2), not analysis
+        r'\bwhat\s+happens\s+if\b',
+        r'\bwhat\s+will\s+happen\s+(?:if|when)\b',
+        r'\bwhat\s+would\s+happen\s+(?:if|when)\b',
+        r'\bwhat\s+is\s+the\s+(?:result|outcome|consequence)\s+(?:of|if|when)',
+        
+        # "What is the effect of" - known consequence (C2)
+        r'\bwhat\s+(?:is|are)\s+the\s+(?:effect|effects|consequence|consequences)\s+of',
+        
+        # "What causes X" when X is a known concept (C2)
+        r'\bwhat\s+causes\s+(?:data\s+)?(?:inconsistency|redundancy|anomaly)',
+        
+        # Multiple choice syntax selection
+        r'\bwhich\s+(?:of\s+the\s+following\s+)?(?:is|are)\s+(?:used\s+to|correct\s+to)',
     ]
     
     # ========== C5 (EVALUATE) PATTERNS ==========
@@ -273,6 +383,7 @@ class EnglishBloomAdjuster:
     ]
     
     # ========== C6 (CREATE) PATTERNS ==========
+    # V5: Must be IMPERATIVE asking student to CREATE something NEW
     FORCE_C6_PATTERNS = [
         r'\bcreate\s+(?:a|an|your)\s+(?:data\s+model|monitoring)',
         r'\bdesign\s+(?:a|an|your)\s+(?:caching|access|strategy)',
@@ -316,6 +427,10 @@ class EnglishBloomAdjuster:
         r'\bway\s+to\s+provide\s+[\w\s]+\s+is',
         r'\btransmission\s+(?:that\s+)?sends\s+[\w\s]+\s+to\s+multiple',
         r'\b(?:in|for)\s+[\w\s]+\s+transmission\s*,',
+        
+        # V5 NEW: Historical descriptions (not student creation)
+        r'\bwas\s+(?:proposed|created|developed|invented)\s+by',
+        r'\b(?:proposed|created|developed|invented)\s+(?:the|a|an)\s+[\w\s]+\s+(?:model|method)',
     ]
     
     # ========== ANTI-PATTERNS ==========
@@ -337,6 +452,11 @@ class EnglishBloomAdjuster:
         r'\bevaluate\s+(?:the\s+)?(?:effectiveness|whether|security)',
         r'\bcreate\s+(?:a|an)\s+(?:data|monitoring)',
         r'\bdesign\s+(?:a|an)\s+(?:caching|disaster)',
+        # V5 NEW: Don't upgrade these to C2
+        r'\bstands\s+for\b',
+        r'\bis\s+defined\s+as\b',
+        r'\bproposed\s+by\b',
+        r'\bcreated\s+by\b',
     ]
     
     NOT_C3_PATTERNS = [
@@ -364,7 +484,8 @@ class EnglishBloomAdjuster:
     C1_KEYWORDS = [
         'define', 'identify', 'list', 'name', 'recall', 'recognize',
         'state', 'label', 'match', 'who', 'what is', 'when', 'where',
-        'called', 'known as', 'referred to as', 'type of', 'basis for'
+        'called', 'known as', 'referred to as', 'type of', 'basis for',
+        'stands for', 'defined as', 'proposed by', 'created by', 'father of'
     ]
     
     C2_KEYWORDS = [
@@ -393,11 +514,16 @@ class EnglishBloomAdjuster:
     C6_KEYWORDS = [
         'create a', 'design a', 'construct a', 'develop a', 'formulate a',
         'devise', 'generate a', 'plan a', 'compose an', 'synthesize',
-        'propose', 'build a', 'produce a'
+        'propose a', 'build a', 'produce a'
     ]
     
     def __init__(self):
         """Compile all patterns"""
+        # V5 NEW patterns
+        self.compiled_historical_creator = [re.compile(p, re.IGNORECASE) for p in self.HISTORICAL_CREATOR_PATTERNS]
+        self.compiled_definition_recall = [re.compile(p, re.IGNORECASE) for p in self.DEFINITION_RECALL_PATTERNS]
+        self.compiled_acronym = [re.compile(p, re.IGNORECASE) for p in self.ACRONYM_PATTERNS]
+        
         self.compiled_technical_blockers = [re.compile(p, re.IGNORECASE) for p in self.TECHNICAL_TERM_BLOCKERS]
         self.compiled_absolute_c1 = [re.compile(p, re.IGNORECASE) for p in self.ABSOLUTE_C1_BLOCKERS]
         self.compiled_force_c1 = [re.compile(p, re.IGNORECASE) for p in self.FORCE_C1_PATTERNS]
@@ -415,6 +541,25 @@ class EnglishBloomAdjuster:
         
         self.compiled_block_c5_c6 = [re.compile(p, re.IGNORECASE) for p in self.BLOCK_C5_C6_IF_ASKING_ABOUT]
         self.compiled_block_c6_desc = [re.compile(p, re.IGNORECASE) for p in self.BLOCK_C6_DESCRIPTIVE]
+        
+        # V5.1 NEW
+        self.compiled_block_false_c4 = [re.compile(p, re.IGNORECASE) for p in self.BLOCK_FALSE_C4_PATTERNS]
+    
+    def _has_false_c4_pattern(self, text):
+        """V5.1: Check if question looks like C4 but is actually C1/C2/C3"""
+        return any(p.search(text) for p in self.compiled_block_false_c4)
+    
+    def _has_historical_creator_pattern(self, text):
+        """V5: Check if question asks about historical creator/proposer"""
+        return any(p.search(text) for p in self.compiled_historical_creator)
+    
+    def _has_definition_recall_pattern(self, text):
+        """V5: Check if question is simple definition recall"""
+        return any(p.search(text) for p in self.compiled_definition_recall)
+    
+    def _has_acronym_pattern(self, text):
+        """V5: Check if question asks for acronym expansion"""
+        return any(p.search(text) for p in self.compiled_acronym)
     
     def _boost_confidence(self, category, ml_confidence, pattern_strength, keyword_count):
         """Boost confidence based on pattern strength"""
@@ -433,25 +578,48 @@ class EnglishBloomAdjuster:
         return confidence
     
     def adjust_classification(self, question_text, ml_prediction):
-        """V4: Enhanced anti-hallucination with technical term blocking"""
+        """V5: Enhanced with historical creator/proposer blocking"""
         question_lower = question_text.lower().strip()
         
         ml_level = ml_prediction['category']
         ml_confidence = ml_prediction['confidence']
         
-        # ====== STAGE 0A: TECHNICAL TERMINOLOGY BLOCKERS ======
+        # ====== STAGE 0A: V5 NEW - HISTORICAL CREATOR BLOCKER ======
+        # "Who proposed/created X?" is ALWAYS C1, never C6
+        if self._has_historical_creator_pattern(question_lower):
+            if ml_level in ['C6', 'C5', 'C4', 'C3']:
+                logger.info(f"🔒 HISTORICAL CREATOR BLOCK: {ml_level}({ml_confidence:.2f}) → C1(0.96)")
+                return self._create_result('C1', 'Remember', 0.96, ml_prediction,
+                                          'historical_creator_blocker', ml_level, ml_confidence)
+        
+        # ====== STAGE 0B: V5 NEW - ACRONYM BLOCKER ======
+        # "X stands for" is ALWAYS C1
+        if self._has_acronym_pattern(question_lower):
+            if ml_level != 'C1':
+                logger.info(f"🔒 ACRONYM BLOCK: {ml_level}({ml_confidence:.2f}) → C1(0.97)")
+                return self._create_result('C1', 'Remember', 0.97, ml_prediction,
+                                          'acronym_blocker', ml_level, ml_confidence)
+        
+        # ====== STAGE 0C: V5 NEW - DEFINITION RECALL BLOCKER ======
+        # "X is defined as" is C1, not C2
+        if self._has_definition_recall_pattern(question_lower):
+            if ml_level == 'C2':
+                logger.info(f"🔒 DEFINITION RECALL BLOCK: C2({ml_confidence:.2f}) → C1(0.95)")
+                return self._create_result('C1', 'Remember', 0.95, ml_prediction,
+                                          'definition_recall_blocker', ml_level, ml_confidence)
+        
+        # ====== STAGE 0D: TECHNICAL TERMINOLOGY BLOCKERS ======
         technical_block_count = sum(1 for p in self.compiled_technical_blockers if p.search(question_lower))
         
         if technical_block_count >= 1:
             if ml_level in ['C3', 'C4', 'C5', 'C6']:
-                # Determine if C1 or C2 based on question type
                 target = 'C2' if any(word in question_lower for word in ['why', 'how does', 'what causes']) else 'C1'
                 target_name = 'Understand' if target == 'C2' else 'Remember'
                 logger.info(f"🔒 TECHNICAL TERM BLOCK: {ml_level}({ml_confidence:.2f}) → {target}(0.95)")
                 return self._create_result(target, target_name, 0.95, ml_prediction,
                                           'technical_term_blocker', ml_level, ml_confidence)
         
-        # ====== STAGE 0B: ABSOLUTE C1 BLOCKERS ======
+        # ====== STAGE 0E: ABSOLUTE C1 BLOCKERS ======
         absolute_c1_count = sum(1 for p in self.compiled_absolute_c1 if p.search(question_lower))
         
         if absolute_c1_count >= 1:
@@ -472,6 +640,19 @@ class EnglishBloomAdjuster:
                 logger.info(f"⛔ BLOCK C5/C6→C1: Asking about criteria/basis")
                 return self._create_result('C1', 'Remember', 0.93, ml_prediction,
                                            'block_c5_c6_criteria', ml_level, ml_confidence)
+        
+        # ====== STAGE 2.5: V5.1 NEW - BLOCK FALSE C4 ======
+        # "Which command is correct" or "What happens if" are NOT analysis
+        if ml_level == 'C4' or any(p.search(question_lower) for p in self.compiled_force_c4):
+            if self._has_false_c4_pattern(question_lower):
+                # Determine target: C1 for syntax, C2 for consequences
+                if any(word in question_lower for word in ['command', 'statement', 'query', 'syntax', 'correct']):
+                    target, target_name = 'C1', 'Remember'
+                else:
+                    target, target_name = 'C2', 'Understand'
+                logger.info(f"⛔ BLOCK FALSE C4→{target}: {ml_level}({ml_confidence:.2f}) → {target}")
+                return self._create_result(target, target_name, 0.92, ml_prediction,
+                                           'block_false_c4', ml_level, ml_confidence)
         
         # ====== STAGE 3: CHECK C6 (CREATE) ======
         result = self._check_level(question_lower, self.compiled_force_c6,
@@ -530,18 +711,14 @@ class EnglishBloomAdjuster:
     def _check_level(self, text, patterns, keywords, anti_patterns,
                      current_ml_level, target_level, level_name, ml_confidence, ml_prediction):
         """Helper to check patterns for specific level"""
-        # 1. Check Anti-Patterns (disqualify if found)
         if any(p.search(text) for p in anti_patterns):
             return None
         
-        # 2. Check Positive Patterns and Keywords
         pattern_strength = sum(1 for p in patterns if p.search(text))
         keyword_count = sum(1 for k in keywords if k in text)
         
-        # 3. Decision Logic
         result = None
         
-        # Case A: Strong Pattern Match → Override ML
         if pattern_strength > 0:
             new_conf = self._boost_confidence(target_level, ml_confidence, pattern_strength, keyword_count)
             result = {
@@ -558,7 +735,6 @@ class EnglishBloomAdjuster:
             if target_level != current_ml_level:
                 logger.info(f"✓ ADJUSTED: {current_ml_level} → {target_level} | Reason: Strong Pattern")
         
-        # Case B: ML matches + keywords present → Boost confidence
         elif current_ml_level == target_level and keyword_count > 0:
             new_conf = self._boost_confidence(target_level, ml_confidence, 0, keyword_count)
             
