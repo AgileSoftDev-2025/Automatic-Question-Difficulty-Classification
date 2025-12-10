@@ -727,46 +727,46 @@
     </div>
 
     <!-- Regenerate Modal -->
-    <div id="regenerate-modal" class="hidden fixed inset-0 overlay-backdrop flex items-center justify-center z-50 p-4">
-        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+    <div id="regenerate-modal" class="hidden fixed inset-0 overlay-backdrop flex items-center justify-center z-50 p-4 sm:p-6">
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-lg sm:max-w-2xl max-h-[85vh] sm:max-h-[90vh] overflow-y-auto">
             <!-- Modal Header -->
-            <div class="sticky top-0 bg-gradient-to-r from-blue-600 to-blue-700 dark:from-blue-700 dark:to-blue-800 text-white p-6 flex justify-between items-center border-b border-blue-500/30">
-                <div class="flex items-center gap-3">
-                    <i class="bi bi-wand2 text-2xl"></i>
-                    <h3 class="text-xl font-bold">Regenerate Question</h3>
+            <div class="sticky top-0 bg-gradient-to-r from-blue-600 to-blue-700 dark:from-blue-700 dark:to-blue-800 text-white px-4 sm:px-6 py-4 sm:py-6 flex items-center justify-between border-b border-blue-500/30 gap-3">
+                <div class="flex items-center gap-2 sm:gap-3 min-w-0">
+                    <i class="bi bi-wand2 text-xl sm:text-2xl flex-shrink-0"></i>
+                    <h3 class="text-lg sm:text-xl font-bold truncate">Regenerate Question</h3>
                 </div>
-                <button id="close-regenerate-modal" class="text-white hover:bg-blue-500/30 p-2 rounded-lg transition-colors">
-                    <i class="bi bi-x-lg text-xl"></i>
+                <button id="close-regenerate-modal" class="text-white hover:bg-blue-500/30 p-2 rounded-lg transition-colors flex-shrink-0" aria-label="Close modal">
+                    <i class="bi bi-x-lg text-lg sm:text-xl"></i>
                 </button>
             </div>
 
             <!-- Modal Content -->
-            <div class="p-6 space-y-4">
+            <div class="p-4 sm:p-6 space-y-4 sm:space-y-5">
                 <!-- Original Question -->
                 <div>
-                    <label class="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2">
+                    <label class="block text-xs sm:text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2">
                         <i class="bi bi-question-circle"></i> Original Question (Q<span id="modal-question-number">1</span>)
                     </label>
-                    <div id="modal-original-text" class="bg-blue-50 dark:bg-gray-700/30 border-l-4 border-blue-500 p-4 rounded text-gray-800 dark:text-gray-200 text-sm leading-relaxed">
+                    <div id="modal-original-text" class="bg-blue-50 dark:bg-gray-700/30 border-l-4 border-blue-500 p-3 sm:p-4 rounded text-gray-800 dark:text-gray-200 text-xs sm:text-sm leading-relaxed max-h-32 overflow-y-auto">
                         Loading...
                     </div>
                 </div>
 
                 <!-- Source and Target Levels -->
-                <div class="grid grid-cols-2 gap-4">
+                <div class="grid grid-cols-2 gap-3 sm:gap-4">
                     <div>
-                        <label class="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2">
+                        <label class="block text-xs sm:text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2">
                             <i class="bi bi-arrow-left"></i> From Level
                         </label>
-                        <div id="modal-source-level" class="px-4 py-2 bg-gray-100 dark:bg-gray-700 rounded text-gray-800 dark:text-gray-200 font-semibold text-center">
+                        <div id="modal-source-level" class="px-3 sm:px-4 py-2 bg-gray-100 dark:bg-gray-700 rounded text-gray-800 dark:text-gray-200 font-bold text-center text-sm sm:text-base">
                             C1
                         </div>
                     </div>
                     <div>
-                        <label class="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2">
+                        <label class="block text-xs sm:text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2">
                             <i class="bi bi-arrow-right"></i> To Level
                         </label>
-                        <select id="modal-target-level" class="w-full px-4 py-2 bg-white dark:bg-gray-700 border-2 border-blue-300 dark:border-blue-600 rounded text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <select id="modal-target-level" class="w-full px-3 sm:px-4 py-2 bg-white dark:bg-gray-700 border-2 border-blue-300 dark:border-blue-600 rounded text-gray-800 dark:text-gray-200 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400">
                             <option value="C1">C1 - Remember</option>
                             <option value="C2">C2 - Understand</option>
                             <option value="C3" selected>C3 - Apply</option>
@@ -779,31 +779,34 @@
 
                 <!-- Transformed Question (appears after generation) -->
                 <div id="regenerate-result-section" class="hidden">
-                    <label class="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2">
-                        <i class="bi bi-sparkles"></i> Regenerated Question
+                    <label class="block text-xs sm:text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2">
+                        <i class="bi bi-sparkles text-yellow-500"></i> Regenerated Question
                     </label>
-                    <div id="modal-transformed-text" class="bg-green-50 dark:bg-green-900/20 border-l-4 border-green-500 p-4 rounded text-gray-800 dark:text-gray-200 text-sm leading-relaxed">
+                    <div id="modal-transformed-text" class="bg-green-50 dark:bg-green-900/20 border-l-4 border-green-500 p-3 sm:p-4 rounded text-gray-800 dark:text-gray-200 text-xs sm:text-sm leading-relaxed max-h-32 overflow-y-auto">
                         Loading...
                     </div>
                 </div>
 
                 <!-- Bloom's Taxonomy Help -->
-                <div class="bg-amber-50 dark:bg-amber-900/20 border-l-4 border-amber-500 p-4 rounded">
-                    <p class="text-xs text-gray-700 dark:text-gray-300">
-                        <i class="bi bi-lightbulb"></i> 
-                        <strong>Tips:</strong> C1-C2 are lower-order thinking (remember, understand). 
-                        C3-C6 are higher-order thinking (apply, analyze, evaluate, create). 
-                        Choose a target level to regenerate the question accordingly.
+                <div class="bg-amber-50 dark:bg-amber-900/20 border-l-4 border-amber-500 p-3 sm:p-4 rounded">
+                    <p class="text-xs sm:text-sm text-gray-700 dark:text-gray-300 space-y-1">
+                        <div class="font-semibold flex items-center gap-2">
+                            <i class="bi bi-lightbulb text-amber-500"></i> 
+                            <span>Tips:</span>
+                        </div>
+                        <span>• <strong>C1-C2</strong>: Lower-order (remember, understand)</span>
+                        <br/>
+                        <span>• <strong>C3-C6</strong>: Higher-order (apply, analyze, evaluate, create)</span>
                     </p>
                 </div>
             </div>
 
             <!-- Modal Footer -->
-            <div class="bg-gray-50 dark:bg-gray-700/50 p-6 flex gap-3 justify-end border-t dark:border-gray-600">
-                <button id="cancel-regenerate-btn" class="px-6 py-2 bg-gray-300 dark:bg-gray-600 text-gray-800 dark:text-white rounded-lg font-semibold hover:bg-gray-400 dark:hover:bg-gray-500 transition-colors">
+            <div class="bg-gray-50 dark:bg-gray-700/50 px-4 sm:px-6 py-3 sm:py-4 flex gap-2 sm:gap-3 justify-end border-t dark:border-gray-600">
+                <button id="cancel-regenerate-btn" class="px-4 sm:px-6 py-2 bg-gray-300 dark:bg-gray-600 text-gray-800 dark:text-white text-xs sm:text-sm rounded-lg font-semibold hover:bg-gray-400 dark:hover:bg-gray-500 transition-colors whitespace-nowrap">
                     Cancel
                 </button>
-                <button id="confirm-regenerate-btn" class="px-6 py-2 bg-blue-600 dark:bg-blue-500 text-white rounded-lg font-semibold hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors flex items-center gap-2">
+                <button id="confirm-regenerate-btn" class="px-4 sm:px-6 py-2 bg-blue-600 dark:bg-blue-500 text-white text-xs sm:text-sm rounded-lg font-semibold hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors flex items-center gap-2 whitespace-nowrap">
                     <i class="bi bi-wand2"></i>
                     <span>Regenerate</span>
                 </button>
