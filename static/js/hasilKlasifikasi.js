@@ -1028,8 +1028,8 @@
       const data = await response.json();
 
       if (response.ok && data.success) {
-        // Add regenerated version to the question card
-        addRegeneratedVersionToQuestion(questionNumber, targetLevel, data.transformed_text);
+        // Add regenerated version as a new question card
+        addRegeneratedQuestionCard(questionNumber, targetLevel, data.transformed_text);
         
         showToast('✓ Question regenerated successfully!', 'success');
         closeRegenerateModal();
@@ -1051,9 +1051,8 @@
     }
   }
 
-  function addRegeneratedVersionToQuestion(questionNumber, targetLevel, transformedText) {
-    // Add a regenerated version to the question card
-    // Find the question card
+  function addRegeneratedQuestionCard(questionNumber, targetLevel, regeneratedText) {
+    // Add regenerated question as a new card below the original
     const questionCard = document.querySelector(`article[data-question-id="${questionNumber}"]`);
 
     if (!questionCard) {
@@ -1061,71 +1060,127 @@
       return;
     }
 
-    // Find or create the regenerated versions container
-    let regeneratedContainer = questionCard.querySelector('.regenerated-versions-container');
+    // Get classification ID from the list container
+    const classificationId = document.getElementById('questions-list')?.getAttribute('data-classification-id') || '';
     
-    if (!regeneratedContainer) {
-      // Create the container if it doesn't exist
-      regeneratedContainer = document.createElement('div');
-      regeneratedContainer.className = 'regenerated-versions-container space-y-2';
-      
-      // Insert after the placeholder or at the end of the classification div
-      const placeholder = questionCard.querySelector('.regenerated-versions-placeholder');
-      if (placeholder) {
-        placeholder.replaceWith(regeneratedContainer);
-      } else {
-        // Find the last classification-related div and append after it
-        const classificationDiv = questionCard.querySelector('.classification-box')?.parentElement;
-        if (classificationDiv) {
-          classificationDiv.appendChild(regeneratedContainer);
-        }
-      }
-    }
-
-    // Create regenerated version card
-    const versionCard = document.createElement('div');
-    const bgColor = getBackgroundColorForLevel(targetLevel);
-    versionCard.className = `regenerated-version-card text-white rounded-xl p-4 shadow-md transition-all hover:shadow-lg`;
-    versionCard.style.background = bgColor;
-    versionCard.dataset.versionLevel = targetLevel;
+    // Create a new article element for the regenerated question
+    const regeneratedCard = document.createElement('article');
+    regeneratedCard.className = 'question-card bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-6 shadow-md hover:shadow-lg transition-all';
+    regeneratedCard.setAttribute('data-regenerated', 'true');
+    regeneratedCard.setAttribute('data-original-question', questionNumber);
+    regeneratedCard.setAttribute('data-regenerated-level', targetLevel);
     
-    versionCard.innerHTML = `
-      <div class="flex items-start justify-between mb-3">
-        <div class="flex items-center gap-2 flex-1">
-          <i class="bi bi-sparkles text-yellow-300 flex-shrink-0"></i>
-          <span class="font-bold text-sm">Regenerated as <strong>${targetLevel}</strong></span>
+    const bgColorClass = getLevelBackgroundClass(targetLevel);
+    const levelColors = {
+      'C1': 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300',
+      'C2': 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300',
+      'C3': 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300',
+      'C4': 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300',
+      'C5': 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300',
+      'C6': 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300'
+    };
+    const badgeClass = levelColors[targetLevel] || 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300';
+    
+    regeneratedCard.innerHTML = `
+      <div class="flex flex-col lg:flex-row gap-4 lg:gap-6">
+        <!-- Question content -->
+        <div class="flex-1 min-w-0">
+          <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+            <div class="flex items-center gap-3 flex-1">
+              <div class="flex flex-col">
+                <h4 class="text-base sm:text-lg font-semibold text-gray-800 dark:text-gray-200">
+                  Question ${questionNumber} <span class="text-xs text-yellow-600 dark:text-yellow-400">(Regenerated)</span>
+                </h4>
+                <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  <i class="bi bi-sparkles text-yellow-500"></i> Transformed to ${targetLevel}
+                </p>
+              </div>
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="classification-badge px-3 py-1 rounded-full text-xs sm:text-sm font-semibold ${badgeClass}">
+                ${targetLevel}
+              </span>
+              <button class="delete-regenerated-question-btn text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 p-2 rounded transition-colors" 
+                      title="Delete this regenerated version">
+                <i class="bi bi-trash text-sm"></i>
+              </button>
+            </div>
+          </div>
+          
+          <!-- Regenerated question text -->
+          <div class="mb-4 p-5 bg-gradient-to-r from-amber-50 to-orange-50 dark:from-gray-700/40 dark:to-orange-900/20 border-l-4 border-amber-500 dark:border-amber-400 rounded-r-lg shadow-sm">
+            <p class="text-xs font-semibold text-gray-600 dark:text-gray-300 mb-3 uppercase tracking-wide">
+              <i class="bi bi-wand2"></i> Regenerated Question:
+            </p>
+            <p class="text-sm sm:text-base lg:text-lg text-gray-800 dark:text-gray-100 leading-relaxed break-words font-medium line-height-relaxed">
+              ${regeneratedText}
+            </p>
+          </div>
         </div>
-        <button class="delete-regenerated-btn text-white hover:bg-white/20 p-1.5 rounded transition-colors flex-shrink-0" 
-                data-version-level="${targetLevel}" 
-                title="Delete this regenerated version">
-          <i class="bi bi-trash text-sm"></i>
-        </button>
+
+        <!-- Classification box showing target level -->
+        <div class="w-full lg:w-auto flex flex-col gap-4">
+          <div class="classification-box ${bgColorClass} text-white rounded-xl p-4 shadow-lg min-w-56">
+            <div class="text-center mb-3">
+              <div class="text-2xl sm:text-3xl font-bold">
+                ${targetLevel}
+              </div>
+              <div class="text-xs mt-1 opacity-90">Regenerated Level</div>
+            </div>
+            
+            <div class="text-xs mb-2 opacity-90 text-center">From Q${questionNumber}</div>
+            
+            <button class="regenerate-again-btn w-full mt-2 bg-white/20 hover:bg-white/30 text-white px-3 py-2 rounded-lg text-sm font-semibold transition-colors shadow-sm border border-white/30 hover:border-white/50"
+                    data-question-number="${questionNumber}"
+                    data-question-text="${regeneratedText}"
+                    data-source-level="${targetLevel}"
+                    data-classification-id="${classificationId}"
+                    title="Regenerate this question to another level">
+              <i class="bi bi-wand2"></i> Regenerate Again
+            </button>
+          </div>
+        </div>
       </div>
-      <p class="text-sm leading-relaxed break-words opacity-95">${transformedText}</p>
     `;
 
-    regeneratedContainer.appendChild(versionCard);
+    // Insert the regenerated card right after the original
+    questionCard.parentElement.insertBefore(regeneratedCard, questionCard.nextSibling);
 
-    // Add delete handler
-    versionCard.querySelector('.delete-regenerated-btn').addEventListener('click', (e) => {
-      e.preventDefault();
-      versionCard.remove();
-      if (regeneratedContainer.children.length === 0) {
-        regeneratedContainer.remove();
-      }
-    });
+    // Add event listeners for the new card
+    setupRegeneratedCardHandlers(regeneratedCard);
   }
 
-  function getBackgroundColorForLevel(level) {
-    const colors = {
-      'C1': 'linear-gradient(to bottom right, rgb(22, 163, 74), rgb(16, 185, 129))',
-      'C2': 'linear-gradient(to bottom right, rgb(37, 99, 235), rgb(59, 130, 246))',
-      'C3': 'linear-gradient(to bottom right, rgb(217, 119, 6), rgb(245, 158, 11))',
-      'C4': 'linear-gradient(to bottom right, rgb(234, 88, 12), rgb(249, 115, 22))',
-      'C5': 'linear-gradient(to bottom right, rgb(220, 38, 38), rgb(239, 68, 68))',
-      'C6': 'linear-gradient(to bottom right, rgb(109, 40, 217), rgb(126, 34, 206))'
+  function setupRegeneratedCardHandlers(card) {
+    // Delete regenerated question
+    const deleteBtn = card.querySelector('.delete-regenerated-question-btn');
+    if (deleteBtn) {
+      deleteBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        card.remove();
+        showToast('Regenerated question deleted', 'info');
+      });
+    }
+
+    // Regenerate again button
+    const regenerateAgainBtn = card.querySelector('.regenerate-again-btn');
+    if (regenerateAgainBtn) {
+      regenerateAgainBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        handleRegenerateClick.call(regenerateAgainBtn);
+      });
+    }
+  }
+
+  function getLevelBackgroundClass(level) {
+    const classes = {
+      'C1': 'from-green-600 to-green-700',
+      'C2': 'from-blue-600 to-blue-700',
+      'C3': 'from-amber-600 to-amber-700',
+      'C4': 'from-orange-600 to-orange-700',
+      'C5': 'from-red-600 to-red-700',
+      'C6': 'from-purple-600 to-purple-700'
     };
-    return colors[level] || 'linear-gradient(to bottom right, rgb(55, 65, 81), rgb(75, 85, 99))';
+    return 'bg-gradient-to-br ' + (classes[level] || 'from-blue-600 to-blue-700');
   }
 
   // ==================== INITIALIZE ON DOM READY ====================
