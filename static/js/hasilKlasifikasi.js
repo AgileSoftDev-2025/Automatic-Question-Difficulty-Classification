@@ -167,7 +167,15 @@
       if (e.target.closest('.save-change-btn')) {
         handleSaveChange(e.target.closest('.save-change-btn'));
       }
+      
+      // Regenerate buttons
+      if (e.target.closest('.regenerate-btn')) {
+        handleRegenerateClick(e.target.closest('.regenerate-btn'));
+      }
     });
+
+    // Regenerate modal handlers
+    setupRegenerateModal();
 
     // Tabs
     elements.tabLinks.forEach(link => {
@@ -883,6 +891,174 @@
   function getClassificationId() {
     const pathParts = window.location.pathname.split('/');
     return pathParts[pathParts.length - 2] || '1';
+  }
+
+  // ==================== REGENERATE/TRANSFORM FUNCTIONS ====================
+  function setupRegenerateModal() {
+    const modal = document.getElementById('regenerate-modal');
+    const closeBtn = document.getElementById('close-regenerate-modal');
+    const cancelBtn = document.getElementById('cancel-regenerate-btn');
+    const confirmBtn = document.getElementById('confirm-regenerate-btn');
+
+    if (!modal) return;
+
+    closeBtn?.addEventListener('click', () => closeRegenerateModal());
+    cancelBtn?.addEventListener('click', () => closeRegenerateModal());
+    
+    // Close on escape
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && !modal.classList.contains('hidden')) {
+        closeRegenerateModal();
+      }
+    });
+
+    // Confirm regenerate
+    confirmBtn?.addEventListener('click', () => confirmRegenerate());
+
+    // Close on outside click
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) {
+        closeRegenerateModal();
+      }
+    });
+  }
+
+  function handleRegenerateClick(button) {
+    const questionNumber = button.getAttribute('data-question-number');
+    const questionText = button.getAttribute('data-question-text');
+    const sourceLevel = button.getAttribute('data-source-level');
+    const classificationId = button.getAttribute('data-classification-id');
+
+    if (!questionText || !sourceLevel) {
+      showToast('Error: Missing question data', 'error');
+      return;
+    }
+
+    // Store current data in modal
+    window.currentRegenerateData = {
+      questionNumber,
+      questionText,
+      sourceLevel,
+      classificationId
+    };
+
+    openRegenerateModal(questionNumber, questionText, sourceLevel);
+  }
+
+  function openRegenerateModal(questionNumber, questionText, sourceLevel) {
+    const modal = document.getElementById('regenerate-modal');
+    const numberEl = document.getElementById('modal-question-number');
+    const originalEl = document.getElementById('modal-original-text');
+    const sourceLevelEl = document.getElementById('modal-source-level');
+    const targetLevelEl = document.getElementById('modal-target-level');
+    const resultSection = document.getElementById('regenerate-result-section');
+
+    if (!modal) return;
+
+    // Update modal content
+    numberEl.textContent = questionNumber;
+    originalEl.textContent = questionText;
+    sourceLevelEl.textContent = sourceLevel;
+    
+    // Reset target level to first different option
+    const levels = ['C1', 'C2', 'C3', 'C4', 'C5', 'C6'];
+    const nextLevel = levels[Math.min(levels.indexOf(sourceLevel) + 1, levels.length - 1)];
+    targetLevelEl.value = nextLevel !== sourceLevel ? nextLevel : 'C3';
+    
+    // Hide result section initially
+    resultSection.classList.add('hidden');
+
+    // Show modal
+    modal.classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closeRegenerateModal() {
+    const modal = document.getElementById('regenerate-modal');
+    if (modal) {
+      modal.classList.add('hidden');
+      document.body.style.overflow = 'auto';
+      window.currentRegenerateData = null;
+    }
+  }
+
+  async function confirmRegenerate() {
+    if (!window.currentRegenerateData) return;
+
+    const { questionNumber, questionText, sourceLevel, classificationId } = window.currentRegenerateData;
+    const targetLevel = document.getElementById('modal-target-level')?.value;
+
+    if (!targetLevel) {
+      showToast('Please select a target level', 'warning');
+      return;
+    }
+
+    if (targetLevel === sourceLevel) {
+      showToast('Target level must be different from source level', 'warning');
+      return;
+    }
+
+    state.isProcessing = true;
+    showLoading(true);
+    
+    const confirmBtn = document.getElementById('confirm-regenerate-btn');
+    if (confirmBtn) {
+      confirmBtn.disabled = true;
+      confirmBtn.innerHTML = '<div class="animate-spin rounded-full h-4 w-4 border-b-2 border-white inline-block"></div> Regenerating...';
+    }
+
+    try {
+      const csrfToken = getCookie('csrftoken') || document.querySelector('[name=csrfmiddlewaretoken]')?.value;
+
+      const response = await fetch(`/klasifikasi/regenerate/${classificationId}/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': csrfToken,
+          'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: JSON.stringify({
+          question_number: questionNumber,
+          question_text: questionText,
+          source_level: sourceLevel,
+          target_level: targetLevel
+        })
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        // Show transformed question
+        const transformedEl = document.getElementById('modal-transformed-text');
+        const resultSection = document.getElementById('regenerate-result-section');
+        
+        if (transformedEl && resultSection) {
+          transformedEl.textContent = data.transformed_text;
+          resultSection.classList.remove('hidden');
+        }
+
+        showToast('✓ Question regenerated successfully!', 'success');
+
+        // Option to close or do something else
+        setTimeout(() => {
+          showToast('The regenerated question has been generated. Review it and close the modal.', 'info');
+        }, 1500);
+      } else {
+        throw new Error(data.error || 'Failed to regenerate');
+      }
+    } catch (error) {
+      console.error('Error regenerating:', error);
+      showToast('✗ ' + (error.message || 'Failed to regenerate question'), 'error');
+    } finally {
+      state.isProcessing = false;
+      showLoading(false);
+      
+      const confirmBtn = document.getElementById('confirm-regenerate-btn');
+      if (confirmBtn) {
+        confirmBtn.disabled = false;
+        confirmBtn.innerHTML = '<i class="bi bi-wand2"></i> <span>Regenerate</span>';
+      }
+    }
   }
 
   // ==================== INITIALIZE ON DOM READY ====================
