@@ -223,7 +223,7 @@ def get_regenerator() -> QuestionRegenerator:
         # Try to find LoRA model path
         lora_path = None
         apps_path = Path(__file__).parent
-        potential_lora_path = apps_path / "regenerate" / "bloom_lora_model"
+        potential_lora_path = apps_path / "regenerate_t5_lora"
         
         if potential_lora_path.exists():
             lora_path = str(potential_lora_path)
