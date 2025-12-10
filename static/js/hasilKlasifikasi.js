@@ -1084,8 +1084,9 @@
 
     // Create regenerated version card
     const versionCard = document.createElement('div');
-    const bgColor = getColorClassForLevel(targetLevel);
-    versionCard.className = `regenerated-version-card ${bgColor} text-white rounded-xl p-4 shadow-md transition-all hover:shadow-lg`;
+    const bgColor = getBackgroundColorForLevel(targetLevel);
+    versionCard.className = `regenerated-version-card text-white rounded-xl p-4 shadow-md transition-all hover:shadow-lg`;
+    versionCard.style.background = bgColor;
     versionCard.dataset.versionLevel = targetLevel;
     
     versionCard.innerHTML = `
@@ -1115,16 +1116,16 @@
     });
   }
 
-  function getColorClassForLevel(level) {
+  function getBackgroundColorForLevel(level) {
     const colors = {
-      'C1': 'from-green-600 to-green-700 bg-gradient-to-br',
-      'C2': 'from-blue-600 to-blue-700 bg-gradient-to-br',
-      'C3': 'from-amber-600 to-amber-700 bg-gradient-to-br',
-      'C4': 'from-orange-600 to-orange-700 bg-gradient-to-br',
-      'C5': 'from-red-600 to-red-700 bg-gradient-to-br',
-      'C6': 'from-purple-600 to-purple-700 bg-gradient-to-br'
+      'C1': 'linear-gradient(to bottom right, rgb(22, 163, 74), rgb(16, 185, 129))',
+      'C2': 'linear-gradient(to bottom right, rgb(37, 99, 235), rgb(59, 130, 246))',
+      'C3': 'linear-gradient(to bottom right, rgb(217, 119, 6), rgb(245, 158, 11))',
+      'C4': 'linear-gradient(to bottom right, rgb(234, 88, 12), rgb(249, 115, 22))',
+      'C5': 'linear-gradient(to bottom right, rgb(220, 38, 38), rgb(239, 68, 68))',
+      'C6': 'linear-gradient(to bottom right, rgb(109, 40, 217), rgb(126, 34, 206))'
     };
-    return colors[level] || 'from-gray-600 to-gray-700 bg-gradient-to-br';
+    return colors[level] || 'linear-gradient(to bottom right, rgb(55, 65, 81), rgb(75, 85, 99))';
   }
 
   // ==================== INITIALIZE ON DOM READY ====================
