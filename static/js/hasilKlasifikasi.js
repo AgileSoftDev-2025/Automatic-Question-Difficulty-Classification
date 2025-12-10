@@ -1028,21 +1028,11 @@
       const data = await response.json();
 
       if (response.ok && data.success) {
-        // Show transformed question
-        const transformedEl = document.getElementById('modal-transformed-text');
-        const resultSection = document.getElementById('regenerate-result-section');
+        // Add regenerated version to the question card
+        addRegeneratedVersionToQuestion(questionNumber, targetLevel, data.transformed_text);
         
-        if (transformedEl && resultSection) {
-          transformedEl.textContent = data.transformed_text;
-          resultSection.classList.remove('hidden');
-        }
-
         showToast('✓ Question regenerated successfully!', 'success');
-
-        // Option to close or do something else
-        setTimeout(() => {
-          showToast('The regenerated question has been generated. Review it and close the modal.', 'info');
-        }, 1500);
+        closeRegenerateModal();
       } else {
         throw new Error(data.error || 'Failed to regenerate');
       }
@@ -1059,6 +1049,82 @@
         confirmBtn.innerHTML = '<i class="bi bi-wand2"></i> <span>Regenerate</span>';
       }
     }
+  }
+
+  function addRegeneratedVersionToQuestion(questionNumber, targetLevel, transformedText) {
+    // Add a regenerated version to the question card
+    // Find the question card
+    const questionCard = document.querySelector(`article[data-question-id="${questionNumber}"]`);
+
+    if (!questionCard) {
+      console.warn('Question card not found for question:', questionNumber);
+      return;
+    }
+
+    // Find or create the regenerated versions container
+    let regeneratedContainer = questionCard.querySelector('.regenerated-versions-container');
+    
+    if (!regeneratedContainer) {
+      // Create the container if it doesn't exist
+      regeneratedContainer = document.createElement('div');
+      regeneratedContainer.className = 'regenerated-versions-container space-y-2';
+      
+      // Insert after the placeholder or at the end of the classification div
+      const placeholder = questionCard.querySelector('.regenerated-versions-placeholder');
+      if (placeholder) {
+        placeholder.replaceWith(regeneratedContainer);
+      } else {
+        // Find the last classification-related div and append after it
+        const classificationDiv = questionCard.querySelector('.classification-box')?.parentElement;
+        if (classificationDiv) {
+          classificationDiv.appendChild(regeneratedContainer);
+        }
+      }
+    }
+
+    // Create regenerated version card
+    const versionCard = document.createElement('div');
+    const bgColor = getColorClassForLevel(targetLevel);
+    versionCard.className = `regenerated-version-card ${bgColor} text-white rounded-xl p-4 shadow-md transition-all hover:shadow-lg`;
+    versionCard.dataset.versionLevel = targetLevel;
+    
+    versionCard.innerHTML = `
+      <div class="flex items-start justify-between mb-3">
+        <div class="flex items-center gap-2 flex-1">
+          <i class="bi bi-sparkles text-yellow-300 flex-shrink-0"></i>
+          <span class="font-bold text-sm">Regenerated as <strong>${targetLevel}</strong></span>
+        </div>
+        <button class="delete-regenerated-btn text-white hover:bg-white/20 p-1.5 rounded transition-colors flex-shrink-0" 
+                data-version-level="${targetLevel}" 
+                title="Delete this regenerated version">
+          <i class="bi bi-trash text-sm"></i>
+        </button>
+      </div>
+      <p class="text-sm leading-relaxed break-words opacity-95">${transformedText}</p>
+    `;
+
+    regeneratedContainer.appendChild(versionCard);
+
+    // Add delete handler
+    versionCard.querySelector('.delete-regenerated-btn').addEventListener('click', (e) => {
+      e.preventDefault();
+      versionCard.remove();
+      if (regeneratedContainer.children.length === 0) {
+        regeneratedContainer.remove();
+      }
+    });
+  }
+
+  function getColorClassForLevel(level) {
+    const colors = {
+      'C1': 'from-green-600 to-green-700 bg-gradient-to-br',
+      'C2': 'from-blue-600 to-blue-700 bg-gradient-to-br',
+      'C3': 'from-amber-600 to-amber-700 bg-gradient-to-br',
+      'C4': 'from-orange-600 to-orange-700 bg-gradient-to-br',
+      'C5': 'from-red-600 to-red-700 bg-gradient-to-br',
+      'C6': 'from-purple-600 to-purple-700 bg-gradient-to-br'
+    };
+    return colors[level] || 'from-gray-600 to-gray-700 bg-gradient-to-br';
   }
 
   // ==================== INITIALIZE ON DOM READY ====================

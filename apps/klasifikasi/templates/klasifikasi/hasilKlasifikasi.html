@@ -188,7 +188,7 @@
         .navbar-sticky {
             position: sticky;
             top: 0;
-            z-index: 1000;
+            z-index: 30;
             transition: box-shadow 0.3s ease;
         }
         .navbar-scrolled {
@@ -465,7 +465,7 @@
                                 </div>
 
                                 <!-- Classification controls with matching gradient colors -->
-                                <div class="w-full lg:w-48 flex-shrink-0">
+                                <div class="w-full lg:w-auto flex flex-col gap-4">
                                     <div class="classification-box bg-gradient-to-br 
                                         {% if q.level == 'C1' %}from-green-600 to-green-700
                                         {% elif q.level == 'C2' %}from-blue-600 to-blue-700
@@ -474,7 +474,7 @@
                                         {% elif q.level == 'C5' %}from-red-600 to-red-700
                                         {% elif q.level == 'C6' %}from-purple-600 to-purple-700
                                         {% else %}from-blue-600 to-blue-700{% endif %}
-                                        text-white rounded-xl p-4 shadow-lg">
+                                        text-white rounded-xl p-4 shadow-lg min-w-56">
                                         <div class="text-center mb-3">
                                             <div class="text-2xl sm:text-3xl font-bold current-label">
                                                 {{ q.level }}
@@ -508,6 +508,9 @@
                                             <i class="bi bi-wand2"></i> Regenerate
                                         </button>
                                     </div>
+                                    
+                                    <!-- Container for regenerated versions (dynamically populated) -->
+                                    <div class="regenerated-versions-placeholder"></div>
                                 </div>
                             </div>
                         </article>
