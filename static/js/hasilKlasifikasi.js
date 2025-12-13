@@ -167,7 +167,15 @@
       if (e.target.closest('.save-change-btn')) {
         handleSaveChange(e.target.closest('.save-change-btn'));
       }
+      
+      // Regenerate buttons
+      if (e.target.closest('.regenerate-btn')) {
+        handleRegenerateClick(e.target.closest('.regenerate-btn'));
+      }
     });
+
+    // Regenerate modal handlers
+    setupRegenerateModal();
 
     // Tabs
     elements.tabLinks.forEach(link => {
@@ -883,6 +891,296 @@
   function getClassificationId() {
     const pathParts = window.location.pathname.split('/');
     return pathParts[pathParts.length - 2] || '1';
+  }
+
+  // ==================== REGENERATE/TRANSFORM FUNCTIONS ====================
+  function setupRegenerateModal() {
+    const modal = document.getElementById('regenerate-modal');
+    const closeBtn = document.getElementById('close-regenerate-modal');
+    const cancelBtn = document.getElementById('cancel-regenerate-btn');
+    const confirmBtn = document.getElementById('confirm-regenerate-btn');
+
+    if (!modal) return;
+
+    closeBtn?.addEventListener('click', () => closeRegenerateModal());
+    cancelBtn?.addEventListener('click', () => closeRegenerateModal());
+    
+    // Close on escape
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && !modal.classList.contains('hidden')) {
+        closeRegenerateModal();
+      }
+    });
+
+    // Confirm regenerate
+    confirmBtn?.addEventListener('click', () => confirmRegenerate());
+
+    // Close on outside click
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) {
+        closeRegenerateModal();
+      }
+    });
+  }
+
+  function handleRegenerateClick(button) {
+    const questionNumber = button.getAttribute('data-question-number');
+    const questionText = button.getAttribute('data-question-text');
+    const sourceLevel = button.getAttribute('data-source-level');
+    const classificationId = button.getAttribute('data-classification-id');
+
+    if (!questionText || !sourceLevel) {
+      showToast('Error: Missing question data', 'error');
+      return;
+    }
+
+    // Store current data in modal
+    window.currentRegenerateData = {
+      questionNumber,
+      questionText,
+      sourceLevel,
+      classificationId
+    };
+
+    openRegenerateModal(questionNumber, questionText, sourceLevel);
+  }
+
+  function openRegenerateModal(questionNumber, questionText, sourceLevel) {
+    const modal = document.getElementById('regenerate-modal');
+    const numberEl = document.getElementById('modal-question-number');
+    const originalEl = document.getElementById('modal-original-text');
+    const sourceLevelEl = document.getElementById('modal-source-level');
+    const targetLevelEl = document.getElementById('modal-target-level');
+    const resultSection = document.getElementById('regenerate-result-section');
+
+    if (!modal) return;
+
+    // Update modal content
+    numberEl.textContent = questionNumber;
+    originalEl.textContent = questionText;
+    sourceLevelEl.textContent = sourceLevel;
+    
+    // Reset target level to first different option
+    const levels = ['C1', 'C2', 'C3', 'C4', 'C5', 'C6'];
+    const nextLevel = levels[Math.min(levels.indexOf(sourceLevel) + 1, levels.length - 1)];
+    targetLevelEl.value = nextLevel !== sourceLevel ? nextLevel : 'C3';
+    
+    // Hide result section initially
+    resultSection.classList.add('hidden');
+
+    // Show modal
+    modal.classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closeRegenerateModal() {
+    const modal = document.getElementById('regenerate-modal');
+    if (modal) {
+      modal.classList.add('hidden');
+      document.body.style.overflow = 'auto';
+      window.currentRegenerateData = null;
+    }
+  }
+
+  async function confirmRegenerate() {
+    if (!window.currentRegenerateData) return;
+
+    const { questionNumber, questionText, sourceLevel, classificationId } = window.currentRegenerateData;
+    const targetLevel = document.getElementById('modal-target-level')?.value;
+
+    if (!targetLevel) {
+      showToast('Please select a target level', 'warning');
+      return;
+    }
+
+    if (targetLevel === sourceLevel) {
+      showToast('Target level must be different from source level', 'warning');
+      return;
+    }
+
+    state.isProcessing = true;
+    showLoading(true);
+    
+    const confirmBtn = document.getElementById('confirm-regenerate-btn');
+    if (confirmBtn) {
+      confirmBtn.disabled = true;
+      confirmBtn.innerHTML = '<div class="animate-spin rounded-full h-4 w-4 border-b-2 border-white inline-block"></div> Regenerating...';
+    }
+
+    try {
+      const csrfToken = getCookie('csrftoken') || document.querySelector('[name=csrfmiddlewaretoken]')?.value;
+
+      const response = await fetch(`/klasifikasi/regenerate/${classificationId}/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': csrfToken,
+          'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: JSON.stringify({
+          question_number: questionNumber,
+          question_text: questionText,
+          source_level: sourceLevel,
+          target_level: targetLevel
+        })
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        // Add regenerated version as a new question card
+        addRegeneratedQuestionCard(questionNumber, targetLevel, data.transformed_text);
+        
+        showToast('✓ Question regenerated successfully!', 'success');
+        closeRegenerateModal();
+      } else {
+        throw new Error(data.error || 'Failed to regenerate');
+      }
+    } catch (error) {
+      console.error('Error regenerating:', error);
+      showToast('✗ ' + (error.message || 'Failed to regenerate question'), 'error');
+    } finally {
+      state.isProcessing = false;
+      showLoading(false);
+      
+      const confirmBtn = document.getElementById('confirm-regenerate-btn');
+      if (confirmBtn) {
+        confirmBtn.disabled = false;
+        confirmBtn.innerHTML = '<i class="bi bi-wand2"></i> <span>Regenerate</span>';
+      }
+    }
+  }
+
+  function addRegeneratedQuestionCard(questionNumber, targetLevel, regeneratedText) {
+    // Add regenerated question as a new card below the original
+    const questionCard = document.querySelector(`article[data-question-id="${questionNumber}"]`);
+
+    if (!questionCard) {
+      console.warn('Question card not found for question:', questionNumber);
+      return;
+    }
+
+    // Get classification ID from the list container
+    const classificationId = document.getElementById('questions-list')?.getAttribute('data-classification-id') || '';
+    
+    // Create a new article element for the regenerated question
+    const regeneratedCard = document.createElement('article');
+    regeneratedCard.className = 'question-card bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-6 shadow-md hover:shadow-lg transition-all';
+    regeneratedCard.setAttribute('data-regenerated', 'true');
+    regeneratedCard.setAttribute('data-original-question', questionNumber);
+    regeneratedCard.setAttribute('data-regenerated-level', targetLevel);
+    
+    const bgColorClass = getLevelBackgroundClass(targetLevel);
+    const levelColors = {
+      'C1': 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300',
+      'C2': 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300',
+      'C3': 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300',
+      'C4': 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300',
+      'C5': 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300',
+      'C6': 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300'
+    };
+    const badgeClass = levelColors[targetLevel] || 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300';
+    
+    regeneratedCard.innerHTML = `
+      <div class="flex flex-col lg:flex-row gap-4 lg:gap-6">
+        <!-- Question content -->
+        <div class="flex-1 min-w-0">
+          <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+            <div class="flex items-center gap-3 flex-1">
+              <div class="flex flex-col">
+                <h4 class="text-base sm:text-lg font-semibold text-gray-800 dark:text-gray-200">
+                  Question ${questionNumber} <span class="text-xs text-yellow-600 dark:text-yellow-400">(Regenerated)</span>
+                </h4>
+                <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  <i class="bi bi-sparkles text-yellow-500"></i> Transformed to ${targetLevel}
+                </p>
+              </div>
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="classification-badge px-3 py-1 rounded-full text-xs sm:text-sm font-semibold ${badgeClass}">
+                ${targetLevel}
+              </span>
+              <button class="delete-regenerated-question-btn text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 p-2 rounded transition-colors" 
+                      title="Delete this regenerated version">
+                <i class="bi bi-trash text-sm"></i>
+              </button>
+            </div>
+          </div>
+          
+          <!-- Regenerated question text -->
+          <div class="mb-4 p-5 bg-gradient-to-r from-amber-50 to-orange-50 dark:from-gray-700/40 dark:to-orange-900/20 border-l-4 border-amber-500 dark:border-amber-400 rounded-r-lg shadow-sm">
+            <p class="text-xs font-semibold text-gray-600 dark:text-gray-300 mb-3 uppercase tracking-wide">
+              <i class="bi bi-wand2"></i> Regenerated Question:
+            </p>
+            <p class="text-sm sm:text-base lg:text-lg text-gray-800 dark:text-gray-100 leading-relaxed break-words font-medium line-height-relaxed">
+              ${regeneratedText}
+            </p>
+          </div>
+        </div>
+
+        <!-- Classification box showing target level -->
+        <div class="w-full lg:w-auto flex flex-col gap-4">
+          <div class="classification-box ${bgColorClass} text-white rounded-xl p-4 shadow-lg min-w-56">
+            <div class="text-center mb-3">
+              <div class="text-2xl sm:text-3xl font-bold">
+                ${targetLevel}
+              </div>
+              <div class="text-xs mt-1 opacity-90">Regenerated Level</div>
+            </div>
+            
+            <div class="text-xs mb-2 opacity-90 text-center">From Q${questionNumber}</div>
+            
+            <button class="regenerate-again-btn w-full mt-2 bg-white/20 hover:bg-white/30 text-white px-3 py-2 rounded-lg text-sm font-semibold transition-colors shadow-sm border border-white/30 hover:border-white/50"
+                    data-question-number="${questionNumber}"
+                    data-question-text="${regeneratedText}"
+                    data-source-level="${targetLevel}"
+                    data-classification-id="${classificationId}"
+                    title="Regenerate this question to another level">
+              <i class="bi bi-wand2"></i> Regenerate Again
+            </button>
+          </div>
+        </div>
+      </div>
+    `;
+
+    // Insert the regenerated card right after the original
+    questionCard.parentElement.insertBefore(regeneratedCard, questionCard.nextSibling);
+
+    // Add event listeners for the new card
+    setupRegeneratedCardHandlers(regeneratedCard);
+  }
+
+  function setupRegeneratedCardHandlers(card) {
+    // Delete regenerated question
+    const deleteBtn = card.querySelector('.delete-regenerated-question-btn');
+    if (deleteBtn) {
+      deleteBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        card.remove();
+        showToast('Regenerated question deleted', 'info');
+      });
+    }
+
+    // Regenerate again button
+    const regenerateAgainBtn = card.querySelector('.regenerate-again-btn');
+    if (regenerateAgainBtn) {
+      regenerateAgainBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        handleRegenerateClick.call(regenerateAgainBtn);
+      });
+    }
+  }
+
+  function getLevelBackgroundClass(level) {
+    const classes = {
+      'C1': 'from-green-600 to-green-700',
+      'C2': 'from-blue-600 to-blue-700',
+      'C3': 'from-amber-600 to-amber-700',
+      'C4': 'from-orange-600 to-orange-700',
+      'C5': 'from-red-600 to-red-700',
+      'C6': 'from-purple-600 to-purple-700'
+    };
+    return 'bg-gradient-to-br ' + (classes[level] || 'from-blue-600 to-blue-700');
   }
 
   // ==================== INITIALIZE ON DOM READY ====================

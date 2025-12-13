@@ -18,6 +18,7 @@ urlpatterns = [
     # CRUD operations
     path('delete/<int:pk>/', views.delete_classification, name='delete'),
     path('update/<int:pk>/', views.update_question_classification, name='update'),
+    path('regenerate/<int:pk>/', views.regenerate_question, name='regenerate'),
     
     # Exports
     path('download/<int:pk>/', views.download_report, name='download_report'),

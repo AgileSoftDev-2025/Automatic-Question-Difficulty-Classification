@@ -203,6 +203,73 @@ def update_question_classification(request, pk):
 
 
 @login_required
+@csrf_protect
+@require_POST
+def regenerate_question(request, pk):
+    """AJAX endpoint to regenerate/transform a question to a different Bloom level"""
+    try:
+        from .regenerate_utils import regenerate_question as regen_func
+        
+        data = json.loads(request.body)
+        question_number = data.get('question_number')
+        question_text = data.get('question_text')
+        source_level = data.get('source_level')
+        target_level = data.get('target_level')
+        
+        # Validate inputs
+        if not all([question_number, question_text, source_level, target_level]):
+            return JsonResponse({
+                'success': False,
+                'error': 'Missing required fields'
+            }, status=400)
+        
+        valid_categories = ['C1', 'C2', 'C3', 'C4', 'C5', 'C6']
+        if source_level not in valid_categories or target_level not in valid_categories:
+            return JsonResponse({
+                'success': False,
+                'error': f'Invalid category. Must be one of: {", ".join(valid_categories)}'
+            }, status=400)
+        
+        # Check if user owns this classification
+        classification = get_object_or_404(ClassificationHistory, pk=pk, user=request.user)
+        
+        # Regenerate the question
+        logger.info(f"Regenerating question {question_number} from {source_level} to {target_level}")
+        
+        result = regen_func(question_text, source_level, target_level)
+        
+        if not result['success']:
+            logger.warning(f"Question regeneration failed: {result['error']}")
+            return JsonResponse({
+                'success': False,
+                'error': f'Failed to regenerate question: {result["error"]}'
+            }, status=500)
+        
+        transformed_text = result['transformed']
+        
+        logger.info(f"Question {question_number} successfully regenerated")
+        logger.debug(f"Original: {question_text[:100]}...")
+        logger.debug(f"Transformed: {transformed_text[:100]}...")
+        
+        return JsonResponse({
+            'success': True,
+            'message': 'Question regenerated successfully',
+            'question_number': question_number,
+            'original_text': question_text,
+            'transformed_text': transformed_text,
+            'source_level': source_level,
+            'target_level': target_level,
+        })
+        
+    except Exception as e:
+        logger.error(f"Error regenerating question: {str(e)}", exc_info=True)
+        return JsonResponse({
+            'success': False,
+            'error': 'An internal error occurred during regeneration'
+        }, status=500)
+
+
+@login_required
 @require_http_methods(["GET"])
 def history_view(request):
     """Display classification history with real database data"""
