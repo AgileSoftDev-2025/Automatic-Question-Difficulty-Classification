@@ -298,6 +298,13 @@ class IndonesianBloomAdjuster:
         r'\bikuti\s+langkah(?:-langkah)?\s+(?:berikut|untuk)',
         r'\blakukan\s+tahapan\s+',
         r'\bjalankan\s+prosedur\s+',
+
+            # === NEW: Problem solving imperatives ===
+        r'\bpecahkan(?:lah)?\s+(?:masalah|kasus|soal)',
+        r'\banalisis(?:lah)?\s+(?:kasus|data)\s+berikut',
+        r'\bevaluasi(?:lah)?\s+(?:dengan\s+menggunakan|menggunakan)',
+        r'\bkerjakan(?:lah)?\s+',
+        r'\bjawablah\s+dengan\s+(?:menghitung|menerapkan|menggunakan)',
     ]
     
     # ========== C4 (ANALYZE) - MUST BE IMPERATIVE + ANALYTICAL ==========
