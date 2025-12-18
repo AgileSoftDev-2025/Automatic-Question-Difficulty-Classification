@@ -134,7 +134,220 @@
         }
     }
 
-    
+    // ==========================================
+    // FILTER FUNCTIONALITY
+    // ==========================================
+    function toggleFilterPanel() {
+    if (!elements.filterPanel) return;
+
+    elements.filterPanel.classList.toggle('active');
+    }
+
+    function handleDatePresetChange() {
+        const preset = elements.filterDatePreset.value;
+        
+        if (preset === 'custom') {
+            elements.customDateRange.classList.remove('hidden');
+        } else {
+            elements.customDateRange.classList.add('hidden');
+            elements.filterDateStart.value = '';
+            elements.filterDateEnd.value = '';
+        }
+    }
+
+    function applyFilters() {
+        const filters = getFilterValues();
+        let visibleCount = 0;
+        
+        // Remove existing "no results" message
+        const existingMsg = elements.tableBody.querySelector('.no-results-row');
+        if (existingMsg) existingMsg.remove();
+        
+        allRows.forEach(row => {
+            const shouldShow = checkRowMatchesFilters(row, filters);
+            
+            if (shouldShow) {
+                row.style.display = '';
+                row.style.animation = 'fadeIn 0.3s ease-out';
+                visibleCount++;
+            } else {
+                row.style.display = 'none';
+            }
+        });
+
+        // Update row numbers
+        updateRowNumbers();
+        
+        // Show notification
+        if (visibleCount === 0) {
+            showNoResultsMessage();
+            showNotification('No results match your filters', 'info');
+        } else {
+            showNotification(`✓ Showing ${visibleCount} result${visibleCount > 1 ? 's' : ''}`, 'success');
+        }
+        
+        // Close filter panel
+        toggleFilterPanel();
+    }
+
+    /**
+     * Get all filter values
+     */
+    function getFilterValues() {
+        return {
+            questionsMin: elements.filterQuestionsMin.value ? parseInt(elements.filterQuestionsMin.value) : null,
+            questionsMax: elements.filterQuestionsMax.value ? parseInt(elements.filterQuestionsMax.value) : null,
+            datePreset: elements.filterDatePreset.value,
+            dateStart: elements.filterDateStart.value,
+            dateEnd: elements.filterDateEnd.value,
+            c1: elements.filterC1.checked,
+            c2: elements.filterC2.checked,
+            c3: elements.filterC3.checked,
+            c4: elements.filterC4.checked,
+            c5: elements.filterC5.checked,
+            c6: elements.filterC6.checked
+        };
+    }
+
+    /**
+     * Check if row matches all active filters
+     */
+    function checkRowMatchesFilters(row, filters) {
+        // Questions filter
+        if (filters.questionsMin !== null || filters.questionsMax !== null) {
+            const questions = parseInt(row.dataset.questions);
+            
+            if (filters.questionsMin !== null && questions < filters.questionsMin) {
+                return false;
+            }
+            
+            if (filters.questionsMax !== null && questions > filters.questionsMax) {
+                return false;
+            }
+        }
+        
+        // Date filter
+        if (filters.datePreset || filters.dateStart || filters.dateEnd) {
+            const rowDate = new Date(row.dataset.date);
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            
+            if (filters.datePreset === 'today') {
+                const rowDateOnly = new Date(rowDate);
+                rowDateOnly.setHours(0, 0, 0, 0);
+                if (rowDateOnly.getTime() !== today.getTime()) {
+                    return false;
+                }
+            } else if (filters.datePreset === '7days') {
+                const sevenDaysAgo = new Date(today);
+                sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+                if (rowDate < sevenDaysAgo) {
+                    return false;
+                }
+            } else if (filters.datePreset === '30days') {
+                const thirtyDaysAgo = new Date(today);
+                thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+                if (rowDate < thirtyDaysAgo) {
+                    return false;
+                }
+            } else if (filters.datePreset === 'custom') {
+                if (filters.dateStart) {
+                    const startDate = new Date(filters.dateStart);
+                    if (rowDate < startDate) {
+                        return false;
+                    }
+                }
+                if (filters.dateEnd) {
+                    const endDate = new Date(filters.dateEnd);
+                    endDate.setHours(23, 59, 59, 999);
+                    if (rowDate > endDate) {
+                        return false;
+                    }
+                }
+            }
+        }
+        
+        // Bloom's Taxonomy filter (C1-C6)
+        const anyBloomChecked = filters.c1 || filters.c2 || filters.c3 || 
+                               filters.c4 || filters.c5 || filters.c6;
+        
+        if (anyBloomChecked) {
+            let hasMatchingBloom = false;
+            
+            if (filters.c1 && parseInt(row.dataset.c1) > 0) hasMatchingBloom = true;
+            if (filters.c2 && parseInt(row.dataset.c2) > 0) hasMatchingBloom = true;
+            if (filters.c3 && parseInt(row.dataset.c3) > 0) hasMatchingBloom = true;
+            if (filters.c4 && parseInt(row.dataset.c4) > 0) hasMatchingBloom = true;
+            if (filters.c5 && parseInt(row.dataset.c5) > 0) hasMatchingBloom = true;
+            if (filters.c6 && parseInt(row.dataset.c6) > 0) hasMatchingBloom = true;
+            
+            if (!hasMatchingBloom) {
+                return false;
+            }
+        }
+        
+        return true;
+    }
+
+    /**
+     * Reset all filters
+     */
+    function resetFilters() {
+        // Clear filter inputs
+        elements.filterQuestionsMin.value = '';
+        elements.filterQuestionsMax.value = '';
+        elements.filterDatePreset.value = '';
+        elements.filterDateStart.value = '';
+        elements.filterDateEnd.value = '';
+        elements.customDateRange.classList.add('hidden');
+        
+        // Uncheck all Bloom's taxonomy checkboxes
+        elements.filterC1.checked = false;
+        elements.filterC2.checked = false;
+        elements.filterC3.checked = false;
+        elements.filterC4.checked = false;
+        elements.filterC5.checked = false;
+        elements.filterC6.checked = false;
+        
+        // Show all rows
+        allRows.forEach(row => {
+            row.style.display = '';
+        });
+        
+        // Remove "no results" message
+        const existingMsg = elements.tableBody.querySelector('.no-results-row');
+        if (existingMsg) existingMsg.remove();
+        
+        // Update row numbers
+        updateRowNumbers();
+        
+        // Close filter panel if open
+        if (elements.filterPanel.classList.contains('active')) {
+            toggleFilterPanel();
+        }
+        
+        showNotification('✓ Filters reset successfully', 'success');
+        window.resetFilters = resetFilters;
+    }
+
+    /**
+     * Show "no results" message
+     */
+    function showNoResultsMessage() {
+        const noResultsRow = document.createElement('tr');
+        noResultsRow.className = 'no-results-row';
+        noResultsRow.innerHTML = `
+            <td colspan="11" class="px-6 py-12 text-center">
+                <i class="bi bi-funnel text-5xl text-gray-300 dark:text-gray-600 mb-3 block"></i>
+                <p class="text-lg font-medium text-gray-700 dark:text-gray-300">No results match your filters</p>
+                <p class="text-sm text-gray-500 dark:text-gray-400 mt-2">Try adjusting your filter criteria</p>
+                <button onclick="window.resetFilters()" class="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all">
+                    Reset Filters
+                </button>
+            </td>
+        `;
+        elements.tableBody.appendChild(noResultsRow);
+    }
 
     // ==========================================
     // 4. PROFILE DROPDOWN
