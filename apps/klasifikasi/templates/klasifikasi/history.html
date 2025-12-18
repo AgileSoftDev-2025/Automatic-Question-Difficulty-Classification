@@ -263,6 +263,27 @@
                                    class="w-full px-3 py-2 border-2 border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 text-sm">
                         </div>
                     </div>
+
+                    <!-- Date Filter -->
+                    <div class="space-y-3">
+                        <h3 class="text-sm font-bold text-gray-700 dark:text-gray-300 flex items-center">
+                            <i class="bi bi-calendar3 mr-2 text-blue-600 dark:text-blue-400"></i>
+                            Date Range
+                        </h3>
+                        <select id="filter-date-preset" class="w-full px-3 py-2 border-2 border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 text-sm font-medium mb-2">
+                            <option value="">All Time</option>
+                            <option value="today">Today</option>
+                            <option value="7days">Last 7 Days</option>
+                            <option value="30days">Last 30 Days</option>
+                            <option value="custom">Custom Range</option>
+                        </select>
+                        <div id="custom-date-range" class="hidden space-y-2">
+                            <input type="date" id="filter-date-start" 
+                                   class="w-full px-3 py-2 border-2 border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 text-sm">
+                            <input type="date" id="filter-date-end" 
+                                   class="w-full px-3 py-2 border-2 border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 text-sm">
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Apply Filter Button -->
