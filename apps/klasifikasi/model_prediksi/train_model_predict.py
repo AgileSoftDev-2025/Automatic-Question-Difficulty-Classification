@@ -176,7 +176,7 @@ def prepare_labels(examples):
     """Convert label columns to a single labels list with correct dtype"""
     labels = []
     for i in range(len(examples[TEXT_COLUMN])):
-        label_row = [float(examples[col][i]) for col in LABEL_COLUMNS]  # Convert to float
+        label_row = [float(examples[col][i]) for col in LABEL_COLUMNS]
         labels.append(label_row)
     return {"labels": labels}
 
@@ -267,8 +267,8 @@ def main():
         return
 
     # Split data
-    test_size = min(0.20, max(0.1, 10/len(df)))  # At least 10% or 10 samples for test
-    val_size = min(0.125, max(0.05, 5/len(df)))  # At least 5% or 5 samples for validation
+    test_size = min(0.20, max(0.1, 10/len(df)))
+    val_size = min(0.125, max(0.05, 5/len(df)))
 
     train_df, test_df = train_test_split(
         df, test_size=test_size, random_state=RANDOM_SEED, shuffle=True
@@ -279,7 +279,7 @@ def main():
             train_df, test_size=val_size/(1-test_size), random_state=RANDOM_SEED, shuffle=True
         )
     else:
-        val_df = test_df  # Use test set as validation if train set is too small
+        val_df = test_df 
 
     print(f"\nData split:")
     print(f"Train: {len(train_df)}, Validation: {len(val_df)}, Test: {len(test_df)}")
