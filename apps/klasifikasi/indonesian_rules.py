@@ -400,14 +400,62 @@ class IndonesianBloomAdjuster:
     
     # ========== C5 (EVALUATE) - MUST BE IMPERATIVE + JUDGMENT ==========
     FORCE_C5_PATTERNS = [
-        r'\bevaluasi(?:lah)?\s+(?:efektivitas|kualitas|kelayakan)',
-        r'\bnilai(?:lah)?\s+(?:efektivitas|kelayakan)',
-        r'\bpertimbangkan\s+[\w\s]+\s+untuk\s+memilih',
-        r'\bjustifikasi\s+(?:pilihan|keputusan)',
-        r'\brekomendasi(?:kan)?\s+[\w\s]+\s+yang\s+(?:terbaik|paling)',
-        r'\bapa\s+yang\s+(?:lebih|paling)\s+(?:baik|efektif)',
-        r'\bmana\s+yang\s+lebih\s+baik',
-        r'\bputuskan\s+(?:apakah|mana)',
+
+        # === Core evaluation verbs ===
+        r'\bevaluasi(?:lah)?\s+(?:efektivitas|kualitas|kelayakan|kinerja|hasil)',
+        r'\bnilai(?:lah)?\s+(?:efektivitas|kelayakan|kualitas|kinerja)',
+        r'\bassess(?:lah)?\s+',
+        r'\bkaji(?:lah)?\s+(?:ulang|kembali)?\s+(?:efektivitas|kelayakan)',
+        
+        # === Judgment & decision making ===
+        r'\bputuskan(?:lah)?\s+(?:apakah|mana|metode|pendekatan)',
+        r'\btentukan(?:lah)?\s+(?:mana\s+yang\s+(?:lebih|paling)|pilihan\s+terbaik)',
+        r'\bpilih(?:lah)?\s+(?:dan\s+)?(?:justifikasi|jelaskan\s+mengapa)',
+        r'\brekomendasi(?:kan)?(?:lah)?\s+[\w\s]+\s+yang\s+(?:terbaik|paling|optimal)',
+
+        # === Justification & defense ===
+        r'\bjustifikasi(?:kan)?(?:lah)?\s+(?:pilihan|keputusan|pendapat|rekomendasi)',
+        r'\bdefend(?:lah)?\s+(?:pilihan|keputusan|posisi)',
+        r'\bberikan\s+(?:argumen|alasan|pembenaran)\s+(?:untuk|mengapa)',
+        r'\bbuktikan\s+bahwa\s+[\w\s]+\s+(?:lebih|paling)\s+(?:baik|efektif)',
+
+        # === Comparison with judgment ===
+        r'\bapa\s+yang\s+(?:lebih|paling)\s+(?:baik|efektif|sesuai|tepat)',
+        r'\bmana\s+yang\s+(?:lebih|paling)\s+(?:baik|efektif|sesuai|tepat)',
+        r'\bmanakah\s+(?:yang\s+)?(?:lebih|paling)\s+',
+        r'\bbandingkan\s+[\w\s]+\s+dan\s+(?:tentukan|pilih|putuskan)\s+yang\s+(?:terbaik|lebih)',
+
+        # === Quality assessment ===
+        r'\bseberapa\s+(?:baik|efektif|layak|tepat)',
+        r'\bapakah\s+[\w\s]+\s+(?:sudah\s+)?(?:efektif|layak|memadai|cukup)',
+        r'\bkritisi(?:lah)?\s+',
+        r'\bkritik(?:lah)?\s+(?:pendekatan|metode|strategi|hasil)',
+        r'\breview(?:lah)?\s+secara\s+kritis',
+
+        # === Effectiveness & suitability ===
+        r'\bsejauh\s+mana\s+[\w\s]+\s+(?:efektif|berhasil|sesuai)',
+        r'\bapakah\s+[\w\s]+\s+dapat\s+diandalkan',
+        r'\buji(?:lah)?\s+(?:validitas|reliabilitas|kelayakan)',
+        r'\bverifikasi(?:lah)?\s+(?:kebenaran|validitas)',
+        
+        # === Recommendation & selection ===
+        r'\busulkan(?:lah)?\s+[\w\s]+\s+(?:terbaik|yang\s+paling|optimal)',
+        r'\bsarankan(?:lah)?\s+[\w\s]+\s+berdasarkan\s+(?:evaluasi|analisis)',
+        r'\btentukan(?:lah)?\s+(?:solusi|pendekatan)\s+terbaik',
+        
+        # === Priority & ranking ===
+        r'\burutkan(?:lah)?\s+[\w\s]+\s+berdasarkan\s+(?:prioritas|efektivitas)',
+        r'\branking(?:lah)?\s+',
+        r'\bprioritaskan(?:lah)?\s+',
+        
+        # === Consideration & deliberation ===
+        r'\bpertimbangkan\s+[\w\s]+\s+(?:untuk\s+)?(?:memilih|menentukan)',
+        r'\btimbang(?:lah)?\s+(?:pro\s+dan\s+kontra|kelebihan\s+dan\s+kekurangan)',
+        
+        # === Appraisal & assessment ===
+        r'\bberikan\s+penilaian\s+(?:terhadap|tentang|mengenai)',
+        r'\blakukan\s+penilaian\s+(?:kritis|komprehensif)',
+        r'\bappraisal(?:lah)?\s+',
     ]
     
     # ========== C6 (CREATE) - MUST BE IMPERATIVE + CREATIVE ==========
