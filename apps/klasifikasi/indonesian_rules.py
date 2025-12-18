@@ -283,6 +283,14 @@ class IndonesianBloomAdjuster:
         r'\bkontras\s+antara',
         r'\bpersamaan\s+dan\s+perbedaan',
         r'\bbeda(?:nya)?\s+[\w\s]+\s+dengan',
+
+        # === Interpretation & Meaning ===
+        r'\binterpretasi(?:kan)?\s+(?:hasil|makna|arti)',
+        r'\bmakna\s+(?:dari|di\s+balik)',
+        r'\barti\s+(?:dari|penting)',
+        r'\bimplikasi\s+(?:dari|terhadap)',
+        r'\bsignifikansi\s+(?:dari|hasil)',
+        r'\bmaksud\s+(?:dari|pernyataan)',
     ]
     
     # ========== C3 (APPLY) - MUST BE IMPERATIVE ==========
