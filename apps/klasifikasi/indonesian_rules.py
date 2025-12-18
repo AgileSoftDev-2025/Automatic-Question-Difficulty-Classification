@@ -293,6 +293,11 @@ class IndonesianBloomAdjuster:
         r'\bbuatlah\s+(?:perhitungan|kalkulasi)',
         r'\bhitung\s+(?:besarnya|nilai|jumlah)',
         r'\bkalkulasi(?:lah)?\s+',
+
+        # === NEW: Step-by-step execution ===
+        r'\bikuti\s+langkah(?:-langkah)?\s+(?:berikut|untuk)',
+        r'\blakukan\s+tahapan\s+',
+        r'\bjalankan\s+prosedur\s+',
     ]
     
     # ========== C4 (ANALYZE) - MUST BE IMPERATIVE + ANALYTICAL ==========
