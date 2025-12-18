@@ -460,13 +460,63 @@ class IndonesianBloomAdjuster:
     
     # ========== C6 (CREATE) - MUST BE IMPERATIVE + CREATIVE ==========
     FORCE_C6_PATTERNS = [
-        r'\brancang(?:lah)?\s+(?:sebuah|suatu)\s+(?:sistem|model)',
-        r'\bdesain(?:lah)?\s+(?:sebuah|suatu)',
-        r'\bbuatlah\s+(?:sistem|model|rancangan)',
-        r'\bkembangkan\s+(?:sistem|model)',
-        r'\bciptakan\b',
-        r'\bsusun(?:lah)?\s+(?:rencana|strategi|sistem)',
-        r'\busulkan\s+(?:desain|rancangan)',
+        # === Core creation verbs ===
+        r'\brancang(?:lah)?\s+(?:sebuah|suatu)\s+(?:sistem|model|aplikasi|database|jaringan)',
+        r'\bdesain(?:lah)?\s+(?:sebuah|suatu)\s+(?:sistem|model|aplikasi|interface)',
+        r'\bbuatlah\s+(?:sistem|model|rancangan|prototipe|desain|arsitektur)',
+        r'\bkembangkan(?:lah)?\s+(?:sistem|model|aplikasi|strategi\s+baru)',
+        r'\bciptakan(?:lah)?\s+',
+        r'\bkreasi(?:kan)?(?:lah)?\s+',
+    
+        # === Planning & strategy ===
+        r'\bsusun(?:lah)?\s+(?:rencana|strategi|sistem|kerangka\s+kerja)',
+        r'\bformulasi(?:kan)?(?:lah)?\s+(?:strategi|rencana|kebijakan)\s+(?:baru|yang)',
+        r'\bruncanakan(?:lah)?\s+',
+        
+        # === Innovation & synthesis ===
+        r'\binovasi(?:kan)?(?:lah)?\s+',
+        r'\bkombinasi(?:kan)?(?:lah)?\s+[\w\s]+\s+(?:menjadi|untuk\s+membuat)',
+        r'\bintegrasikan(?:lah)?\s+[\w\s]+\s+(?:menjadi|untuk\s+membuat)',
+        r'\bsintesis(?:kan)?(?:lah)?\s+',
+        r'\bgabungkan(?:lah)?\s+[\w\s]+\s+(?:untuk\s+)?membuat\s+(?:sebuah|suatu)',
+        
+        # === Proposal & recommendation ===
+        r'\busulkan(?:lah)?\s+(?:desain|rancangan|model|sistem)\s+(?:baru|yang)',
+        r'\bajukan(?:lah)?\s+(?:proposal|rancangan|konsep)\s+(?:baru|untuk)',
+        
+        # === Construction & development ===
+        r'\bbangun(?:lah)?\s+(?:sebuah|suatu)\s+(?:sistem|aplikasi|model)',
+        r'\bkonstruksi(?:kan)?(?:lah)?\s+',
+        r'\bproduksi(?:kan)?(?:lah)?\s+',
+        
+        # === Generation & composition ===
+        r'\bgenerate(?:lah)?\s+(?:solusi|ide|rancangan)\s+baru',
+        r'\bkomposisi(?:kan)?(?:lah)?\s+',
+        r'\btuliskan(?:lah)?\s+(?:algoritma|prosedur|protokol)\s+(?:baru|untuk)',
+        
+        # === Architecture & framework ===
+        r'\barsitektur(?:kan)?(?:lah)?\s+',
+        r'\bbuatlah\s+arsitektur\s+',
+        r'\bbuatlah\s+kerangka\s+kerja\s+',
+        
+        # === Modeling & simulation ===
+        r'\bmodelkan(?:lah)?\s+',
+        r'\bsimulasiakan(?:lah)?\s+(?:dan\s+)?(?:rancang|buat)',
+        
+        # === Invention & origination ===
+        r'\btemukan(?:lah)?\s+(?:cara|metode|solusi)\s+(?:baru|alternatif)',
+        r'\bproduce(?:lah)?\s+(?:sebuah|suatu)',
+        r'\boriginate(?:lah)?\s+',
+        
+        # === Derivation & adaptation ===
+        r'\bturunkan(?:lah)?\s+[\w\s]+\s+(?:baru|yang\s+berbeda)',
+        r'\badaptasi(?:kan)?(?:lah)?\s+[\w\s]+\s+menjadi\s+(?:sebuah|suatu)',
+        r'\bmodifikasi(?:lah)?\s+[\w\s]+\s+(?:untuk\s+)?membuat',
+        
+        # === Reconstruction ===
+        r'\brekonstruksi(?:kan)?(?:lah)?\s+',
+        r'\breorganisasi(?:kan)?(?:lah)?\s+',
+        r'\bredesain(?:lah)?\s+',
     ]
     
     # ========== CRITICAL: BLOCK FALSE C5/C6 ==========
