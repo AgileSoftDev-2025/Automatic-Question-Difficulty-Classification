@@ -274,6 +274,38 @@ class IndonesianBloomAdjuster:
         # === V8 NEW: Understanding basis/reasoning ===
         r'\bdidasarkan\s+pada\b',
         r'\batas\s+dasar\b',
+
+        # === Comparison & Differentiation ===
+        r'\bbedakan\s+antara(?!\s+dengan\s+(?:cara|menghitung))',
+        r'\bperbedaan\s+(?:antara|utama)\s+[\w\s]+\s+(?:dan|dengan)',
+        r'\bbandingkan(?!\s+dengan\s+(?:cara|menghitung))\s+[\w\s]+\s+(?:dan|dengan)',
+        r'\bapa\s+(?:yang\s+)?membedakan',
+        r'\bkontras\s+antara',
+        r'\bpersamaan\s+dan\s+perbedaan',
+        r'\bbeda(?:nya)?\s+[\w\s]+\s+dengan',
+
+        # === Interpretation & Meaning ===
+        r'\binterpretasi(?:kan)?\s+(?:hasil|makna|arti)',
+        r'\bmakna\s+(?:dari|di\s+balik)',
+        r'\barti\s+(?:dari|penting)',
+        r'\bimplikasi\s+(?:dari|terhadap)',
+        r'\bsignifikansi\s+(?:dari|hasil)',
+        r'\bmaksud\s+(?:dari|pernyataan)',
+
+        # === Classification & Categorization ===
+        r'\bkategorikan\s+(?:berdasarkan|menurut)(?!\s+dengan\s+cara)',
+        r'\bklasifikasikan(?!\s+dengan\s+cara)',
+        r'\bkelompokkan\s+[\w\s]+\s+(?:berdasarkan|menurut)(?!\s+dengan\s+cara)',
+        r'\bjenis(?:-jenis)?\s+[\w\s]+\s+beserta\s+(?:penjelasan|karakteristik)',
+        r'\btipe(?:-tipe)?\s+[\w\s]+\s+dan\s+(?:penjelasan|ciri)',
+        r'\bmacam(?:-macam)?\s+[\w\s]+\s+beserta\s+(?:penjelasan|pengertian)',
+        
+        # === Characteristics & Features ===
+        r'\bkarakteristik\s+(?:dari|utama|yang\s+membedakan)',
+        r'\bciri(?:-ciri)?\s+(?:dari|khusus|khas)',
+        r'\bsifat(?:-sifat)?\s+(?:dari|khusus)',
+        r'\bfitur\s+(?:utama|penting)',
+        r'\batribut\s+(?:dari|yang\s+penting)',
     ]
     
     # ========== C3 (APPLY) - MUST BE IMPERATIVE ==========
@@ -287,6 +319,37 @@ class IndonesianBloomAdjuster:
         
         # === Application scenarios ===
         r'\bpenggunaan\s+[\w\s]+\s+untuk\s+(?:menghubungkan|transaksi)',
+
+        # === Calculation & Computation ===
+        r'\btentukanl?ah\s+(?:nilai|jumlah|total|hasil)',
+        r'\bbuatlah\s+(?:perhitungan|kalkulasi)',
+        r'\bhitung\s+(?:besarnya|nilai|jumlah)',
+        r'\bkalkulasi(?:lah)?\s+',
+
+        # === Step-by-step execution ===
+        r'\bikuti\s+langkah(?:-langkah)?\s+(?:berikut|untuk)',
+        r'\blakukan\s+tahapan\s+',
+        r'\bjalankan\s+prosedur\s+',
+
+        # === Problem solving imperatives ===
+        r'\bpecahkan(?:lah)?\s+(?:masalah|kasus|soal)',
+        r'\banalisis(?:lah)?\s+(?:kasus|data)\s+berikut',
+        r'\bevaluasi(?:lah)?\s+(?:dengan\s+menggunakan|menggunakan)',
+        r'\bkerjakan(?:lah)?\s+',
+        r'\bjawablah\s+dengan\s+(?:menghitung|menerapkan|menggunakan)',
+
+        # === Step-by-step execution ===
+        r'\bikuti\s+langkah(?:-langkah)?\s+(?:berikut|untuk)',
+        r'\blakukan\s+tahapan\s+',
+        r'\bjalankan\s+prosedur\s+',
+        
+        # === Comparison through application ===
+        r'\bbandingkan\s+dengan\s+(?:menghitung|cara|menggunakan)',
+        r'\bbedakan\s+dengan\s+(?:menerapkan|cara|menggunakan)',
+        
+        # === Reporting/Documentation with calculation ===
+        r'\bbuatlah\s+(?:laporan|dokumentasi)\s+[\w\s]+\s+dengan\s+(?:menghitung|perhitungan)',
+        r'\bsajikan\s+hasil\s+(?:perhitungan|kalkulasi|analisis)',
     ]
     
     # ========== C4 (ANALYZE) - MUST BE IMPERATIVE + ANALYTICAL ==========
@@ -299,29 +362,161 @@ class IndonesianBloomAdjuster:
         
         # === Analytical challenges ===
         r'\bperusahaan\s+harus\s+berhadapan\s+dengan',
+
+        # === Pattern & Trend Identification ===
+        r'\bidentifikasi(?:lah)?\s+(?:dan\s+)?(?:jelaskan|analisis)\s+(?:pola|trend)',
+        r'\bidentifikasi(?:lah)?\s+(?:hubungan|kaitan|korelasi)',
+        r'\bidentifikasi(?:lah)?\s+(?:kelemahan|kekuatan|gap|kesenjangan)',
+        r'\bidentifikasi(?:lah)?\s+(?:risiko|ancaman|peluang)',
+        r'\btemukan\s+(?:pola|anomali|penyimpangan|ketidaksesuaian)',
+        r'\bdeteksi\s+(?:masalah|error|fraud|anomali)',
+        r'\bcari\s+(?:pola|hubungan|keterkaitan)',
+        
+        # === Breakdown & Decomposition ===
+        r'\buraikan\s+(?:komponen|elemen|bagian)',
+        r'\bpecah(?:kan)?\s+(?:menjadi|ke\s+dalam)\s+(?:bagian|komponen|elemen)',
+        r'\bjabarkan\s+(?:struktur|komponen|elemen)',
+        r'\bdekomposisi(?:kan)?\s+',
+        r'\bpisahkan\s+(?:komponen|faktor|elemen)',
+        r'\bbreakdown\s+',
+        
+        # === Comparison & Contrast ===
+        r'\bbandingkan\s+(?:secara\s+)?(?:kritis|mendalam|detail)',
+        r'\bbandingkan\s+[\w\s]+\s+dalam\s+hal',
+        r'\bbandingkan\s+[\w\s]+\s+dari\s+(?:segi|aspek|perspektif)',
+        r'\bkontraskan\s+',
+        r'\bbedakan\s+secara\s+(?:analitis|kritis)',
+        r'\blakukan\s+perbandingan\s+(?:antara|atas)',
+        
+        # === Relationship Analysis ===
+        r'\bhubungkan\s+(?:antara|dengan)',
+        r'\bkorelasikan\s+',
+        r'\bkaitkan\s+[\w\s]+\s+dengan',
+        r'\banalisis(?:lah)?\s+keterkaitan',
+        r'\btunjukkan\s+(?:hubungan|kaitan|korelasi)',
+        r'\bjelaskan\s+(?:hubungan|kaitan)\s+(?:antara|dengan)\s+[\w\s]+\s+(?:dan|dengan)',
+    
     ]
     
     # ========== C5 (EVALUATE) - MUST BE IMPERATIVE + JUDGMENT ==========
     FORCE_C5_PATTERNS = [
-        r'\bevaluasi(?:lah)?\s+(?:efektivitas|kualitas|kelayakan)',
-        r'\bnilai(?:lah)?\s+(?:efektivitas|kelayakan)',
-        r'\bpertimbangkan\s+[\w\s]+\s+untuk\s+memilih',
-        r'\bjustifikasi\s+(?:pilihan|keputusan)',
-        r'\brekomendasi(?:kan)?\s+[\w\s]+\s+yang\s+(?:terbaik|paling)',
-        r'\bapa\s+yang\s+(?:lebih|paling)\s+(?:baik|efektif)',
-        r'\bmana\s+yang\s+lebih\s+baik',
-        r'\bputuskan\s+(?:apakah|mana)',
+
+        # === Core evaluation verbs ===
+        r'\bevaluasi(?:lah)?\s+(?:efektivitas|kualitas|kelayakan|kinerja|hasil)',
+        r'\bnilai(?:lah)?\s+(?:efektivitas|kelayakan|kualitas|kinerja)',
+        r'\bassess(?:lah)?\s+',
+        r'\bkaji(?:lah)?\s+(?:ulang|kembali)?\s+(?:efektivitas|kelayakan)',
+        
+        # === Judgment & decision making ===
+        r'\bputuskan(?:lah)?\s+(?:apakah|mana|metode|pendekatan)',
+        r'\btentukan(?:lah)?\s+(?:mana\s+yang\s+(?:lebih|paling)|pilihan\s+terbaik)',
+        r'\bpilih(?:lah)?\s+(?:dan\s+)?(?:justifikasi|jelaskan\s+mengapa)',
+        r'\brekomendasi(?:kan)?(?:lah)?\s+[\w\s]+\s+yang\s+(?:terbaik|paling|optimal)',
+
+        # === Justification & defense ===
+        r'\bjustifikasi(?:kan)?(?:lah)?\s+(?:pilihan|keputusan|pendapat|rekomendasi)',
+        r'\bdefend(?:lah)?\s+(?:pilihan|keputusan|posisi)',
+        r'\bberikan\s+(?:argumen|alasan|pembenaran)\s+(?:untuk|mengapa)',
+        r'\bbuktikan\s+bahwa\s+[\w\s]+\s+(?:lebih|paling)\s+(?:baik|efektif)',
+
+        # === Comparison with judgment ===
+        r'\bapa\s+yang\s+(?:lebih|paling)\s+(?:baik|efektif|sesuai|tepat)',
+        r'\bmana\s+yang\s+(?:lebih|paling)\s+(?:baik|efektif|sesuai|tepat)',
+        r'\bmanakah\s+(?:yang\s+)?(?:lebih|paling)\s+',
+        r'\bbandingkan\s+[\w\s]+\s+dan\s+(?:tentukan|pilih|putuskan)\s+yang\s+(?:terbaik|lebih)',
+
+        # === Quality assessment ===
+        r'\bseberapa\s+(?:baik|efektif|layak|tepat)',
+        r'\bapakah\s+[\w\s]+\s+(?:sudah\s+)?(?:efektif|layak|memadai|cukup)',
+        r'\bkritisi(?:lah)?\s+',
+        r'\bkritik(?:lah)?\s+(?:pendekatan|metode|strategi|hasil)',
+        r'\breview(?:lah)?\s+secara\s+kritis',
+
+        # === Effectiveness & suitability ===
+        r'\bsejauh\s+mana\s+[\w\s]+\s+(?:efektif|berhasil|sesuai)',
+        r'\bapakah\s+[\w\s]+\s+dapat\s+diandalkan',
+        r'\buji(?:lah)?\s+(?:validitas|reliabilitas|kelayakan)',
+        r'\bverifikasi(?:lah)?\s+(?:kebenaran|validitas)',
+        
+        # === Recommendation & selection ===
+        r'\busulkan(?:lah)?\s+[\w\s]+\s+(?:terbaik|yang\s+paling|optimal)',
+        r'\bsarankan(?:lah)?\s+[\w\s]+\s+berdasarkan\s+(?:evaluasi|analisis)',
+        r'\btentukan(?:lah)?\s+(?:solusi|pendekatan)\s+terbaik',
+        
+        # === Priority & ranking ===
+        r'\burutkan(?:lah)?\s+[\w\s]+\s+berdasarkan\s+(?:prioritas|efektivitas)',
+        r'\branking(?:lah)?\s+',
+        r'\bprioritaskan(?:lah)?\s+',
+        
+        # === Consideration & deliberation ===
+        r'\bpertimbangkan\s+[\w\s]+\s+(?:untuk\s+)?(?:memilih|menentukan)',
+        r'\btimbang(?:lah)?\s+(?:pro\s+dan\s+kontra|kelebihan\s+dan\s+kekurangan)',
+        
+        # === Appraisal & assessment ===
+        r'\bberikan\s+penilaian\s+(?:terhadap|tentang|mengenai)',
+        r'\blakukan\s+penilaian\s+(?:kritis|komprehensif)',
+        r'\bappraisal(?:lah)?\s+',
     ]
     
     # ========== C6 (CREATE) - MUST BE IMPERATIVE + CREATIVE ==========
     FORCE_C6_PATTERNS = [
-        r'\brancang(?:lah)?\s+(?:sebuah|suatu)\s+(?:sistem|model)',
-        r'\bdesain(?:lah)?\s+(?:sebuah|suatu)',
-        r'\bbuatlah\s+(?:sistem|model|rancangan)',
-        r'\bkembangkan\s+(?:sistem|model)',
-        r'\bciptakan\b',
-        r'\bsusun(?:lah)?\s+(?:rencana|strategi|sistem)',
-        r'\busulkan\s+(?:desain|rancangan)',
+        # === Core creation verbs ===
+        r'\brancang(?:lah)?\s+(?:sebuah|suatu)\s+(?:sistem|model|aplikasi|database|jaringan)',
+        r'\bdesain(?:lah)?\s+(?:sebuah|suatu)\s+(?:sistem|model|aplikasi|interface)',
+        r'\bbuatlah\s+(?:sistem|model|rancangan|prototipe|desain|arsitektur)',
+        r'\bkembangkan(?:lah)?\s+(?:sistem|model|aplikasi|strategi\s+baru)',
+        r'\bciptakan(?:lah)?\s+',
+        r'\bkreasi(?:kan)?(?:lah)?\s+',
+    
+        # === Planning & strategy ===
+        r'\bsusun(?:lah)?\s+(?:rencana|strategi|sistem|kerangka\s+kerja)',
+        r'\bformulasi(?:kan)?(?:lah)?\s+(?:strategi|rencana|kebijakan)\s+(?:baru|yang)',
+        r'\bruncanakan(?:lah)?\s+',
+        
+        # === Innovation & synthesis ===
+        r'\binovasi(?:kan)?(?:lah)?\s+',
+        r'\bkombinasi(?:kan)?(?:lah)?\s+[\w\s]+\s+(?:menjadi|untuk\s+membuat)',
+        r'\bintegrasikan(?:lah)?\s+[\w\s]+\s+(?:menjadi|untuk\s+membuat)',
+        r'\bsintesis(?:kan)?(?:lah)?\s+',
+        r'\bgabungkan(?:lah)?\s+[\w\s]+\s+(?:untuk\s+)?membuat\s+(?:sebuah|suatu)',
+        
+        # === Proposal & recommendation ===
+        r'\busulkan(?:lah)?\s+(?:desain|rancangan|model|sistem)\s+(?:baru|yang)',
+        r'\bajukan(?:lah)?\s+(?:proposal|rancangan|konsep)\s+(?:baru|untuk)',
+        
+        # === Construction & development ===
+        r'\bbangun(?:lah)?\s+(?:sebuah|suatu)\s+(?:sistem|aplikasi|model)',
+        r'\bkonstruksi(?:kan)?(?:lah)?\s+',
+        r'\bproduksi(?:kan)?(?:lah)?\s+',
+        
+        # === Generation & composition ===
+        r'\bgenerate(?:lah)?\s+(?:solusi|ide|rancangan)\s+baru',
+        r'\bkomposisi(?:kan)?(?:lah)?\s+',
+        r'\btuliskan(?:lah)?\s+(?:algoritma|prosedur|protokol)\s+(?:baru|untuk)',
+        
+        # === Architecture & framework ===
+        r'\barsitektur(?:kan)?(?:lah)?\s+',
+        r'\bbuatlah\s+arsitektur\s+',
+        r'\bbuatlah\s+kerangka\s+kerja\s+',
+        
+        # === Modeling & simulation ===
+        r'\bmodelkan(?:lah)?\s+',
+        r'\bsimulasiakan(?:lah)?\s+(?:dan\s+)?(?:rancang|buat)',
+        
+        # === Invention & origination ===
+        r'\btemukan(?:lah)?\s+(?:cara|metode|solusi)\s+(?:baru|alternatif)',
+        r'\bproduce(?:lah)?\s+(?:sebuah|suatu)',
+        r'\boriginate(?:lah)?\s+',
+        
+        # === Derivation & adaptation ===
+        r'\bturunkan(?:lah)?\s+[\w\s]+\s+(?:baru|yang\s+berbeda)',
+        r'\badaptasi(?:kan)?(?:lah)?\s+[\w\s]+\s+menjadi\s+(?:sebuah|suatu)',
+        r'\bmodifikasi(?:lah)?\s+[\w\s]+\s+(?:untuk\s+)?membuat',
+        
+        # === Reconstruction ===
+        r'\brekonstruksi(?:kan)?(?:lah)?\s+',
+        r'\breorganisasi(?:kan)?(?:lah)?\s+',
+        r'\bredesain(?:lah)?\s+',
     ]
     
     # ========== CRITICAL: BLOCK FALSE C5/C6 ==========
@@ -346,6 +541,24 @@ class IndonesianBloomAdjuster:
         r'\bdikembangkan\s+menjadi',
         r'\bkemudian\s+dikenal\s+dengan',
         r'\bdikenal\s+dengan\s+nama',
+
+        # Questions asking WHAT something creates/produces (recall)
+        r'\bmenghasilkan\s+(?:output|laporan|informasi)\s+(?:berupa|yaitu)',
+        r'\bberupa\s+[\w\s]+\s+yang\s+(?:berisi|mencakup)',
+        
+        # Questions asking about creation process (understand), not asking to create
+        r'\bproses\s+(?:pembuatan|pengembangan)\s+[\w\s]+\s+(?:meliputi|terdiri)',
+        r'\btahap(?:-tahap)?\s+(?:dalam\s+)?(?:pembuatan|pengembangan)',
+        r'\blangkah(?:-langkah)?\s+(?:dalam\s+)?(?:pembuatan|pengembangan)',
+        
+        # Questions about design characteristics (recall), not asking to design
+        r'\bdesain\s+[\w\s]+\s+(?:mencakup|meliputi|terdiri)',
+        r'\barsitektur\s+[\w\s]+\s+(?:terdiri|mencakup)',
+        r'\bkomponen\s+(?:dalam\s+)?(?:desain|arsitektur|sistem)',
+        
+        # Questions about model characteristics (recall)
+        r'\bmodel\s+[\w\s]+\s+(?:adalah|merupakan|terdiri)',
+        r'\bcontoh\s+(?:dari\s+)?(?:model|desain|sistem)',
     ]
     
     # ========== V8 NEW: BLOCK FALSE C3 (APPLY) ==========

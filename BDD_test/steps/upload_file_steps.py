@@ -27,7 +27,7 @@ def step_impl(context):
 @when("I selects a valid file in a supported format")
 def step_impl(context):
     context.browser.find_element(By.ID, "file-input").send_keys(
-        r"D:\1. Rehan\0. KULIAH\2. MATA KULIAH\SEMESTER 5\11. Pembangunan Perangkat Lunak Praktikum\Test_Behave\feature\test_files\UTS_I1_Kelompok 3 Bloomers_Data.pdf"
+        r"D:\Test_Behave\feature\test_files\UTS_I1_Kelompok 3 Bloomers_Data.pdf" # sesuaikan dengan path folder kalian
     )
     time.sleep(1)
 
@@ -35,7 +35,7 @@ def step_impl(context):
 @when("I selects a file with an unsupported format")
 def step_impl(context):
     context.browser.find_element(By.ID, "file-input").send_keys(
-        r"D:\1. Rehan\0. KULIAH\2. MATA KULIAH\SEMESTER 5\11. Pembangunan Perangkat Lunak Praktikum\Test_Behave\feature\test_files\test_png.png"
+        r"D:\Test_Behave\feature\test_files\test_png.png" # sesuaikan dengan path folder kalian
     )
     time.sleep(1)
 

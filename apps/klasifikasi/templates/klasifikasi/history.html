@@ -59,6 +59,16 @@
         .dark .navbar-scrolled {
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.2);
         }
+        .filter-panel {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease-out, opacity 0.3s ease-out;
+            opacity: 0;
+        }
+        .filter-panel.active {
+            max-height: 800px;
+            opacity: 1;
+        }
     </style>
 </head>
 <body class="bg-gradient-to-b from-blue-50 to-gray-100 dark:bg-gradient-to-b dark:from-gray-900 dark:to-gray-800 min-h-screen transition-colors duration-300">
@@ -226,14 +236,98 @@
                         <option value="name-asc" {% if sort_by == 'name-asc' %}selected{% endif %}>🔤 Name (A-Z)</option>
                         <option value="name-desc" {% if sort_by == 'name-desc' %}selected{% endif %}>🔤 Name (Z-A)</option>
                     </select>
-                    <button type="submit" class="px-5 py-3 bg-blue-600 dark:bg-blue-500 text-white rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 transition-all shadow-md hover:shadow-lg transform hover:scale-105">
+                    <button type="button" id="filter-toggle-btn" class="px-5 py-3 bg-blue-600 dark:bg-blue-500 text-white rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 transition-all shadow-md hover:shadow-lg transform hover:scale-105" title="Open filters">
                         <i class="bi bi-funnel-fill"></i>
                     </button>
-                    <a href="{% url 'klasifikasi:history' %}" class="px-5 py-3 bg-gray-600 dark:bg-gray-700 text-white rounded-lg hover:bg-gray-700 dark:hover:bg-gray-600 transition-all shadow-md hover:shadow-lg transform hover:scale-105" title="Reset filters">
+                    <button type="button" id="reset-filter-btn" class="px-5 py-3 bg-gray-600 dark:bg-gray-700 text-white rounded-lg hover:bg-gray-700 dark:hover:bg-gray-600 transition-all shadow-md hover:shadow-lg transform hover:scale-105" title="Reset filters">
                         <i class="bi bi-arrow-clockwise"></i>
-                    </a>
+                    </button>
                 </div>
             </form>
+
+            <!-- Filter Panel -->
+            <div id="filter-panel" class="filter-panel mt-4 pt-4 border-t-2 border-gray-200 dark:border-gray-700">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    
+                    <!-- Questions Filter -->
+                    <div class="space-y-3">
+                        <h3 class="text-sm font-bold text-gray-700 dark:text-gray-300 flex items-center">
+                            <i class="bi bi-list-check mr-2 text-blue-600 dark:text-blue-400"></i>
+                            Questions Range
+                        </h3>
+                        <div class="flex gap-2 items-center">
+                            <input type="number" id="filter-questions-min" placeholder="Min" min="0" 
+                                   class="w-full px-3 py-2 border-2 border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 text-sm">
+                            <span class="text-gray-500 dark:text-gray-400 font-medium">to</span>
+                            <input type="number" id="filter-questions-max" placeholder="Max" min="0" 
+                                   class="w-full px-3 py-2 border-2 border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 text-sm">
+                        </div>
+                    </div>
+
+                    <!-- Date Filter -->
+                    <div class="space-y-3">
+                        <h3 class="text-sm font-bold text-gray-700 dark:text-gray-300 flex items-center">
+                            <i class="bi bi-calendar3 mr-2 text-blue-600 dark:text-blue-400"></i>
+                            Date Range
+                        </h3>
+                        <select id="filter-date-preset" class="w-full px-3 py-2 border-2 border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 text-sm font-medium mb-2">
+                            <option value="">All Time</option>
+                            <option value="today">Today</option>
+                            <option value="7days">Last 7 Days</option>
+                            <option value="30days">Last 30 Days</option>
+                            <option value="custom">Custom Range</option>
+                        </select>
+                        <div id="custom-date-range" class="hidden space-y-2">
+                            <input type="date" id="filter-date-start" 
+                                   class="w-full px-3 py-2 border-2 border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 text-sm">
+                            <input type="date" id="filter-date-end" 
+                                   class="w-full px-3 py-2 border-2 border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 text-sm">
+                        </div>
+                    </div>
+
+                    <!-- Bloom's Taxonomy Filter -->
+                    <div class="space-y-3">
+                        <h3 class="text-sm font-bold text-gray-700 dark:text-gray-300 flex items-center">
+                            <i class="bi bi-diagram-3 mr-2 text-blue-600 dark:text-blue-400"></i>
+                            Bloom's Taxonomy
+                        </h3>
+                        <div class="grid grid-cols-2 gap-2">
+                            <label class="flex items-center space-x-2 cursor-pointer group">
+                                <input type="checkbox" id="filter-c1" class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700">
+                                <span class="text-sm text-gray-700 dark:text-gray-300 group-hover:text-blue-600 dark:group-hover:text-blue-400">C1 (Remember)</span>
+                            </label>
+                            <label class="flex items-center space-x-2 cursor-pointer group">
+                                <input type="checkbox" id="filter-c2" class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700">
+                                <span class="text-sm text-gray-700 dark:text-gray-300 group-hover:text-blue-600 dark:group-hover:text-blue-400">C2 (Understand)</span>
+                            </label>
+                            <label class="flex items-center space-x-2 cursor-pointer group">
+                                <input type="checkbox" id="filter-c3" class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700">
+                                <span class="text-sm text-gray-700 dark:text-gray-300 group-hover:text-blue-600 dark:group-hover:text-blue-400">C3 (Apply)</span>
+                            </label>
+                            <label class="flex items-center space-x-2 cursor-pointer group">
+                                <input type="checkbox" id="filter-c4" class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700">
+                                <span class="text-sm text-gray-700 dark:text-gray-300 group-hover:text-blue-600 dark:group-hover:text-blue-400">C4 (Analyze)</span>
+                            </label>
+                            <label class="flex items-center space-x-2 cursor-pointer group">
+                                <input type="checkbox" id="filter-c5" class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700">
+                                <span class="text-sm text-gray-700 dark:text-gray-300 group-hover:text-blue-600 dark:group-hover:text-blue-400">C5 (Evaluate)</span>
+                            </label>
+                            <label class="flex items-center space-x-2 cursor-pointer group">
+                                <input type="checkbox" id="filter-c6" class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700">
+                                <span class="text-sm text-gray-700 dark:text-gray-300 group-hover:text-blue-600 dark:group-hover:text-blue-400">C6 (Create)</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Apply Filter Button -->
+                <div class="mt-6 flex justify-end">
+                    <button type="button" id="apply-filter-btn" class="px-8 py-3 bg-gradient-to-r from-blue-600 to-blue-700 dark:from-blue-500 dark:to-blue-600 text-white rounded-lg font-bold hover:from-blue-700 hover:to-blue-800 dark:hover:from-blue-600 dark:hover:to-blue-700 transition-all shadow-lg hover:shadow-xl transform hover:scale-105">
+                        <i class="bi bi-check-circle-fill mr-2"></i>
+                        Apply Filters
+                    </button>
+                </div>
+            </div>
         </div>
 
         <!-- Messages -->
@@ -276,7 +370,17 @@
                     </thead>
                     <tbody class="divide-y divide-gray-200 dark:divide-gray-700" id="table-body">
                         {% for classification in classifications %}
-                        <tr class="hover:bg-blue-50 dark:hover:bg-gray-700 transition-all-smooth {% cycle '' 'bg-gray-50 dark:bg-gray-800' %}" data-id="{{ classification.id }}">
+                        <tr class="hover:bg-blue-50 dark:hover:bg-gray-700 transition-all-smooth {% cycle '' 'bg-gray-50 dark:bg-gray-800' %}" 
+                            data-id="{{ classification.id }}"
+                            data-questions="{{ classification.total_questions }}"
+                            data-date="{{ classification.created_at|date:'Y-m-d' }}"
+                            data-c1="{{ classification.q1_count }}"
+                            data-c2="{{ classification.q2_count }}"
+                            data-c3="{{ classification.q3_count }}"
+                            data-c4="{{ classification.q4_count }}"
+                            data-c5="{{ classification.q5_count }}"
+                            data-c6="{{ classification.q6_count }}">
+                            
                             <td class="px-6 py-4 text-sm text-gray-900 dark:text-white font-medium">{{ forloop.counter }}</td>
                             <td class="px-6 py-4 text-sm text-gray-900 dark:text-white font-medium">
                                 <div class="flex items-center">
