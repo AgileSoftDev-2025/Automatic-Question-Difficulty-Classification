@@ -362,6 +362,40 @@ class IndonesianBloomAdjuster:
         
         # === Analytical challenges ===
         r'\bperusahaan\s+harus\s+berhadapan\s+dengan',
+
+        # === Pattern & Trend Identification ===
+        r'\bidentifikasi(?:lah)?\s+(?:dan\s+)?(?:jelaskan|analisis)\s+(?:pola|trend)',
+        r'\bidentifikasi(?:lah)?\s+(?:hubungan|kaitan|korelasi)',
+        r'\bidentifikasi(?:lah)?\s+(?:kelemahan|kekuatan|gap|kesenjangan)',
+        r'\bidentifikasi(?:lah)?\s+(?:risiko|ancaman|peluang)',
+        r'\btemukan\s+(?:pola|anomali|penyimpangan|ketidaksesuaian)',
+        r'\bdeteksi\s+(?:masalah|error|fraud|anomali)',
+        r'\bcari\s+(?:pola|hubungan|keterkaitan)',
+        
+        # === Breakdown & Decomposition ===
+        r'\buraikan\s+(?:komponen|elemen|bagian)',
+        r'\bpecah(?:kan)?\s+(?:menjadi|ke\s+dalam)\s+(?:bagian|komponen|elemen)',
+        r'\bjabarkan\s+(?:struktur|komponen|elemen)',
+        r'\bdekomposisi(?:kan)?\s+',
+        r'\bpisahkan\s+(?:komponen|faktor|elemen)',
+        r'\bbreakdown\s+',
+        
+        # === Comparison & Contrast ===
+        r'\bbandingkan\s+(?:secara\s+)?(?:kritis|mendalam|detail)',
+        r'\bbandingkan\s+[\w\s]+\s+dalam\s+hal',
+        r'\bbandingkan\s+[\w\s]+\s+dari\s+(?:segi|aspek|perspektif)',
+        r'\bkontraskan\s+',
+        r'\bbedakan\s+secara\s+(?:analitis|kritis)',
+        r'\blakukan\s+perbandingan\s+(?:antara|atas)',
+        
+        # === Relationship Analysis ===
+        r'\bhubungkan\s+(?:antara|dengan)',
+        r'\bkorelasikan\s+',
+        r'\bkaitkan\s+[\w\s]+\s+dengan',
+        r'\banalisis(?:lah)?\s+keterkaitan',
+        r'\btunjukkan\s+(?:hubungan|kaitan|korelasi)',
+        r'\bjelaskan\s+(?:hubungan|kaitan)\s+(?:antara|dengan)\s+[\w\s]+\s+(?:dan|dengan)',
+    
     ]
     
     # ========== C5 (EVALUATE) - MUST BE IMPERATIVE + JUDGMENT ==========
