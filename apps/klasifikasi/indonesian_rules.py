@@ -274,6 +274,15 @@ class IndonesianBloomAdjuster:
         # === V8 NEW: Understanding basis/reasoning ===
         r'\bdidasarkan\s+pada\b',
         r'\batas\s+dasar\b',
+
+        # === Comparison & Differentiation ===
+        r'\bbedakan\s+antara(?!\s+dengan\s+(?:cara|menghitung))',
+        r'\bperbedaan\s+(?:antara|utama)\s+[\w\s]+\s+(?:dan|dengan)',
+        r'\bbandingkan(?!\s+dengan\s+(?:cara|menghitung))\s+[\w\s]+\s+(?:dan|dengan)',
+        r'\bapa\s+(?:yang\s+)?membedakan',
+        r'\bkontras\s+antara',
+        r'\bpersamaan\s+dan\s+perbedaan',
+        r'\bbeda(?:nya)?\s+[\w\s]+\s+dengan',
     ]
     
     # ========== C3 (APPLY) - MUST BE IMPERATIVE ==========
@@ -294,12 +303,12 @@ class IndonesianBloomAdjuster:
         r'\bhitung\s+(?:besarnya|nilai|jumlah)',
         r'\bkalkulasi(?:lah)?\s+',
 
-        # === NEW: Step-by-step execution ===
+        # === Step-by-step execution ===
         r'\bikuti\s+langkah(?:-langkah)?\s+(?:berikut|untuk)',
         r'\blakukan\s+tahapan\s+',
         r'\bjalankan\s+prosedur\s+',
 
-            # === NEW: Problem solving imperatives ===
+        # === Problem solving imperatives ===
         r'\bpecahkan(?:lah)?\s+(?:masalah|kasus|soal)',
         r'\banalisis(?:lah)?\s+(?:kasus|data)\s+berikut',
         r'\bevaluasi(?:lah)?\s+(?:dengan\s+menggunakan|menggunakan)',
