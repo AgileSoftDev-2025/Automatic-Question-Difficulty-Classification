@@ -12,7 +12,7 @@ from PIL import Image
 import os
 import logging
 import re
-
+from django.shortcuts import render
 from .models import User, Profile
 
 logger = logging.getLogger(__name__)
@@ -725,3 +725,13 @@ def delete_account_view(request):
     
     # GET request - redirect to settings
     return redirect('users:settings')
+
+def terms_view(request):
+    """
+    View untuk menampilkan halaman Terms of Service
+    """
+    context = {
+        'page_title': 'Terms of Service',
+        'last_updated': 'December 19, 2025',
+    }
+    return render(request, 'users/terms.html', context)
