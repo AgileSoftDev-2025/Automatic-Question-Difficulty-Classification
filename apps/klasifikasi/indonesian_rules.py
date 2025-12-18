@@ -292,7 +292,7 @@ class IndonesianBloomAdjuster:
         r'\bsignifikansi\s+(?:dari|hasil)',
         r'\bmaksud\s+(?:dari|pernyataan)',
 
-        # === NEW: Classification & Categorization ===
+        # === Classification & Categorization ===
         r'\bkategorikan\s+(?:berdasarkan|menurut)(?!\s+dengan\s+cara)',
         r'\bklasifikasikan(?!\s+dengan\s+cara)',
         r'\bkelompokkan\s+[\w\s]+\s+(?:berdasarkan|menurut)(?!\s+dengan\s+cara)',
@@ -300,7 +300,7 @@ class IndonesianBloomAdjuster:
         r'\btipe(?:-tipe)?\s+[\w\s]+\s+dan\s+(?:penjelasan|ciri)',
         r'\bmacam(?:-macam)?\s+[\w\s]+\s+beserta\s+(?:penjelasan|pengertian)',
         
-        # === NEW: Characteristics & Features ===
+        # === Characteristics & Features ===
         r'\bkarakteristik\s+(?:dari|utama|yang\s+membedakan)',
         r'\bciri(?:-ciri)?\s+(?:dari|khusus|khas)',
         r'\bsifat(?:-sifat)?\s+(?:dari|khusus)',
@@ -337,6 +337,19 @@ class IndonesianBloomAdjuster:
         r'\bevaluasi(?:lah)?\s+(?:dengan\s+menggunakan|menggunakan)',
         r'\bkerjakan(?:lah)?\s+',
         r'\bjawablah\s+dengan\s+(?:menghitung|menerapkan|menggunakan)',
+
+        # === Step-by-step execution ===
+        r'\bikuti\s+langkah(?:-langkah)?\s+(?:berikut|untuk)',
+        r'\blakukan\s+tahapan\s+',
+        r'\bjalankan\s+prosedur\s+',
+        
+        # === Comparison through application ===
+        r'\bbandingkan\s+dengan\s+(?:menghitung|cara|menggunakan)',
+        r'\bbedakan\s+dengan\s+(?:menerapkan|cara|menggunakan)',
+        
+        # === Reporting/Documentation with calculation ===
+        r'\bbuatlah\s+(?:laporan|dokumentasi)\s+[\w\s]+\s+dengan\s+(?:menghitung|perhitungan)',
+        r'\bsajikan\s+hasil\s+(?:perhitungan|kalkulasi|analisis)',
     ]
     
     # ========== C4 (ANALYZE) - MUST BE IMPERATIVE + ANALYTICAL ==========
