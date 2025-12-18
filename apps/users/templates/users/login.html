@@ -36,11 +36,8 @@
         <div class="hidden lg:flex lg:w-1/2 flex-col justify-center px-12 xl:px-24">
             <div class="flex items-center justify-start mb-16 animate-fade-in">
                 <div class="flex items-center">
-                    <svg class="w-10 h-10 text-blue-600 dark:text-blue-400" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M12 2L4 6V12C4 16.5 7.5 20.5 12 22C16.5 20.5 20 16.5 20 12V6L12 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="currentColor" opacity="0.2"/>
-                        <path d="M12 2L4 6V12C4 16.5 7.5 20.5 12 22C16.5 20.5 20 16.5 20 12V6L12 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    </svg>
-                    <span class="text-blue-600 dark:text-blue-400 text-3xl font-bold ml-3">BLOOMERS</span>
+                    <!-- Ganti SVG dengan logo gambar saja -->
+                    <img src="{% static 'images/logo.png' %}" alt="Bloomers Logo" class="w-100 h-50 object-contain">
                 </div>
             </div>
 
@@ -49,8 +46,7 @@
             </h1>
             <p class="text-gray-700 dark:text-gray-300 text-lg xl:text-xl leading-relaxed animate-fade-in">
                 Bloomers helps educators streamline question<br>
-                analysis with smart AI that classifies cognitive levels<br>
-                instantly and objectively.
+                analysis with smart AI that classifies cognitive levels instantly and objectively.<br>
             </p>
         </div>
 
@@ -58,11 +54,8 @@
         <div class="w-full lg:w-1/2 flex flex-col justify-center items-center px-6 sm:px-12 lg:px-16 py-12">
             <!-- Mobile Logo -->
             <div class="lg:hidden flex items-center justify-center mb-8">
-                <svg class="w-10 h-10 text-blue-600 dark:text-blue-400" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M12 2L4 6V12C4 16.5 7.5 20.5 12 22C16.5 20.5 20 16.5 20 12V6L12 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="currentColor" opacity="0.2"/>
-                    <path d="M12 2L4 6V12C4 16.5 7.5 20.5 12 22C16.5 20.5 20 16.5 20 12V6L12 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-                <span class="text-blue-600 dark:text-blue-400 text-3xl font-bold ml-3">BLOOMERS</span>
+                <!-- Ganti SVG dengan logo gambar saja -->
+                <img src="{% static 'images/logo.png' %}" alt="Bloomers Logo" class="w-10 h-10 object-contain">
             </div>
 
             <div class="w-full max-w-lg">
@@ -185,13 +178,11 @@
             const emailError = document.getElementById('email-error');
             const passwordError = document.getElementById('password-error');
 
-            // Email validation
             function validateEmail(email) {
                 const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
                 return re.test(email);
             }
 
-            // Show error message
             function showError(input, errorElement, message) {
                 input.classList.add('border-red-500', 'focus:ring-red-500');
                 input.classList.remove('border-gray-200', 'dark:border-gray-600');
@@ -199,14 +190,12 @@
                 errorElement.classList.remove('hidden');
             }
 
-            // Clear error message
             function clearError(input, errorElement) {
                 input.classList.remove('border-red-500', 'focus:ring-red-500');
                 input.classList.add('border-gray-200', 'dark:border-gray-600');
                 errorElement.classList.add('hidden');
             }
 
-            // Real-time email validation
             emailInput.addEventListener('blur', () => {
                 const email = emailInput.value.trim();
                 if (email && !validateEmail(email)) {
@@ -222,14 +211,12 @@
                 }
             });
 
-            // Real-time password validation
             passwordInput.addEventListener('input', () => {
                 if (!passwordError.classList.contains('hidden')) {
                     clearError(passwordInput, passwordError);
                 }
             });
 
-            // Toggle password visibility
             if (toggleButton) {
                 toggleButton.addEventListener('click', () => {
                     const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
@@ -246,11 +233,8 @@
                 });
             }
 
-            // Form submission with validation
             form.addEventListener('submit', (e) => {
                 let isValid = true;
-
-                // Validate email
                 const email = emailInput.value.trim();
                 if (!email) {
                     showError(emailInput, emailError, 'Email is required');
@@ -260,7 +244,6 @@
                     isValid = false;
                 }
 
-                // Validate password
                 const password = passwordInput.value;
                 if (!password) {
                     showError(passwordInput, passwordError, 'Password is required');
@@ -272,7 +255,6 @@
                     return;
                 }
 
-                // Disable button and show loading state
                 submitButton.disabled = true;
                 submitButton.innerHTML = `
                     <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white inline" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -283,7 +265,6 @@
                 `;
             });
 
-            // Auto-dismiss messages after 5 seconds
             const alerts = document.querySelectorAll('[role="alert"]');
             alerts.forEach(alert => {
                 setTimeout(() => {
