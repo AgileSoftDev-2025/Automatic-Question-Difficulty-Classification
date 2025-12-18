@@ -38,12 +38,11 @@ from datasets import Dataset
 # Suppress warnings
 warnings.filterwarnings("ignore")
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
-os.environ['WANDB_SILENT'] = 'true'  # Disable wandb logging
+os.environ['WANDB_SILENT'] = 'true'
 
 # ---------------- Settings ----------------
-TEXT_COLUMN = "Learning_outcome"  # Updated to match your CSV
-LABEL_COLUMNS = ["Remember", "Understand", "Apply", "Analyze", "Evaluate", "Create"]  # Updated to match your CSV
-PRETRAINED_MODEL = "roberta-base"
+TEXT_COLUMN = "Learning_outcome"
+LABEL_COLUMNS = ["Remember", "Understand", "Apply", "Analyze", "Evaluate", "Create"]
 OUTPUT_DIR = "roberta_multilabel_output"
 RANDOM_SEED = 42
 BATCH_SIZE = 16
@@ -227,7 +226,7 @@ def compute_metrics(eval_pred):
         valid_label_indices = []
 
         for i in range(labels.shape[1]):
-            if len(np.unique(labels[:, i])) > 1:  # Both 0 and 1 present
+            if len(np.unique(labels[:, i])) > 1:
                 valid_labels.append(labels[:, i])
                 valid_probs.append(sigmoid_predictions[:, i])
                 valid_label_indices.append(i)
