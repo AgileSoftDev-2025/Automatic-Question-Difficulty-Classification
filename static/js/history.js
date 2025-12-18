@@ -21,11 +21,33 @@
         profileMenuButton: document.getElementById('profile-menu-button'),
         profileMenuDropdown: document.getElementById('profile-menu-dropdown'),
         historyTable: document.getElementById('history-table'),
-        messagesContainer: document.getElementById('messages-container')
+        messagesContainer: document.getElementById('messages-container'),
+
+        // Filter elements
+        filterToggleBtn: document.getElementById('filter-toggle-btn'),
+        resetFilterBtn: document.getElementById('reset-filter-btn'),
+        filterPanel: document.getElementById('filter-panel'),
+        applyFilterBtn: document.getElementById('apply-filter-btn'),
+
+        filterQuestionsMin: document.getElementById('filter-questions-min'),
+        filterQuestionsMax: document.getElementById('filter-questions-max'),
+
+        filterDatePreset: document.getElementById('filter-date-preset'),
+        filterDateStart: document.getElementById('filter-date-start'),
+        filterDateEnd: document.getElementById('filter-date-end'),
+        customDateRange: document.getElementById('custom-date-range'),
+
+        filterC1: document.getElementById('filter-c1'),
+        filterC2: document.getElementById('filter-c2'),
+        filterC3: document.getElementById('filter-c3'),
+        filterC4: document.getElementById('filter-c4'),
+        filterC5: document.getElementById('filter-c5'),
+        filterC6: document.getElementById('filter-c6')
     };
     
     let currentDeleteId = null;
     let searchTimeout = null;
+    let allRows = [];
 
     // ==========================================
     // 2. INITIALIZATION
@@ -37,14 +59,26 @@
         setupMessages();
         setupKeyboardShortcuts();
         checkTableScroll();
+        storeAllRows();
         
         console.log('✓ History page initialized successfully');
+    }
+
+    function storeAllRows() {
+        allRows = Array.from(elements.tableBody.querySelectorAll('tr[data-id]'));
     }
 
     // ==========================================
     // 3. EVENT LISTENERS SETUP
     // ==========================================
     function setupEventListeners() {
+
+        if (elements.applyFilterBtn) {
+            elements.applyFilterBtn.addEventListener('click', () => {
+                applyFilters();
+                toggleFilterPanel();
+            });
+        }
         // Mobile menu toggle
         if (elements.mobileMenuButton) {
             elements.mobileMenuButton.addEventListener('click', toggleMobileMenu);
@@ -83,7 +117,24 @@
             clearTimeout(resizeTimeout);
             resizeTimeout = setTimeout(checkTableScroll, 250);
         });
+
+         // Toggle filter panel
+        if (elements.filterToggleBtn) {
+            elements.filterToggleBtn.addEventListener('click', toggleFilterPanel);
+        }
+
+        // Reset filters
+        if (elements.resetFilterBtn) {
+            elements.resetFilterBtn.addEventListener('click', resetFilters);
+        }
+
+        // Date preset change
+        if (elements.filterDatePreset) {
+            elements.filterDatePreset.addEventListener('change', handleDatePresetChange);
+        }
     }
+
+    
 
     // ==========================================
     // 4. PROFILE DROPDOWN
@@ -234,8 +285,10 @@
     }
 
     function updateRowNumbers() {
-        const rows = elements.tableBody.querySelectorAll('tr[data-id]');
-        rows.forEach((row, index) => {
+        const visibleRows = Array.from(elements.tableBody.querySelectorAll('tr[data-id]'))
+            .filter(row => row.style.display !== 'none');
+        
+        visibleRows.forEach((row, index) => {
             const firstCell = row.querySelector('td:first-child');
             if (firstCell) {
                 firstCell.textContent = index + 1;
