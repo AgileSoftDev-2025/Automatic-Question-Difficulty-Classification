@@ -541,6 +541,24 @@ class IndonesianBloomAdjuster:
         r'\bdikembangkan\s+menjadi',
         r'\bkemudian\s+dikenal\s+dengan',
         r'\bdikenal\s+dengan\s+nama',
+
+        # Questions asking WHAT something creates/produces (recall)
+        r'\bmenghasilkan\s+(?:output|laporan|informasi)\s+(?:berupa|yaitu)',
+        r'\bberupa\s+[\w\s]+\s+yang\s+(?:berisi|mencakup)',
+        
+        # Questions asking about creation process (understand), not asking to create
+        r'\bproses\s+(?:pembuatan|pengembangan)\s+[\w\s]+\s+(?:meliputi|terdiri)',
+        r'\btahap(?:-tahap)?\s+(?:dalam\s+)?(?:pembuatan|pengembangan)',
+        r'\blangkah(?:-langkah)?\s+(?:dalam\s+)?(?:pembuatan|pengembangan)',
+        
+        # Questions about design characteristics (recall), not asking to design
+        r'\bdesain\s+[\w\s]+\s+(?:mencakup|meliputi|terdiri)',
+        r'\barsitektur\s+[\w\s]+\s+(?:terdiri|mencakup)',
+        r'\bkomponen\s+(?:dalam\s+)?(?:desain|arsitektur|sistem)',
+        
+        # Questions about model characteristics (recall)
+        r'\bmodel\s+[\w\s]+\s+(?:adalah|merupakan|terdiri)',
+        r'\bcontoh\s+(?:dari\s+)?(?:model|desain|sistem)',
     ]
     
     # ========== V8 NEW: BLOCK FALSE C3 (APPLY) ==========
