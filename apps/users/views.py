@@ -735,3 +735,12 @@ def terms_view(request):
         'last_updated': 'December 19, 2025',
     }
     return render(request, 'users/terms.html', context)
+
+def privacy_view(request):
+    # Ambil query param untuk centang otomatis
+    agree = request.GET.get('agree') == 'true'
+
+    context = {
+        'agree': agree,
+    }
+    return render(request, 'users/privacy.html', context)
