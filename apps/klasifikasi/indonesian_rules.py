@@ -291,6 +291,21 @@ class IndonesianBloomAdjuster:
         r'\bimplikasi\s+(?:dari|terhadap)',
         r'\bsignifikansi\s+(?:dari|hasil)',
         r'\bmaksud\s+(?:dari|pernyataan)',
+
+        # === NEW: Classification & Categorization ===
+        r'\bkategorikan\s+(?:berdasarkan|menurut)(?!\s+dengan\s+cara)',
+        r'\bklasifikasikan(?!\s+dengan\s+cara)',
+        r'\bkelompokkan\s+[\w\s]+\s+(?:berdasarkan|menurut)(?!\s+dengan\s+cara)',
+        r'\bjenis(?:-jenis)?\s+[\w\s]+\s+beserta\s+(?:penjelasan|karakteristik)',
+        r'\btipe(?:-tipe)?\s+[\w\s]+\s+dan\s+(?:penjelasan|ciri)',
+        r'\bmacam(?:-macam)?\s+[\w\s]+\s+beserta\s+(?:penjelasan|pengertian)',
+        
+        # === NEW: Characteristics & Features ===
+        r'\bkarakteristik\s+(?:dari|utama|yang\s+membedakan)',
+        r'\bciri(?:-ciri)?\s+(?:dari|khusus|khas)',
+        r'\bsifat(?:-sifat)?\s+(?:dari|khusus)',
+        r'\bfitur\s+(?:utama|penting)',
+        r'\batribut\s+(?:dari|yang\s+penting)',
     ]
     
     # ========== C3 (APPLY) - MUST BE IMPERATIVE ==========
