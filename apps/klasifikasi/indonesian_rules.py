@@ -287,6 +287,12 @@ class IndonesianBloomAdjuster:
         
         # === Application scenarios ===
         r'\bpenggunaan\s+[\w\s]+\s+untuk\s+(?:menghubungkan|transaksi)',
+
+        # === Calculation & Computation ===
+        r'\btentukanl?ah\s+(?:nilai|jumlah|total|hasil)',
+        r'\bbuatlah\s+(?:perhitungan|kalkulasi)',
+        r'\bhitung\s+(?:besarnya|nilai|jumlah)',
+        r'\bkalkulasi(?:lah)?\s+',
     ]
     
     # ========== C4 (ANALYZE) - MUST BE IMPERATIVE + ANALYTICAL ==========
