@@ -595,6 +595,9 @@ class EnglishBloomAdjuster:
         
         ml_level = ml_prediction['category']
         ml_confidence = ml_prediction['confidence']
+        if any(p.search(question_lower) for p in self.compiled_scenario_recall):
+            if ml_level != 'C1':
+                return self._create_result('C1', 'Remember', 0.96, ml_prediction, 'scenario_recall_blocker', ml_level, ml_confidence)
         
         # ====== STAGE 0A: V5 NEW - HISTORICAL CREATOR BLOCKER ======
         # "Who proposed/created X?" is ALWAYS C1, never C6
