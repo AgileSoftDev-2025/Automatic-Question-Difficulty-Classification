@@ -283,7 +283,7 @@
   function showNotification(message, type = 'info') {
     // Create notification element
     const notification = document.createElement('div');
-    notification.className = `fixed top-4 right-4 z-50 max-w-md p-4 rounded-xl shadow-lg transition-all duration-300 ${
+    notification.className = `fixed top-20 right-4 z-[9999] max-w-md p-4 rounded-xl shadow-lg transition-all duration-300 ${
       type === 'success' ? 'bg-green-100 border border-green-300 text-green-800' :
       type === 'error' ? 'bg-red-100 border border-red-300 text-red-800' :
       type === 'warning' ? 'bg-yellow-100 border border-yellow-300 text-yellow-800' :
