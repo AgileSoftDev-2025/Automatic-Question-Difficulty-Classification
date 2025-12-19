@@ -532,6 +532,7 @@ class EnglishBloomAdjuster:
         self.compiled_historical_creator = [re.compile(p, re.IGNORECASE) for p in self.HISTORICAL_CREATOR_PATTERNS]
         self.compiled_definition_recall = [re.compile(p, re.IGNORECASE) for p in self.DEFINITION_RECALL_PATTERNS]
         self.compiled_acronym = [re.compile(p, re.IGNORECASE) for p in self.ACRONYM_PATTERNS]
+        self.compiled_scenario_recall = [re.compile(p, re.IGNORECASE) for p in self.SCENARIO_RECALL_PATTERNS]
         
         self.compiled_technical_blockers = [re.compile(p, re.IGNORECASE) for p in self.TECHNICAL_TERM_BLOCKERS]
         self.compiled_absolute_c1 = [re.compile(p, re.IGNORECASE) for p in self.ABSOLUTE_C1_BLOCKERS]
@@ -547,6 +548,7 @@ class EnglishBloomAdjuster:
         self.compiled_not_c3 = [re.compile(p, re.IGNORECASE) for p in self.NOT_C3_PATTERNS]
         self.compiled_not_c4 = [re.compile(p, re.IGNORECASE) for p in self.NOT_C4_PATTERNS]
         self.compiled_not_c5 = [re.compile(p, re.IGNORECASE) for p in self.NOT_C5_PATTERNS]
+        
         
         self.compiled_block_c5_c6 = [re.compile(p, re.IGNORECASE) for p in self.BLOCK_C5_C6_IF_ASKING_ABOUT]
         self.compiled_block_c6_desc = [re.compile(p, re.IGNORECASE) for p in self.BLOCK_C6_DESCRIPTIVE]
