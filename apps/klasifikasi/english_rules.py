@@ -80,6 +80,12 @@ class EnglishBloomAdjuster:
         r'\bwhat\s+is\s+the\s+term\s+used\s+for\b',
         r'\bis\s+a\s+term\s+that\s+describes\b',
     ]
+
+    COMPLEXITY_PATTERNS = [
+        r'\b(?:time|space)\s+complexity\b',
+        r'\bbig\s+[o0]\s+notation\b',
+        r'\befficiency\s+of\s+(?:the\s+)?algorithm\b',
+    ]
     
     # ========== TECHNICAL TERMINOLOGY TRAPS ==========
     TECHNICAL_TERM_BLOCKERS = [
@@ -164,6 +170,8 @@ class EnglishBloomAdjuster:
         r'\bdeveloped\s+by\s*[\.\?]?\s*$',
         r'\bintroduced\s+by\s*[\.\?]?\s*$',
     ]
+
+    
     
     # ========== C1 (REMEMBER) PATTERNS ==========
     FORCE_C1_PATTERNS = [
