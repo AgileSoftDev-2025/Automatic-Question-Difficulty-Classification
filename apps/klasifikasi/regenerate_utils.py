@@ -1,6 +1,7 @@
 """
 Question Regeneration Utility Module
 Handles transformation of questions across Bloom's Taxonomy levels
+Using Hybrid Strategy: Rule-Based Templates > AI Model > Fallback
 """
 
 import torch
@@ -10,13 +11,16 @@ from typing import Optional, List, Dict
 from transformers import T5ForConditionalGeneration, AutoTokenizer
 from peft import PeftModel
 
+# Import Rule-Based System yang baru dibuat
+from .regenerate_rules import smart_regenerator
+
 logger = logging.getLogger(__name__)
 
 
 class QuestionRegenerator:
     """
     Regenerate/Transform questions across Bloom's Taxonomy levels (C1-C6)
-    Uses a pre-trained T5 model with LoRA adapters
+    Uses a hybrid approach: Template Injection + T5 LoRA Model
     """
     
     def __init__(self, base_model_name: str = "t5-small", 
@@ -44,7 +48,7 @@ class QuestionRegenerator:
             self.tokenizer = AutoTokenizer.from_pretrained(self.base_model_name)
             base_model = T5ForConditionalGeneration.from_pretrained(self.base_model_name)
             
-            # Load LoRA adapters if path is provided
+            # Load LoRA adapters if path is provided and exists
             if self.lora_model_path and Path(self.lora_model_path).exists():
                 try:
                     logger.info(f"Loading LoRA adapters from: {self.lora_model_path}")
@@ -56,7 +60,7 @@ class QuestionRegenerator:
                     self.model = base_model
                     self.model.eval()
             else:
-                logger.info("No LoRA adapters found. Using base model only.")
+                logger.info("No LoRA adapters found/provided. Using base model only.")
                 self.model = base_model
                 self.model.eval()
             
@@ -65,35 +69,24 @@ class QuestionRegenerator:
             
         except Exception as e:
             logger.error(f"Failed to load model: {e}")
-            raise RuntimeError(f"Could not load model: {e}")
+            # We don't raise error here to allow rule-based to work even if AI fails
+            self.model = None
     
     def transform_question(self, 
-                          question: str, 
-                          source_level: str, 
-                          target_level: str,
-                          max_length: int = 512,
-                          num_beams: int = 4,
-                          temperature: float = 0.7) -> str:
+                           question: str, 
+                           source_level: str, 
+                           target_level: str,
+                           max_length: int = 512,
+                           num_beams: int = 4,
+                           temperature: float = 0.7) -> str:
         """
-        Transform a question from one Bloom level to another
+        Transform a question from one Bloom level to another.
         
-        Args:
-            question: The input question text
-            source_level: Current Bloom level (C1-C6)
-            target_level: Desired Bloom level (C1-C6)
-            max_length: Maximum length for generated text
-            num_beams: Beam search width
-            temperature: Sampling temperature (lower = more deterministic)
-            
-        Returns:
-            Transformed question text
-            
-        Raises:
-            ValueError: If model is not loaded or invalid levels provided
-            RuntimeError: If transformation fails
+        STRATEGY PRIORITY:
+        1. Smart Rule-Based (Template Injection) -> Best for grammar & structure.
+        2. T5 AI Model -> Best for complex context when rules fail.
+        3. Simple Fallback -> Safe failover.
         """
-        if self.model is None:
-            raise ValueError("Model not loaded. Check model loading logs.")
         
         # Validate levels
         valid_levels = ['C1', 'C2', 'C3', 'C4', 'C5', 'C6']
@@ -102,93 +95,103 @@ class QuestionRegenerator:
         
         # Same level - return original
         if source_level == target_level:
-            logger.info(f"Source and target levels same ({source_level}). Returning original question.")
+            logger.info(f"Source and target levels same ({source_level}). Returning original.")
             return question
         
+        # --- STRATEGY 1: Smart Rule-Based Regeneration ---
         try:
-            # Prepare input prompt
-            input_text = f"transform {source_level} to {target_level}: {question}"
+            # Menggunakan sistem ekstraksi topik & template
+            rule_based_result = smart_regenerator.generate_question(question, target_level)
             
-            # Tokenize
-            inputs = self.tokenizer(
-                input_text,
-                return_tensors="pt",
-                max_length=512,
-                truncation=True
-            ).to(self.device)
-            
-            # Generate with beam search
-            with torch.no_grad():
-                outputs = self.model.generate(
-                    **inputs,
-                    max_length=max_length,
-                    num_beams=num_beams,
-                    temperature=temperature,
-                    early_stopping=True,
-                    do_sample=False,  # Use beam search for consistency
-                    repetition_penalty=1.2  # Penalize repetition
-                )
-            
-            # Decode
-            transformed = self.tokenizer.decode(outputs[0], skip_special_tokens=True)
-            
-            # Validate output
-            if not transformed or len(transformed.strip()) < 5:
-                logger.warning(f"Generated text too short: {transformed}. Returning modified original.")
-                # Fallback: return modified version of original
-                return self._fallback_transform(question, source_level, target_level)
-            
-            logger.info(f"Successfully transformed question from {source_level} to {target_level}")
-            return transformed.strip()
-            
+            if rule_based_result:
+                logger.info(f"✅ Rule-Based Success: {source_level}->{target_level}")
+                return rule_based_result
+            else:
+                logger.debug("Rule-based extraction returned None (topic too short/complex).")
+                
         except Exception as e:
-            logger.error(f"Error during transformation: {e}")
-            # Fallback to simple transformation
-            return self._fallback_transform(question, source_level, target_level)
+            logger.warning(f"Rule-based regeneration warning: {e}")
+
+        # --- STRATEGY 2: T5 AI Model (Deep Learning) ---
+        if self.model is not None:
+            try:
+                # Prepare input prompt
+                input_text = f"transform {source_level} to {target_level}: {question}"
+                
+                # Tokenize
+                inputs = self.tokenizer(
+                    input_text,
+                    return_tensors="pt",
+                    max_length=512,
+                    truncation=True
+                ).to(self.device)
+                
+                # Generate with beam search for quality
+                with torch.no_grad():
+                    outputs = self.model.generate(
+                        **inputs,
+                        max_length=max_length,
+                        num_beams=num_beams,
+                        temperature=temperature,
+                        early_stopping=True,
+                        do_sample=False,
+                        repetition_penalty=1.2 # Prevent repeating phrases
+                    )
+                
+                # Decode
+                transformed = self.tokenizer.decode(outputs[0], skip_special_tokens=True)
+                
+                # Validate output (ensure it's not empty or nonsense)
+                if transformed and len(transformed.strip()) > 5:
+                    logger.info(f"🤖 AI Model Success: {transformed}")
+                    return transformed.strip()
+                    
+            except Exception as e:
+                logger.error(f"AI generation failed: {e}")
+        else:
+            logger.warning("AI Model not loaded, skipping Strategy 2.")
+
+        # --- STRATEGY 3: Fallback (Rule-Based Prefix) ---
+        return self._fallback_transform(question, source_level, target_level)
     
     def _fallback_transform(self, question: str, source_level: str, target_level: str) -> str:
         """
-        Fallback transformation when model fails
-        Uses rule-based modifications based on Bloom's levels
-        
-        Args:
-            question: Original question
-            source_level: Current level
-            target_level: Target level
-            
-        Returns:
-            Modified question
+        Fallback transformation when both Smart Rules and AI fail.
+        Just prepends a relevant verb/prefix.
         """
-        logger.info(f"Using fallback transformation from {source_level} to {target_level}")
+        logger.info(f"⚠️ Using fallback transformation")
         
         # Simple rule-based transformations as fallback
         prefixes = {
-            'C1': 'Define, Identify, List, Recall',
-            'C2': 'Explain, Describe, Summarize, Classify',
-            'C3': 'Apply, Solve, Demonstrate, Illustrate',
-            'C4': 'Analyze, Compare, Contrast, Distinguish',
-            'C5': 'Judge, Evaluate, Argue, Defend',
-            'C6': 'Create, Design, Synthesize, Develop',
+            'C1': 'Definisikan/Sebutkan:',
+            'C2': 'Jelaskan/Uraikan:',
+            'C3': 'Terapkan/Demonstrasikan:',
+            'C4': 'Analisis/Bandingkan:',
+            'C5': 'Evaluasi/Nilailah:',
+            'C6': 'Rancanglah/Buatlah:',
         }
         
-        # Just add a prefix indicating the new level
+        # Detect simple english (optional enhancement for fallback)
+        is_english = any(w in question.lower() for w in ['the', 'what', 'how', 'explain'])
+        if is_english:
+            prefixes = {
+                'C1': 'Define/List:',
+                'C2': 'Explain/Describe:',
+                'C3': 'Apply/Demonstrate:',
+                'C4': 'Analyze/Compare:',
+                'C5': 'Evaluate/Assess:',
+                'C6': 'Design/Create:',
+            }
+        
         prefix = prefixes.get(target_level, target_level)
-        return f"{prefix}: {question}"
+        return f"{prefix} {question}"
     
     def batch_transform(self, 
-                       questions: List[str],
-                       source_levels: List[str],
-                       target_levels: List[str]) -> List[str]:
+                        questions: List[str],
+                        source_levels: List[str],
+                        target_levels: List[str]) -> List[str]:
         """
         Transform multiple questions at once
-        
-        Args:
-            questions: List of question texts
-            source_levels: List of source levels
-            target_levels: List of target levels
-            
-        Returns:
-            List of transformed questions
         """
         if not (len(questions) == len(source_levels) == len(target_levels)):
             raise ValueError("All input lists must have same length")
@@ -199,7 +202,7 @@ class QuestionRegenerator:
                 transformed = self.transform_question(q, src, tgt)
                 results.append(transformed)
             except Exception as e:
-                logger.error(f"Failed to transform question: {e}")
+                logger.error(f"Failed to transform question in batch: {e}")
                 results.append(q)  # Return original on error
         
         return results
@@ -213,14 +216,12 @@ def get_regenerator() -> QuestionRegenerator:
     """
     Get or create the global QuestionRegenerator instance
     Implements lazy loading pattern
-    
-    Returns:
-        QuestionRegenerator instance
     """
     global _regenerator_instance
     
     if _regenerator_instance is None:
         # Try to find LoRA model path
+        # Assumes the folder 'regenerate_t5_lora' is in the same directory as this file
         lora_path = None
         apps_path = Path(__file__).parent
         potential_lora_path = apps_path / "regenerate_t5_lora"
@@ -228,6 +229,8 @@ def get_regenerator() -> QuestionRegenerator:
         if potential_lora_path.exists():
             lora_path = str(potential_lora_path)
             logger.info(f"Found LoRA model at: {lora_path}")
+        else:
+            logger.warning(f"LoRA model folder not found at {potential_lora_path}. Using base T5 only.")
         
         _regenerator_instance = QuestionRegenerator(
             base_model_name="t5-small",
@@ -239,15 +242,8 @@ def get_regenerator() -> QuestionRegenerator:
 
 def regenerate_question(question: str, source_level: str, target_level: str) -> Dict[str, str]:
     """
-    Convenience function to regenerate a single question
-    
-    Args:
-        question: Question text to transform
-        source_level: Current Bloom level
-        target_level: Target Bloom level
-        
-    Returns:
-        Dictionary with 'original', 'transformed', 'source_level', 'target_level'
+    Convenience function to regenerate a single question.
+    This is the function called by views.py
     """
     try:
         regenerator = get_regenerator()

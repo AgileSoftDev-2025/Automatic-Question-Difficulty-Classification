@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Settings - Bloomers</title>
     <script>
-    // Dark mode initialization - must run before page renders
+    // Dark mode initialization
         if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
             document.documentElement.classList.add('dark')
         } else {
@@ -30,47 +30,42 @@
         }
         .tab-active {
             border-bottom: 3px solid #2563eb;
-            color: #2563eb;
         }
         .dark .tab-active {
-            color: #60a5fa;
             border-bottom-color: #60a5fa;
         }
-        @media (max-width: 768px) {
-            .settings-tabs {
-                overflow-x: auto;
-                -webkit-overflow-scrolling: touch;
-            }
-            .settings-tabs::-webkit-scrollbar {
-                display: none;
-            }
+        /* Navbar scroll transition */
+        .navbar-sticky {
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            transition: box-shadow 0.3s ease;
         }
-
-    .navbar-sticky {
-        position: sticky;
-        top: 0;
-        z-index: 1000;
-        transition: box-shadow 0.3s ease;
-    }
-    .navbar-scrolled {
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-    }
-    .dark .navbar-scrolled {
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.2);
-    }
+        .navbar-scrolled {
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+        .dark .navbar-scrolled {
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.2);
+        }
+        /* Hide scrollbar for settings tabs on mobile */
+        .settings-tabs {
+            -webkit-overflow-scrolling: touch;
+        }
+        .settings-tabs::-webkit-scrollbar {
+            display: none;
+        }
     </style>
 </head>
 <body class="bg-gradient-to-br from-blue-50 via-purple-50 to-blue-100 dark:bg-gradient-to-br dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 min-h-screen transition-colors duration-300">
     
-    <!-- Navigation -->
     <nav class="navbar-sticky bg-white dark:bg-gray-800 shadow-md transition-colors duration-300">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex justify-between h-16 items-center">
                 
-            <div class="flex items-center">
-                <img src="{% static 'images/logo.png' %}" 
-                    alt="Bloomers Logo" 
-                    class="w-30 h-14 object-contain">
+                <div class="flex items-center">
+                    <img src="{% static 'images/logo.png' %}" 
+                        alt="Bloomers Logo" 
+                        class="w-30 h-14 object-contain">
                 </div>
                 
                 <div class="hidden md:flex items-center space-x-6">
@@ -146,7 +141,6 @@
         </div>
     </nav>
 
-    <!-- Header Section -->
     <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12">
         <div class="max-w-3xl">
             <h1 class="text-3xl md:text-5xl font-bold text-gray-900 dark:text-white leading-tight mb-4">
@@ -158,7 +152,6 @@
         </div>
     </section>
 
-    <!-- Messages -->
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-4">
         {% if messages %}
             {% for message in messages %}
@@ -178,8 +171,7 @@
                     {% endif %}
                     <span class="font-medium">{{ message }}</span>
                 </div>
-                <button type="button" class="text-2xl font-bold leading-none hover:opacity-70 transition-opacity ml-4" 
-                        onclick="this.parentElement.style.display='none'">
+                <button type="button" class="text-2xl font-bold leading-none hover:opacity-70 transition-opacity ml-4">
                     &times;
                 </button>
             </div>
@@ -187,33 +179,29 @@
         {% endif %}
     </div>
 
-    <!-- Settings Content -->
     <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-16">
-        <!-- Tabs Navigation -->
         <div class="bg-white dark:bg-gray-800 rounded-t-2xl shadow-lg overflow-hidden transition-colors duration-300">
-            <div class="settings-tabs flex border-b border-gray-200 dark:border-gray-700">
-                <button type="button" data-tab="account" class="tab-button tab-active flex-1 px-4 sm:px-6 py-4 text-sm sm:text-base font-semibold text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors whitespace-nowrap">
+            <div class="settings-tabs flex border-b border-gray-200 dark:border-gray-700 overflow-x-auto">
+                <button type="button" data-tab="account" class="tab-button tab-active bg-blue-50 dark:bg-gray-700 text-blue-600 dark:text-blue-400 flex-1 px-4 sm:px-6 py-4 text-sm sm:text-base font-semibold hover:text-blue-600 dark:hover:text-blue-400 transition-colors whitespace-nowrap">
                     <i class="bi bi-person-circle mr-2"></i>
                     <span class="hidden sm:inline">Account</span>
                 </button>
-                <button type="button" data-tab="security" class="tab-button flex-1 px-4 sm:px-6 py-4 text-sm sm:text-base font-semibold text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors whitespace-nowrap">
+                <button type="button" data-tab="security" class="tab-button text-gray-600 dark:text-gray-400 flex-1 px-4 sm:px-6 py-4 text-sm sm:text-base font-semibold hover:text-blue-600 dark:hover:text-blue-400 transition-colors whitespace-nowrap">
                     <i class="bi bi-shield-lock mr-2"></i>
                     <span class="hidden sm:inline">Security</span>
                 </button>
-                <button type="button" data-tab="notifications" class="tab-button flex-1 px-4 sm:px-6 py-4 text-sm sm:text-base font-semibold text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors whitespace-nowrap">
+                <button type="button" data-tab="notifications" class="tab-button text-gray-600 dark:text-gray-400 flex-1 px-4 sm:px-6 py-4 text-sm sm:text-base font-semibold hover:text-blue-600 dark:hover:text-blue-400 transition-colors whitespace-nowrap">
                     <i class="bi bi-bell mr-2"></i>
                     <span class="hidden sm:inline">Notifications</span>
                 </button>
-                <button type="button" data-tab="preferences" class="tab-button flex-1 px-4 sm:px-6 py-4 text-sm sm:text-base font-semibold text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors whitespace-nowrap">
+                <button type="button" data-tab="preferences" class="tab-button text-gray-600 dark:text-gray-400 flex-1 px-4 sm:px-6 py-4 text-sm sm:text-base font-semibold hover:text-blue-600 dark:hover:text-blue-400 transition-colors whitespace-nowrap">
                     <i class="bi bi-sliders mr-2"></i>
                     <span class="hidden sm:inline">Preferences</span>
                 </button>
             </div>
 
-            <!-- Tab Contents -->
             <div class="p-6 sm:p-8 text-gray-900 dark:text-white">
                 
-                <!-- Account Tab -->
                 <div id="account-tab" class="tab-content">
                     <h2 class="text-2xl font-bold mb-6 text-gray-900 dark:text-white">Account Information</h2>
                     
@@ -287,7 +275,6 @@
 
                     <hr class="my-8 border-gray-200 dark:border-gray-700">
 
-                    <!-- Danger Zone -->
                     <div class="bg-red-50 dark:bg-red-900 border-2 border-red-200 dark:border-red-700 rounded-xl p-6">
                         <h3 class="text-lg font-bold text-red-800 dark:text-red-200 mb-3">
                             <i class="bi bi-exclamation-triangle-fill mr-2"></i>
@@ -305,11 +292,9 @@
                     </div>
                 </div>
 
-                <!-- Security Tab -->
                 <div id="security-tab" class="tab-content hidden">
                     <h2 class="text-2xl font-bold mb-6 text-gray-900 dark:text-white">Security Settings</h2>
                     
-                    <!-- Change Password -->
                     <form method="POST" action="{% url 'users:settings' %}" class="space-y-6 mb-8">
                         {% csrf_token %}
                         <input type="hidden" name="form_type" value="password">
@@ -325,7 +310,7 @@
                                        required
                                        class="w-full px-4 py-3 pr-12 border-2 border-gray-200 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                                        placeholder="Enter current password">
-                                <button type="button" class="password-toggle absolute top-1/2 -translate-y-1/2 right-4 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400">
+                                <button type="button" class="password-toggle absolute top-1/2 -translate-y-1/2 right-4 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400 focus:outline-none">
                                     <i class="bi bi-eye-slash text-xl"></i>
                                 </button>
                             </div>
@@ -343,7 +328,7 @@
                                        minlength="8"
                                        class="w-full px-4 py-3 pr-12 border-2 border-gray-200 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                                        placeholder="Enter new password">
-                                <button type="button" class="password-toggle absolute top-1/2 -translate-y-1/2 right-4 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400">
+                                <button type="button" class="password-toggle absolute top-1/2 -translate-y-1/2 right-4 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400 focus:outline-none">
                                     <i class="bi bi-eye-slash text-xl"></i>
                                 </button>
                             </div>
@@ -361,7 +346,7 @@
                                        required
                                        class="w-full px-4 py-3 pr-12 border-2 border-gray-200 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                                        placeholder="Confirm new password">
-                                <button type="button" class="password-toggle absolute top-1/2 -translate-y-1/2 right-4 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400">
+                                <button type="button" class="password-toggle absolute top-1/2 -translate-y-1/2 right-4 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400 focus:outline-none">
                                     <i class="bi bi-eye-slash text-xl"></i>
                                 </button>
                             </div>
@@ -378,7 +363,6 @@
 
                     <hr class="my-8 border-gray-200 dark:border-gray-700">
 
-                    <!-- Active Sessions -->
                     <div>
                         <h3 class="text-xl font-bold mb-4 text-gray-900 dark:text-white">Active Sessions</h3>
                         <div class="bg-gray-50 dark:bg-gray-700 border-2 border-gray-200 dark:border-gray-600 rounded-xl p-6">
@@ -399,7 +383,6 @@
                     </div>
                 </div>
 
-                <!-- Notifications Tab -->
                 <div id="notifications-tab" class="tab-content hidden">
                     <h2 class="text-2xl font-bold mb-6 text-gray-900 dark:text-white">Notification Preferences</h2>
                     
@@ -471,7 +454,6 @@
                     </form>
                 </div>
 
-                <!-- Preferences Tab -->
                 <div id="preferences-tab" class="tab-content hidden">
                     <h2 class="text-2xl font-bold mb-6 text-gray-900 dark:text-white">Application Preferences</h2>
                     
@@ -559,7 +541,6 @@
         </div>
     </main>
 
-    <!-- Delete Account Modal -->
     <div id="delete-modal" class="hidden fixed inset-0 bg-black dark:bg-gray-950 bg-opacity-50 dark:bg-opacity-70 z-50 flex items-center justify-center p-4">
         <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-md w-full p-6 sm:p-8 animate-fade-in transition-colors duration-300">
             <div class="text-center mb-6">
