@@ -85,6 +85,12 @@ class EnglishBloomAdjuster:
         r'\bfull\s+form\s+of\s+[A-Z]{2,}\b',
         r'\b[A-Z]{2,}\s+(?:is\s+)?short\s+for\b',
     ]
+
+    SCENARIO_RECALL_PATTERNS = [
+        r'\bwhich\s+of\s+the\s+following\s+is\s+the\s+name\s+of\b',
+        r'\bwhat\s+is\s+the\s+term\s+used\s+for\b',
+        r'\bis\s+a\s+term\s+that\s+describes\b',
+    ]
     
     # ========== TECHNICAL TERMINOLOGY TRAPS ==========
     TECHNICAL_TERM_BLOCKERS = [
