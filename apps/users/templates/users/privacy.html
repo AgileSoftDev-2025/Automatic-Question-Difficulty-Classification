@@ -28,8 +28,13 @@
             <div class="flex items-center">
                 <img src="{% static 'images/logo.png' %}" alt="Logo" class="w-30 h-14 object-contain">
             </div>
-        </div>
-    </nav>
+
+        <!-- Dark Mode Toggle -->
+        <button id="theme-toggle" class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors" aria-label="Toggle dark mode">
+            <i class="bi bi-moon-stars text-xl text-gray-700 dark:text-gray-300"></i>
+        </button>
+    </div>
+</nav>
 
     <!-- Main Content -->
     <main class="container mx-auto px-6 py-12 max-w-4xl">
@@ -153,6 +158,34 @@
             </div>
         </div>
     </footer>
+    
+   <script>
+        // Dark mode toggle
+        const themeToggle = document.getElementById('theme-toggle');
+        const icon = themeToggle.querySelector('i');
 
+        function updateIcon() {
+            if (document.documentElement.classList.contains('dark')) {
+                icon.classList.remove('bi-moon-stars');
+                icon.classList.add('bi-sun');
+            } else {
+                icon.classList.remove('bi-sun');
+                icon.classList.add('bi-moon-stars');
+            }
+        }
+
+        updateIcon();
+
+        themeToggle.addEventListener('click', () => {
+            if (document.documentElement.classList.contains('dark')) {
+                document.documentElement.classList.remove('dark');
+                localStorage.theme = 'light';
+            } else {
+                document.documentElement.classList.add('dark');
+                localStorage.theme = 'dark';
+            }
+            updateIcon();
+        });
+    </script>
 </body>
 </html>
