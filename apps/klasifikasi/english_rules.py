@@ -1,4 +1,4 @@
-# apps/klasifikasi/english_rules.py - V5: HISTORICAL CREATOR FIX
+# V5.2: Focused on Algorithm Complexity, Scenario Recall, and Code Tracing.git commit -m "docs: bump version to V5.2 and update documentation"
 
 import re
 import logging
