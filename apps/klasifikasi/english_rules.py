@@ -311,6 +311,9 @@ class EnglishBloomAdjuster:
         r'\busing\s+(?:the\s+)?(?:OSI\s+model|version\s+control|Git)',
         r'\bat\s+which\s+layer\s+would\s+you\s+troubleshoot',
         r'\bcalculate\s+the\s+number\s+of',
+        r'\bwrite\s+a\s+(?:query|statement|program)\s+to\b',
+        r'\bwhat\s+is\s+the\s+(?:result|output)\s+of\s+the\s+following\s+code\b',
+        r'\btrace\s+the\s+execution\b',
     ]
     
     # ========== C4 (ANALYZE) PATTERNS ==========
