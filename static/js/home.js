@@ -14,12 +14,16 @@
     classifyBtn: document.getElementById('classify-btn'),
     filePreview: document.getElementById('file-preview'),
     fileName: document.getElementById('file-name'),
+    fileSize: document.getElementById('file-size'),
     removeFileBtn: document.getElementById('remove-file-btn'),
-    // Referensi ke dropdown dihapus dari sini
     deleteHistoryBtns: document.querySelectorAll('.delete-history-btn'),
     clearAllHistoryBtn: document.getElementById('clear-all-history-btn'),
-    clearAllForm: document.getElementById('clear-all-form')
+    clearAllForm: document.getElementById('clear-all-form'),
+    uploadForm: document.getElementById('upload-form')
   };
+
+  // Store current file
+  let currentFile = null;
 
   // ==========================================
   // 2. FILE UPLOAD HANDLING
@@ -75,6 +79,22 @@
   }
 
   /**
+   * Get file icon based on extension
+   * @param {string} fileName - Name of the file
+   * @returns {string} - Bootstrap icon class
+   */
+  function getFileIcon(fileName) {
+    const extension = fileName.split('.').pop().toLowerCase();
+    const iconMap = {
+      'pdf': 'file-earmark-pdf-fill text-red-600',
+      'csv': 'file-earmark-spreadsheet-fill text-green-600',
+      'txt': 'file-earmark-text-fill text-blue-600',
+      'docx': 'file-earmark-word-fill text-blue-700'
+    };
+    return iconMap[extension] || 'file-earmark-text-fill text-blue-600';
+  }
+
+  /**
    * Handle file selection and display preview
    * @param {File} file - The selected file
    */
@@ -89,26 +109,35 @@
       return;
     }
     
+    // Store current file
+    currentFile = file;
+    
     // Update UI
     if (elements.fileName) {
       elements.fileName.textContent = file.name;
-      
-      // Add file size info
-      const sizeSpan = elements.fileName.nextElementSibling;
-      if (sizeSpan) {
-        sizeSpan.textContent = `${formatFileSize(file.size)} - Ready to classify`;
-      }
+    }
+    
+    if (elements.fileSize) {
+      elements.fileSize.textContent = `${formatFileSize(file.size)} - Ready to classify`;
     }
     
     if (elements.filePreview) {
       elements.filePreview.classList.remove('hidden');
       elements.filePreview.classList.add('flex');
       
+      // Update file icon
+      const iconElement = elements.filePreview.querySelector('i');
+      if (iconElement) {
+        iconElement.className = `bi ${getFileIcon(file.name)} text-3xl flex-shrink-0`;
+      }
+      
       // Add animation
       elements.filePreview.style.opacity = '0';
+      elements.filePreview.style.transform = 'translateY(-10px)';
       setTimeout(() => {
-        elements.filePreview.style.transition = 'opacity 0.3s ease-in-out';
+        elements.filePreview.style.transition = 'all 0.3s ease-in-out';
         elements.filePreview.style.opacity = '1';
+        elements.filePreview.style.transform = 'translateY(0)';
       }, 10);
     }
     
@@ -119,20 +148,29 @@
     if (elements.classifyBtn) {
       elements.classifyBtn.disabled = false;
       elements.classifyBtn.classList.remove('bg-gray-400', 'cursor-not-allowed');
-      elements.classifyBtn.classList.add('bg-gray-500', 'hover:bg-blue-600', 'cursor-pointer');
+      elements.classifyBtn.classList.add('bg-blue-600', 'hover:bg-blue-700', 'cursor-pointer');
+      
+      // Add pulse animation
+      elements.classifyBtn.classList.add('animate-pulse');
+      setTimeout(() => elements.classifyBtn.classList.remove('animate-pulse'), 2000);
     }
+
+    showNotification('✓ File selected successfully! Ready to classify.', 'success');
   }
 
   /**
    * Remove file preview and reset form
    */
   function removeFilePreview() {
+    currentFile = null;
+    
     if (elements.fileInput) {
       elements.fileInput.value = '';
     }
     
     if (elements.filePreview) {
       elements.filePreview.style.opacity = '0';
+      elements.filePreview.style.transform = 'translateY(-10px)';
       setTimeout(() => {
         elements.filePreview.classList.add('hidden');
         elements.filePreview.classList.remove('flex');
@@ -145,8 +183,8 @@
     
     if (elements.classifyBtn) {
       elements.classifyBtn.disabled = true;
-      elements.classifyBtn.classList.add('bg-gray-400');
       elements.classifyBtn.classList.remove('bg-blue-600', 'hover:bg-blue-700');
+      elements.classifyBtn.classList.add('bg-gray-400', 'cursor-not-allowed');
     }
   }
 
@@ -225,14 +263,7 @@
   }
 
   // ==========================================
-  // 4. PROFILE MENU DROPDOWN
-  // ==========================================
-  
-  // SELURUH BAGIAN INI SENGAJA DIHAPUS
-  // Logika ini sekarang ada di static/js/nav.js
-
-  // ==========================================
-  // 5. HISTORY TABLE ACTIONS
+  // 4. HISTORY TABLE ACTIONS
   // ==========================================
   
   /**
@@ -245,18 +276,22 @@
   }
 
   /**
-   * Show notification message
+   * Show notification message with enhanced styling
    * @param {string} message - Message to display
-   * @param {string} type - Type: 'success', 'error', 'info'
+   * @param {string} type - Type: 'success', 'error', 'info', 'warning'
    */
   function showNotification(message, type = 'info') {
     // Create notification element
     const notification = document.createElement('div');
-    notification.className = `fixed top-4 right-4 z-50 max-w-md p-4 rounded-xl shadow-lg animate-fade-in ${
+    notification.className = `fixed top-4 right-4 z-50 max-w-md p-4 rounded-xl shadow-lg transition-all duration-300 ${
       type === 'success' ? 'bg-green-100 border border-green-300 text-green-800' :
       type === 'error' ? 'bg-red-100 border border-red-300 text-red-800' :
+      type === 'warning' ? 'bg-yellow-100 border border-yellow-300 text-yellow-800' :
       'bg-blue-100 border border-blue-300 text-blue-800'
     }`;
+    
+    notification.style.opacity = '0';
+    notification.style.transform = 'translateX(400px)';
     
     notification.innerHTML = `
       <div class="flex items-center justify-between">
@@ -264,26 +299,35 @@
           <i class="bi bi-${
             type === 'success' ? 'check-circle-fill' :
             type === 'error' ? 'exclamation-triangle-fill' :
+            type === 'warning' ? 'exclamation-circle-fill' :
             'info-circle-fill'
           } text-xl mr-3"></i>
           <span class="font-medium">${message}</span>
         </div>
-        <button class="ml-4 text-2xl font-bold leading-none hover:opacity-70">&times;</button>
+        <button class="ml-4 text-2xl font-bold leading-none hover:opacity-70 transition-opacity">&times;</button>
       </div>
     `;
     
     document.body.appendChild(notification);
     
+    // Trigger animation
+    setTimeout(() => {
+      notification.style.opacity = '1';
+      notification.style.transform = 'translateX(0)';
+    }, 10);
+    
     // Auto-remove after 5 seconds
     const timer = setTimeout(() => {
       notification.style.opacity = '0';
+      notification.style.transform = 'translateX(400px)';
       setTimeout(() => notification.remove(), 300);
     }, 5000);
     
     // Remove on click
     notification.querySelector('button').addEventListener('click', () => {
-      clearTimeout(timer); // Hentikan auto-remove jika ditutup manual
+      clearTimeout(timer);
       notification.style.opacity = '0';
+      notification.style.transform = 'translateX(400px)';
       setTimeout(() => notification.remove(), 300);
     });
   }
@@ -314,7 +358,7 @@
   }
 
   // ==========================================
-  // 6. AUTO-DISMISS MESSAGES
+  // 5. AUTO-DISMISS MESSAGES
   // ==========================================
   
   const messageAlerts = document.querySelectorAll('[id^="message-alert-"]');
@@ -329,47 +373,46 @@
         }
       }, 5000);
       
-      // Hentikan timer jika ditutup manual
+      // Stop timer if closed manually
       const closeButton = alert.querySelector('button');
       if (closeButton) {
-          closeButton.addEventListener('click', () => {
-              clearTimeout(timer);
-          });
+        closeButton.addEventListener('click', () => {
+          clearTimeout(timer);
+        });
       }
     });
   }
 
   // ==========================================
-  // 7. FORM SUBMISSION HANDLING
+  // 6. FORM SUBMISSION HANDLING
   // ==========================================
   
-  if (elements.classifyBtn) {
-    const form = elements.classifyBtn.closest('form');
-    
-    if (form) {
-      form.addEventListener('submit', (e) => {
-        // Cek jika tombol classify masih disabled (berarti tidak ada file)
-        if (elements.classifyBtn.disabled) {
-            e.preventDefault(); // Hentikan submit
-            showNotification('Please select a valid file first.', 'error');
-            return;
-        }
-          
-        // Show loading state
-        elements.classifyBtn.disabled = true;
-        elements.classifyBtn.innerHTML = `
-          <svg class="animate-spin h-5 w-5 inline-block mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-          </svg>
-          PROCESSING...
-        `;
-      });
-    }
+  if (elements.classifyBtn && elements.uploadForm) {
+    elements.uploadForm.addEventListener('submit', (e) => {
+      // Check if button is disabled (no file)
+      if (elements.classifyBtn.disabled) {
+        e.preventDefault();
+        showNotification('Please select a valid file first.', 'error');
+        return;
+      }
+      
+      // Show loading state
+      elements.classifyBtn.disabled = true;
+      elements.classifyBtn.innerHTML = `
+        <svg class="animate-spin h-5 w-5 inline-block mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+        </svg>
+        PROCESSING...
+      `;
+
+      // Show progress notification
+      showNotification('⏳ Classifying your questions... This may take a moment.', 'info');
+    });
   }
 
   // ==========================================
-  // 8. RESPONSIVE UTILITIES
+  // 7. RESPONSIVE UTILITIES
   // ==========================================
   
   /**
@@ -378,7 +421,13 @@
   function handleResize() {
     const isMobile = window.innerWidth < 768;
     
-    // (Logika dropdown dipindah ke nav.js)
+    // Add responsive adjustments if needed
+    if (isMobile && elements.filePreview) {
+      // Adjust preview for mobile
+      elements.filePreview.classList.add('flex-col');
+    } else if (elements.filePreview) {
+      elements.filePreview.classList.remove('flex-col');
+    }
   }
 
   // Debounce resize handler
@@ -389,26 +438,85 @@
   });
 
   // ==========================================
-  // 9. KEYBOARD ACCESSIBILITY
+  // 8. KEYBOARD ACCESSIBILITY
   // ==========================================
   
   // Allow file selection with Enter/Space on drop zone
   if (elements.dropZone) {
-      // Menambahkan tabindex agar bisa di-fokus
-      elements.dropZone.setAttribute('tabindex', '0');
-      
-      elements.dropZone.addEventListener('keydown', (e) => {
-          if (e.key === 'Enter' || e.key === ' ') {
-              e.preventDefault();
-              elements.fileInput?.click();
-          }
-      });
+    elements.dropZone.setAttribute('tabindex', '0');
+    
+    elements.dropZone.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        elements.fileInput?.click();
+      }
+    });
   }
 
   // ==========================================
-  // 10. INITIALIZATION
+  // 9. ENHANCED HISTORY TABLE FEATURES
   // ==========================================
   
-  console.log('✓ Bloomers Home Page Initialized');
+  /**
+   * Add hover effects to table rows
+   */
+  function enhanceHistoryTable() {
+    const tableRows = document.querySelectorAll('tbody tr');
+    
+    tableRows.forEach(row => {
+      row.addEventListener('mouseenter', () => {
+        row.style.transform = 'scale(1.01)';
+        row.style.transition = 'transform 0.2s ease-in-out';
+      });
+      
+      row.addEventListener('mouseleave', () => {
+        row.style.transform = 'scale(1)';
+      });
+    });
+  }
+
+  // ==========================================
+  // 10. FILE PREVIEW ENHANCEMENTS
+  // ==========================================
+  
+  /**
+   * Add file details tooltip
+   */
+  function addFileTooltip() {
+    if (elements.fileName && currentFile) {
+      elements.fileName.title = `File: ${currentFile.name}\nSize: ${formatFileSize(currentFile.size)}\nType: ${currentFile.type}`;
+    }
+  }
+
+  // ==========================================
+  // 11. INITIALIZATION
+  // ==========================================
+  
+  function init() {
+    console.log('✓ Bloomers Home Page Initialized');
+    
+    // Initial responsive check
+    handleResize();
+    
+    // Enhance history table if present
+    enhanceHistoryTable();
+    
+    // Check for auto-scroll to history (if redirected after classification)
+    if (window.location.hash === '#history') {
+      const historySection = document.querySelector('section:last-of-type');
+      if (historySection) {
+        setTimeout(() => {
+          historySection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 500);
+      }
+    }
+  }
+
+  // Run initialization
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
   
 })();

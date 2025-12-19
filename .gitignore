@@ -1,0 +1,7 @@
+# Python bytecode
+__pycache__/
+*.pyc
+*.pyo
+
+# Database files
+db.sqlite3

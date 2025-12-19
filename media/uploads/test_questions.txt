@@ -1,0 +1,11 @@
+1. Apa yang dimaksud dengan algoritma dalam pemrograman?
+
+2. Jelaskan perbedaan antara bahasa pemrograman tingkat tinggi dan tingkat rendah.
+
+3. Bagaimana cara menggunakan struktur percabangan if-else?
+
+4. Analisis perbedaan antara array dan linked list.
+
+5. Evaluasi efisiensi algoritma bubble sort untuk dataset besar.
+
+6. Rancang sebuah sistem manajemen perpustakaan sederhana.

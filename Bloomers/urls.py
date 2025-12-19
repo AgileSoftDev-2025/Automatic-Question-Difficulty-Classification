@@ -19,9 +19,10 @@ from django.contrib import admin
 from django.urls import include, path
 from django.conf import settings
 from django.conf.urls.static import static
-
+from apps.soal import views as soal_views  
 urlpatterns = [
     path("admin/", admin.site.urls),
+    path('', soal_views.home, name='home'),
     path('users/', include('apps.users.urls')),
     path('soal/', include('apps.soal.urls')),
     path('klasifikasi/', include('apps.klasifikasi.urls')),

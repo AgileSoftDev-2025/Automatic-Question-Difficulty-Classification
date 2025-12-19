@@ -1,4 +1,4 @@
-# V5.2: Focused on Algorithm Complexity, Scenario Recall, and Code Tracing.git commit -m "docs: bump version to V5.2 and update documentation"
+# apps/klasifikasi/english_rules.py - V5: HISTORICAL CREATOR FIX
 
 import re
 import logging
@@ -21,17 +21,28 @@ class EnglishBloomAdjuster:
     # ========== V5 NEW: HISTORICAL CREATOR/PROPOSER PATTERNS ==========
     # These ask WHO did something historically - always C1 recall
     HISTORICAL_CREATOR_PATTERNS = [
+        # "Who proposed/created/invented X?"
         r'\bwho\s+(?:proposed|created|invented|developed|introduced|designed|founded)\b',
         r'\bwho\s+is\s+(?:the\s+)?(?:father|founder|creator|inventor|author)\s+of\b',
         r'\bwho\s+(?:first\s+)?(?:proposed|introduced|developed)\s+(?:the\s+)?[\w\s]+\s*\??$',
+        
+        # "X was proposed/created by..."
         r'\bwas\s+(?:proposed|created|invented|developed|introduced|designed|founded)\s+by\b',
         r'\bwere\s+(?:proposed|created|invented|developed|introduced)\s+by\b',
         r'\b(?:proposed|created|invented|developed|introduced)\s+by\s+(?:whom|who)\b',
+        
+        # "The X philosophy/model/method was proposed by..."
         r'\b(?:philosophy|model|method|methodology|technique|approach)\s+was\s+proposed\s+by\b',
         r'\b(?:philosophy|model|method|methodology|technique|approach)\s+(?:is\s+)?(?:proposed|introduced)\s+by\b',
+        
+        # "X proposed the Y" (asking what X proposed)
         r'\b[\w\s]+\s+proposed\s+(?:the\s+)?[\w\s]+\s+(?:model|method|theory|concept)',
+        
+        # "Father/Founder of X is..."
         r'\b(?:father|founder|creator|inventor)\s+of\s+[\w\s]+\s+is\b',
         r'\bthe\s+(?:father|founder|creator)\s+of\b',
+        
+        # Passive attribution
         r'\bis\s+(?:credited|attributed)\s+(?:to|with)\b',
         r'\bwas\s+(?:credited|attributed)\s+(?:to|with)\b',
     ]
@@ -73,21 +84,6 @@ class EnglishBloomAdjuster:
         r'\bexpand\s+(?:the\s+)?(?:acronym\s+)?[A-Z]{2,}\b',
         r'\bfull\s+form\s+of\s+[A-Z]{2,}\b',
         r'\b[A-Z]{2,}\s+(?:is\s+)?short\s+for\b',
-    ]
-
-    SCENARIO_RECALL_PATTERNS = [
-        r'\bwhich\s+of\s+the\s+following\s+is\s+the\s+name\s+of\b',
-        r'\bwhat\s+is\s+the\s+term\s+used\s+for\b',
-        r'\bis\s+a\s+term\s+that\s+describes\b',
-    ]
-
-    COMPLEXITY_PATTERNS = [
-        r'\b(?:time|space)\s+complexity\b',
-        r'\bbig\s+[o0]\s+notation\b',
-        r'\befficiency\s+of\s+(?:the\s+)?algorithm\b',
-        r'\bworst-case\s+(?:scenario|running\s+time)\b',
-        r'\bestimate\s+the\s+growth\s+rate\b',
-        r'\bnumber\s+of\s+(?:comparisons|iterations|swaps)\s+required\b',
     ]
     
     # ========== TECHNICAL TERMINOLOGY TRAPS ==========
@@ -173,8 +169,6 @@ class EnglishBloomAdjuster:
         r'\bdeveloped\s+by\s*[\.\?]?\s*$',
         r'\bintroduced\s+by\s*[\.\?]?\s*$',
     ]
-
-    
     
     # ========== C1 (REMEMBER) PATTERNS ==========
     FORCE_C1_PATTERNS = [
@@ -311,9 +305,6 @@ class EnglishBloomAdjuster:
         r'\busing\s+(?:the\s+)?(?:OSI\s+model|version\s+control|Git)',
         r'\bat\s+which\s+layer\s+would\s+you\s+troubleshoot',
         r'\bcalculate\s+the\s+number\s+of',
-        r'\bwrite\s+a\s+(?:query|statement|program)\s+to\b',
-        r'\bwhat\s+is\s+the\s+(?:result|output)\s+of\s+the\s+following\s+code\b',
-        r'\btrace\s+the\s+execution\b',
     ]
     
     # ========== C4 (ANALYZE) PATTERNS ==========
@@ -532,8 +523,6 @@ class EnglishBloomAdjuster:
         self.compiled_historical_creator = [re.compile(p, re.IGNORECASE) for p in self.HISTORICAL_CREATOR_PATTERNS]
         self.compiled_definition_recall = [re.compile(p, re.IGNORECASE) for p in self.DEFINITION_RECALL_PATTERNS]
         self.compiled_acronym = [re.compile(p, re.IGNORECASE) for p in self.ACRONYM_PATTERNS]
-        self.compiled_scenario_recall = [re.compile(p, re.IGNORECASE) for p in self.SCENARIO_RECALL_PATTERNS]
-        self.compiled_complexity = [re.compile(p, re.IGNORECASE) for p in self.COMPLEXITY_PATTERNS]
         
         self.compiled_technical_blockers = [re.compile(p, re.IGNORECASE) for p in self.TECHNICAL_TERM_BLOCKERS]
         self.compiled_absolute_c1 = [re.compile(p, re.IGNORECASE) for p in self.ABSOLUTE_C1_BLOCKERS]
@@ -549,7 +538,6 @@ class EnglishBloomAdjuster:
         self.compiled_not_c3 = [re.compile(p, re.IGNORECASE) for p in self.NOT_C3_PATTERNS]
         self.compiled_not_c4 = [re.compile(p, re.IGNORECASE) for p in self.NOT_C4_PATTERNS]
         self.compiled_not_c5 = [re.compile(p, re.IGNORECASE) for p in self.NOT_C5_PATTERNS]
-        
         
         self.compiled_block_c5_c6 = [re.compile(p, re.IGNORECASE) for p in self.BLOCK_C5_C6_IF_ASKING_ABOUT]
         self.compiled_block_c6_desc = [re.compile(p, re.IGNORECASE) for p in self.BLOCK_C6_DESCRIPTIVE]
@@ -595,13 +583,6 @@ class EnglishBloomAdjuster:
         
         ml_level = ml_prediction['category']
         ml_confidence = ml_prediction['confidence']
-        if any(p.search(question_lower) for p in self.compiled_scenario_recall):
-            if ml_level != 'C1':
-                return self._create_result('C1', 'Remember', 0.96, ml_prediction, 'scenario_recall_blocker', ml_level, ml_confidence)
-        
-        if any(p.search(question_lower) for p in self.compiled_complexity):
-            if ml_level in ['C1', 'C2', 'C3']:
-                return self._create_result('C4', 'Analyze', 0.95, ml_prediction, 'complexity_analysis_override', ml_level, ml_confidence)
         
         # ====== STAGE 0A: V5 NEW - HISTORICAL CREATOR BLOCKER ======
         # "Who proposed/created X?" is ALWAYS C1, never C6
@@ -766,7 +747,7 @@ class EnglishBloomAdjuster:
                     'adjustment_reason': f"ML prediction confirmed by {level_name} keywords",
                     'ml_category': current_ml_level,
                     'ml_confidence': ml_confidence,
-                    'was_adjusted': True        
+                    'was_adjusted': True
                 }
         
         return result
