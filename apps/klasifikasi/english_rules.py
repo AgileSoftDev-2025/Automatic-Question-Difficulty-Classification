@@ -85,6 +85,9 @@ class EnglishBloomAdjuster:
         r'\b(?:time|space)\s+complexity\b',
         r'\bbig\s+[o0]\s+notation\b',
         r'\befficiency\s+of\s+(?:the\s+)?algorithm\b',
+        r'\bworst-case\s+(?:scenario|running\s+time)\b',
+        r'\bestimate\s+the\s+growth\s+rate\b',
+        r'\bnumber\s+of\s+(?:comparisons|iterations|swaps)\s+required\b',
     ]
     
     # ========== TECHNICAL TERMINOLOGY TRAPS ==========
