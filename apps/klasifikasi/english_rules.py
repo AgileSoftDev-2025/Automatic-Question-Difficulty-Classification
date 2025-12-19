@@ -599,6 +599,10 @@ class EnglishBloomAdjuster:
             if ml_level != 'C1':
                 return self._create_result('C1', 'Remember', 0.96, ml_prediction, 'scenario_recall_blocker', ml_level, ml_confidence)
         
+        if any(p.search(question_lower) for p in self.compiled_complexity):
+            if ml_level in ['C1', 'C2', 'C3']:
+                return self._create_result('C4', 'Analyze', 0.95, ml_prediction, 'complexity_analysis_override', ml_level, ml_confidence)
+        
         # ====== STAGE 0A: V5 NEW - HISTORICAL CREATOR BLOCKER ======
         # "Who proposed/created X?" is ALWAYS C1, never C6
         if self._has_historical_creator_pattern(question_lower):
