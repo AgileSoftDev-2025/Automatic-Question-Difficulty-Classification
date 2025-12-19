@@ -846,6 +846,10 @@
       type === 'warning' ? 'bg-yellow-500' :
       'bg-blue-500'
     }`;
+    toast.style.position = 'fixed';
+    toast.style.top = '80px';
+    toast.style.right = '16px';
+    toast.style.zIndex = '9999';
     
     const icon = {
       success: 'check-circle-fill',
